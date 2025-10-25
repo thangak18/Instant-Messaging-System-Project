@@ -85,33 +85,19 @@ public class LoginHistoryPanel extends JPanel {
         setLayout(new BorderLayout(10, 10));
         setBorder(new EmptyBorder(10, 10, 10, 10));
 
-        // Panel tìm kiếm và sắp xếp
-        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
-        searchPanel.setBorder(createTitledBorder("Bộ lọc và Tìm kiếm")); // Áp dụng viền
-        
-        searchPanel.add(new JLabel("Tìm kiếm theo tên đăng nhập:"));
-        searchPanel.add(searchField);
-        searchPanel.add(new JLabel("Sắp xếp:"));
-        searchPanel.add(sortCombo);
-        searchPanel.add(searchButton); // Dùng nút đã tạo
-        searchPanel.add(filterButton); // Dùng nút đã tạo
-
         // Panel Bảng
         JPanel centerPanel = new JPanel(new BorderLayout());
-        centerPanel.setBorder(createTitledBorder("Lịch sử đăng nhập")); // Áp dụng viền
-        
+        centerPanel.setBorder(createTitledBorder("Lịch sử đăng nhập"));
         JScrollPane scrollPane = new JScrollPane(historyTable);
         centerPanel.add(scrollPane, BorderLayout.CENTER);
 
         // Panel nút chức năng
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
-        buttonPanel.setBorder(createTitledBorder("Chức năng")); // Áp dụng viền
-        
+        buttonPanel.setBorder(createTitledBorder("Chức năng"));
         buttonPanel.add(refreshButton);
         buttonPanel.add(exportButton);
 
-        // Thêm các panel con vào panel chính
-        add(searchPanel, BorderLayout.NORTH);
+        // Chỉ thêm bảng và nút chức năng vào panel chính
         add(centerPanel, BorderLayout.CENTER);
         add(buttonPanel, BorderLayout.SOUTH);
     }

@@ -41,11 +41,13 @@ public class AdminMainFrame extends JFrame {
         // Nút lựa chọn chức năng
         JButton userBtn = new JButton("Quản lý người dùng");
         JButton historyBtn = new JButton("Xem lịch sử đăng nhập");
-        JButton groupBtn = new JButton("Quản lý nhóm chat");
+        JButton groupBtn = new JButton("Xem danh sách nhóm chat");
+        JButton spamBtn = new JButton("Xem danh sách báo cáo spam");
 
         userBtn.setFont(new Font("Arial", Font.BOLD, 18));
         historyBtn.setFont(new Font("Arial", Font.BOLD, 18));
         groupBtn.setFont(new Font("Arial", Font.BOLD, 18));
+        spamBtn.setFont(new Font("Arial", Font.BOLD, 18));
 
         userBtn.setBackground(new Color(0, 102, 255));
         userBtn.setForeground(Color.BLACK);
@@ -53,14 +55,18 @@ public class AdminMainFrame extends JFrame {
         historyBtn.setForeground(Color.BLACK);
         groupBtn.setBackground(new Color(0, 102, 255));
         groupBtn.setForeground(Color.BLACK);
+        spamBtn.setBackground(new Color(0, 102, 255));
+        spamBtn.setForeground(Color.BLACK);
 
         userBtn.setFocusPainted(false);
         historyBtn.setFocusPainted(false);
         groupBtn.setFocusPainted(false);
+        spamBtn.setFocusPainted(false);
 
         userBtn.addActionListener(e -> openUserManagement());
         historyBtn.addActionListener(e -> openLoginHistory());
         groupBtn.addActionListener(e -> openGroupManagement());
+        spamBtn.addActionListener(e -> openSpamReport());
 
         gbc.gridx = 0; gbc.gridy = 1;
         homePanel.add(userBtn, gbc);
@@ -68,6 +74,8 @@ public class AdminMainFrame extends JFrame {
         homePanel.add(historyBtn, gbc);
         gbc.gridx = 0; gbc.gridy = 3;
         homePanel.add(groupBtn, gbc);
+        gbc.gridx = 0; gbc.gridy = 4;
+        homePanel.add(spamBtn, gbc);
 
         contentPanel.add(homePanel, BorderLayout.CENTER);
         contentPanel.revalidate();
@@ -96,7 +104,8 @@ public class AdminMainFrame extends JFrame {
         JMenu userMenu = new JMenu("Lựa chọn chức năng");
         JMenuItem userListMenuItem = new JMenuItem("Quản lý người dùng");
         JMenuItem loginHistoryMenuItem = new JMenuItem("Lịch sử đăng nhập");
-        JMenuItem groupListMenuItem = new JMenuItem("Quản lý nhóm chat");
+        JMenuItem groupListMenuItem = new JMenuItem("Xem danh sách nhóm chat");
+        JMenuItem spamReportMenuItem = new JMenuItem("Xem danh sách báo cáo spam");
         userMenu.add(userListMenuItem);
         // userMenu.add(new JMenuItem("Thêm người dùng"));
         // userMenu.add(new JMenuItem("Cập nhật người dùng"));
@@ -108,6 +117,7 @@ public class AdminMainFrame extends JFrame {
         // userMenu.add(new JMenuItem("Danh sách bạn bè"));
         userMenu.add(loginHistoryMenuItem);
         userMenu.add(groupListMenuItem);
+        userMenu.add(spamReportMenuItem);
 
         // Thêm event handler cho chức năng quản lý người dùng (quan trọng)
         userListMenuItem.addActionListener(e -> openUserManagement());
@@ -115,6 +125,8 @@ public class AdminMainFrame extends JFrame {
         loginHistoryMenuItem.addActionListener(e-> openLoginHistory());
 
         groupListMenuItem.addActionListener(e-> openGroupManagement());
+
+        spamReportMenuItem.addActionListener(e-> openSpamReport());
         
         // // Menu Quản lý nhóm
         //JMenu groupMenu = new JMenu("Quản lý nhóm");
@@ -248,11 +260,34 @@ public class AdminMainFrame extends JFrame {
         contentPanel.repaint();
     }
     
-    // private void openSpamReport() {
-    //     SpamReportFrame frame = new SpamReportFrame();
-    //     desktopPane.add(frame);
-    //     frame.setVisible(true);
-    // }
+    private void openSpamReport() {
+        contentPanel.removeAll();
+        JPanel wrapper = new JPanel(new BorderLayout());
+        // Tiêu đề trang
+        JLabel titleLabel = new JLabel("Xem danh sách báo cáo spam");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 22));
+        titleLabel.setForeground(new Color(0, 102, 255));
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        wrapper.add(titleLabel, BorderLayout.NORTH);
+
+        SpamReportPanel spamPanel = new SpamReportPanel();
+        wrapper.add(spamPanel, BorderLayout.CENTER);
+
+        // Nút quay lại
+        JButton backBtn = new JButton("Quay lại trang chủ");
+        backBtn.setFont(new Font("Arial", Font.BOLD, 14));
+        backBtn.setBackground(new Color(108, 117, 125));
+        backBtn.setForeground(Color.BLACK);
+        backBtn.setFocusPainted(false);
+        backBtn.addActionListener(e -> showHomePage());
+        JPanel backPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        backPanel.add(backBtn);
+        wrapper.add(backPanel, BorderLayout.SOUTH);
+
+        contentPanel.add(wrapper, BorderLayout.CENTER);
+        contentPanel.revalidate();
+        contentPanel.repaint();
+    }
     
     // private void openStatistics() {
     //     StatisticsFrame frame = new StatisticsFrame();
