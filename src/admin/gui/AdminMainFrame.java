@@ -288,6 +288,35 @@ public class AdminMainFrame extends JFrame {
         contentPanel.revalidate();
         contentPanel.repaint();
     }
+
+    // private open newUserReport() {
+    //     contentPanel.removeAll();
+    //     JPanel wrapper = new JPanel(new BorderLayout());
+    //     // Tiêu đề trang
+    //     JLabel titleLabel = new JLabel("Xem danh sách người dùng mới");
+    //     titleLabel.setFont(new Font("Arial", Font.BOLD, 22));
+    //     titleLabel.setForeground(new Color(0, 102, 255));
+    //     titleLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+    //     wrapper.add(titleLabel, BorderLayout.NORTH);
+
+    //     NewUserReportPanel newUserPanel = new NewUserReportPanel();
+    //     wrapper.add(newUserPanel, BorderLayout.CENTER);
+
+    //     // Nút quay lại
+    //     JButton backBtn = new JButton("Quay lại trang chủ");
+    //     backBtn.setFont(new Font("Arial", Font.BOLD, 14));
+    //     backBtn.setBackground(new Color(108, 117, 125));
+    //     backBtn.setForeground(Color.BLACK);
+    //     backBtn.setFocusPainted(false);
+    //     backBtn.addActionListener(e -> showHomePage());
+    //     JPanel backPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+    //     backPanel.add(backBtn);
+    //     wrapper.add(backPanel, BorderLayout.SOUTH);
+
+    //     contentPanel.add(wrapper, BorderLayout.CENTER);
+    //     contentPanel.revalidate();
+    //     contentPanel.repaint();
+    // }
     
     // private void openStatistics() {
     //     StatisticsFrame frame = new StatisticsFrame();

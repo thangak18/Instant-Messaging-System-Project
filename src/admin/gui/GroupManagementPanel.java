@@ -50,8 +50,9 @@ public class GroupManagementPanel extends JPanel {
         };
         groupTable = new JTable(groupTableModel);
         groupTable.setRowHeight(25);
+        Color lightBlue = new Color(135, 206, 250);
         groupTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 13));
-        groupTable.getTableHeader().setBackground(ZALO_BLUE);
+        groupTable.getTableHeader().setBackground(lightBlue);
         groupTable.getTableHeader().setForeground(Color.WHITE);
         groupTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         

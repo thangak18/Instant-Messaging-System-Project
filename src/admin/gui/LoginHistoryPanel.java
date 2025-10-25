@@ -54,9 +54,10 @@ public class LoginHistoryPanel extends JPanel {
         historyTable.setFillsViewportHeight(true);
 
         // --- ÁP DỤNG MÀU SẮC CHO BẢNG ---
+        Color lightBlue = new Color(135, 206, 250);
         historyTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 13));
-        historyTable.getTableHeader().setBackground(Color.WHITE);
-        historyTable.getTableHeader().setForeground(Color.BLACK);
+        historyTable.getTableHeader().setBackground(lightBlue);
+        historyTable.getTableHeader().setForeground(Color.WHITE);
 
         // Thiết lập độ rộng cột
         TableColumnModel columnModel = historyTable.getColumnModel();

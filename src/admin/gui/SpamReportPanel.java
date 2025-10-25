@@ -43,11 +43,12 @@ public class SpamReportPanel extends JPanel {
         };
         spamTable = new JTable(model);
         // ... (code thiết lập bảng giữ nguyên) ...
+        Color lightBlue = new Color(135, 206, 250);
         spamTable.setRowHeight(25);
         spamTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         spamTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 13));
-        spamTable.getTableHeader().setBackground(Color.WHITE);
-        spamTable.getTableHeader().setForeground(Color.BLACK);
+        spamTable.getTableHeader().setBackground(lightBlue);
+        spamTable.getTableHeader().setForeground(Color.WHITE);
         TableColumnModel columnModel = spamTable.getColumnModel();
         columnModel.getColumn(0).setPreferredWidth(40);
         columnModel.getColumn(1).setPreferredWidth(130);
@@ -69,10 +70,11 @@ public class SpamReportPanel extends JPanel {
 
         // --- Các component Chức năng ---
         lockUserButton = new JButton("Khóa tài khoản bị tố cáo");
-        styleDestructiveButton(lockUserButton); 
+        stylePrimaryButton(lockUserButton); 
         markAsDoneButton = new JButton("Đánh dấu 'Đã xử lý'");
+        stylePrimaryButton(markAsDoneButton);
         refreshButton = new JButton("Làm mới");
-        styleNeutralButton(refreshButton);
+        stylePrimaryButton(refreshButton);
     }
 
     private void setupLayout() {

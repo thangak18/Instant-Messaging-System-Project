@@ -38,9 +38,10 @@ public class UserManagementPanel extends JPanel {
         userTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
         // --- CẢI TIẾN MÀU SẮC 2: Thêm màu cho Tiêu đề Bảng (Header) ---
+        Color lightBlue = new Color(135, 206, 250);
         userTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 13));
-        userTable.getTableHeader().setBackground(Color.WHITE); // Nền trắng
-        userTable.getTableHeader().setForeground(Color.BLACK); // Chữ đen
+        userTable.getTableHeader().setBackground(lightBlue); // Nền trắng
+        userTable.getTableHeader().setForeground(Color.WHITE); // Chữ đen
 
         // Thiết lập độ rộng cột
         TableColumnModel columnModel = userTable.getColumnModel();
