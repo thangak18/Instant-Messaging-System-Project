@@ -17,6 +17,8 @@ public class UserManagementPanel extends JPanel {
     private JComboBox<String> sortCombo;
     private JButton addButton, editButton, deleteButton, lockButton, unlockButton, refreshButton,
             filterButton, searchButton; 
+    private JComboBox<String> activityCompareCombo;
+    private JTextField activityCountField;
     public UserManagementPanel() {
         initializeComponents();
         setupLayout();
@@ -52,9 +54,15 @@ public class UserManagementPanel extends JPanel {
         columnModel.getColumn(7).setPreferredWidth(80);
 
         // Các trường tìm kiếm và lọc
-        searchField = new JTextField(20);
+        searchField = new JTextField(10); // Giảm chiều dài ô nhập tên
         statusFilter = new JComboBox<>(new String[]{"Tất cả", "Hoạt động", "Bị khóa"});
         sortCombo = new JComboBox<>(new String[]{"Sắp xếp theo tên", "Sắp xếp theo ngày tạo"});
+
+        // Lọc theo số lượng hoạt động
+        activityCompareCombo = new JComboBox<>(new String[]{"=", "<", ">"});
+        activityCompareCombo.setPreferredSize(new Dimension(45, 25));
+        activityCountField = new JTextField();
+        activityCountField.setColumns(5);
 
         // --- CẢI TIẾN MÀU SẮC 3: Tạo kiểu cho các nút bấm ---
         
@@ -89,19 +97,21 @@ public class UserManagementPanel extends JPanel {
         setLayout(new BorderLayout(10, 10));
         setBorder(new EmptyBorder(10, 10, 10, 10));
 
-        // --- CẢI TIẾN MÀU SẮC 4: Thêm màu cho Tiêu đề Viền (TitledBorder) ---
-        
-        // Panel tìm kiếm
+        // Panel lọc và tìm kiếm
         JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
         Border searchBorder = createTitledBorder("Bộ lọc và Tìm kiếm");
         searchPanel.setBorder(searchBorder);
 
-        searchPanel.add(new JLabel("Tìm kiếm:"));
-        searchPanel.add(searchField);
-        searchPanel.add(new JLabel("Trạng thái:"));
-        searchPanel.add(statusFilter);
         searchPanel.add(new JLabel("Sắp xếp:"));
         searchPanel.add(sortCombo);
+
+        searchPanel.add(new JLabel("Tên đăng nhập:"));
+        searchPanel.add(searchField);
+
+        searchPanel.add(new JLabel("Số lượng hoạt động:"));
+        searchPanel.add(activityCompareCombo);
+        searchPanel.add(activityCountField);
+
         searchPanel.add(filterButton);
         searchPanel.add(searchButton);
 

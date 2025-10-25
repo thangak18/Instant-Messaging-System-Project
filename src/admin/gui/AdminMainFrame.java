@@ -46,6 +46,7 @@ public class AdminMainFrame extends JFrame {
         JButton newUserBtn = new JButton("Xem danh sách người dùng mới");
         JButton statsBtn = new JButton("Thống kê người dùng");
         JButton friendStasBtn = new JButton("Danh sách người dùng và số lượng bạn bè");
+        JButton activeUserReport = new JButton("Xem danh sách người dùng hoạt động");
 
         userBtn.setFont(new Font("Arial", Font.BOLD, 18));
         historyBtn.setFont(new Font("Arial", Font.BOLD, 18));
@@ -54,7 +55,7 @@ public class AdminMainFrame extends JFrame {
         newUserBtn.setFont(new Font("Arial", Font.BOLD, 18));
         statsBtn.setFont(new Font("Arial", Font.BOLD, 18));
         friendStasBtn.setFont(new Font("Arial", Font.BOLD, 18));
-
+        activeUserReport.setFont(new Font("Arial", Font.BOLD, 18));
 
         userBtn.setBackground(new Color(0, 102, 255));
         userBtn.setForeground(Color.BLACK);
@@ -70,6 +71,8 @@ public class AdminMainFrame extends JFrame {
         statsBtn.setForeground(Color.BLACK);
         friendStasBtn.setBackground(new Color(0, 102, 255));
         friendStasBtn.setForeground(Color.BLACK);
+        activeUserReport.setBackground(new Color(0, 102, 255));
+        activeUserReport.setForeground(Color.BLACK);
 
         userBtn.setFocusPainted(false);
         historyBtn.setFocusPainted(false);
@@ -78,6 +81,9 @@ public class AdminMainFrame extends JFrame {
         newUserBtn.setFocusPainted(false);
         statsBtn.setFocusPainted(false);
         friendStasBtn.setFocusPainted(false);
+        activeUserReport.setFocusPainted(false);
+
+         // Thêm event handlers cho các nút chức năng
 
         userBtn.addActionListener(e -> openUserManagement());
         historyBtn.addActionListener(e -> openLoginHistory());
@@ -86,6 +92,7 @@ public class AdminMainFrame extends JFrame {
         newUserBtn.addActionListener(e -> openNewUserReport());
         statsBtn.addActionListener(e -> openStatistics());
         friendStasBtn.addActionListener(e -> openFriendStats());
+        activeUserReport.addActionListener(e -> openActiveUserReport());
 
         gbc.gridx = 0; gbc.gridy = 1;
         homePanel.add(userBtn, gbc);
@@ -101,6 +108,8 @@ public class AdminMainFrame extends JFrame {
         homePanel.add(statsBtn, gbc);
         gbc.gridx = 0; gbc.gridy = 7;
         homePanel.add(friendStasBtn, gbc);
+        gbc.gridx = 0; gbc.gridy = 8;
+        homePanel.add(activeUserReport, gbc);
 
         contentPanel.add(homePanel, BorderLayout.CENTER);
         contentPanel.revalidate();
@@ -134,6 +143,7 @@ public class AdminMainFrame extends JFrame {
         JMenuItem newUserReportMenuItem = new JMenuItem("Xem danh sách người dùng mới");
         JMenuItem statisticsMenuItem = new JMenuItem("Thống kê người dùng");
         JMenuItem friendStatsMenuItem = new JMenuItem("Danh sách người dùng và số lượng bạn bè");
+        JMenuItem activeUserReportMenuItem = new JMenuItem("Xem danh sách người dùng hoạt động");
         userMenu.add(userListMenuItem);
         // userMenu.add(new JMenuItem("Thêm người dùng"));
         // userMenu.add(new JMenuItem("Cập nhật người dùng"));
@@ -149,6 +159,7 @@ public class AdminMainFrame extends JFrame {
         userMenu.add(newUserReportMenuItem);
         userMenu.add(statisticsMenuItem);
         userMenu.add(friendStatsMenuItem);
+        userMenu.add(activeUserReportMenuItem);
 
         // Thêm event handler cho chức năng quản lý người dùng (quan trọng)
         userListMenuItem.addActionListener(e -> openUserManagement());
@@ -158,6 +169,7 @@ public class AdminMainFrame extends JFrame {
         newUserReportMenuItem.addActionListener(e-> openNewUserReport());
         statisticsMenuItem.addActionListener(e-> openStatistics());
         friendStatsMenuItem.addActionListener(e-> openFriendStats());
+        activeUserReportMenuItem.addActionListener(e-> openActiveUserReport());
         
         // // Menu Quản lý nhóm
         //JMenu groupMenu = new JMenu("Quản lý nhóm");
@@ -390,6 +402,35 @@ public class AdminMainFrame extends JFrame {
 
         FriendStatsPanel friendStatsPanel = new FriendStatsPanel();
         wrapper.add(friendStatsPanel, BorderLayout.CENTER);
+
+        // Nút quay lại
+        JButton backBtn = new JButton("Quay lại trang chủ");
+        backBtn.setFont(new Font("Arial", Font.BOLD, 14));
+        backBtn.setBackground(new Color(108, 117, 125));
+        backBtn.setForeground(Color.BLACK);
+        backBtn.setFocusPainted(false);
+        backBtn.addActionListener(e -> showHomePage());
+        JPanel backPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        backPanel.add(backBtn);
+        wrapper.add(backPanel, BorderLayout.SOUTH);
+
+        contentPanel.add(wrapper, BorderLayout.CENTER);
+        contentPanel.revalidate();
+        contentPanel.repaint();
+    }
+
+    private void openActiveUserReport() {
+        contentPanel.removeAll();
+        JPanel wrapper = new JPanel(new BorderLayout());
+        // Tiêu đề trang
+        JLabel titleLabel = new JLabel("Báo cáo người dùng hoạt động");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 22));
+        titleLabel.setForeground(new Color(0, 102, 255));
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        wrapper.add(titleLabel, BorderLayout.NORTH);
+
+        ActiveUserReportPanel activeUserPanel = new ActiveUserReportPanel();
+        wrapper.add(activeUserPanel, BorderLayout.CENTER);
 
         // Nút quay lại
         JButton backBtn = new JButton("Quay lại trang chủ");
