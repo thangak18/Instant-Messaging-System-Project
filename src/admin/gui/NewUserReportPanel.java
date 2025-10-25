@@ -44,8 +44,9 @@ public class NewUserReportPanel extends JPanel {
         reportTable.setAutoCreateRowSorter(true); // Cho phép sắp xếp khi nhấn vào tiêu đề
 
         // Áp dụng màu sắc cho tiêu đề bảng
+        Color lightBlue = new Color(135, 206, 250);
         reportTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 13));
-        reportTable.getTableHeader().setBackground(ZALO_BLUE);
+        reportTable.getTableHeader().setBackground(lightBlue);
         reportTable.getTableHeader().setForeground(Color.WHITE);
 
         // Chỉnh độ rộng cột
@@ -74,7 +75,8 @@ public class NewUserReportPanel extends JPanel {
         // --- Các component Chức năng ---
         refreshButton = new JButton("Làm mới");
         exportButton = new JButton("Xuất Excel");
-        styleNeutralButton(refreshButton);
+        stylePrimaryButton(refreshButton);
+        stylePrimaryButton(exportButton);
     }
 
     private void setupLayout() {
@@ -85,10 +87,10 @@ public class NewUserReportPanel extends JPanel {
         JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
         filterPanel.setBorder(createTitledBorder("Tùy chọn báo cáo"));
         
-        filterPanel.add(new JLabel("Từ ngày:"));
-        filterPanel.add(dateFromField);
-        filterPanel.add(new JLabel("Đến ngày:"));
-        filterPanel.add(dateToField);
+        // filterPanel.add(new JLabel("Từ ngày:"));
+        // filterPanel.add(dateFromField);
+        // filterPanel.add(new JLabel("Đến ngày:"));
+        // filterPanel.add(dateToField);
         filterPanel.add(new JLabel("Lọc theo tên:"));
         filterPanel.add(searchNameField);
         filterPanel.add(new JLabel("Sắp xếp:"));

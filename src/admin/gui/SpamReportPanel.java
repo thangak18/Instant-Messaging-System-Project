@@ -174,7 +174,7 @@ public class SpamReportPanel extends JPanel {
 
     // --- Các hàm hỗ trợ tạo kiểu (Giữ nguyên không đổi) ---
 
-    private Border createTitledBorder(String title) {
+    private Border createTitledBorder(String title) { //Tạo viền có tiêu đề
         Border emptyInside = new EmptyBorder(5, 5, 5, 5);
         TitledBorder titledBorder = BorderFactory.createTitledBorder(title);
         titledBorder.setTitleColor(ZALO_BLUE);
@@ -182,7 +182,7 @@ public class SpamReportPanel extends JPanel {
         return BorderFactory.createCompoundBorder(titledBorder, emptyInside);
     }
 
-    private void stylePrimaryButton(JButton button) {
+    private void stylePrimaryButton(JButton button) { //màu xanh
         button.setBackground(ZALO_BLUE);
         button.setForeground(Color.WHITE);
         button.setFont(new Font("Arial", Font.BOLD, 12));
@@ -192,7 +192,7 @@ public class SpamReportPanel extends JPanel {
         button.setMargin(new Insets(5, 12, 5, 12));
     }
     
-    private void styleDestructiveButton(JButton button) {
+    private void styleDestructiveButton(JButton button) { //màu đỏ
         button.setBackground(DESTRUCTIVE_RED);
         button.setForeground(Color.WHITE);
         button.setFont(new Font("Arial", Font.BOLD, 12));
@@ -202,7 +202,7 @@ public class SpamReportPanel extends JPanel {
         button.setMargin(new Insets(5, 12, 5, 12));
     }
 
-    private void styleNeutralButton(JButton button) {
+    private void styleNeutralButton(JButton button) { //màu xám
         button.setBackground(NEUTRAL_GRAY);
         button.setForeground(Color.WHITE);
         button.setFont(new Font("Arial", Font.BOLD, 12));
