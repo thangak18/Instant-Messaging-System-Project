@@ -11,49 +11,98 @@ public class AdminMainFrame extends JFrame {
     private JMenuBar menuBar;
     private JPanel contentPanel;
     private JLabel statusLabel;
-    
+
+    // Thêm biến trang chủ
+    private JPanel homePanel;
+
     public AdminMainFrame() {
         initializeComponents();
         setupLayout();
         setupMenu();
-        // Thêm dòng này để test giao diện quản lý người dùng luôn hiện khi chạy (quan trọng)
-        openUserManagement();
+        showHomePage(); // Hiển thị trang chủ khi khởi động
     }
-    
+
+    // Thêm hàm tạo giao diện trang chủ với các nút chức năng
+    private void showHomePage() {
+        contentPanel.removeAll();
+
+        homePanel = new JPanel();
+        homePanel.setLayout(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(20, 20, 20, 20);
+
+        // Tiêu đề trang chủ
+        JLabel titleLabel = new JLabel("Trang chủ quản trị hệ thống chat");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 28));
+        titleLabel.setForeground(new Color(0, 102, 255));
+        gbc.gridx = 0; gbc.gridy = 0;
+        homePanel.add(titleLabel, gbc);
+
+        // Nút lựa chọn chức năng
+        JButton userBtn = new JButton("Quản lý người dùng");
+        JButton historyBtn = new JButton("Xem lịch sử đăng nhập");
+
+        userBtn.setFont(new Font("Arial", Font.BOLD, 18));
+        historyBtn.setFont(new Font("Arial", Font.BOLD, 18));
+
+        userBtn.setBackground(new Color(0, 102, 255));
+        userBtn.setForeground(Color.BLACK);
+        historyBtn.setBackground(new Color(0, 102, 255));
+        historyBtn.setForeground(Color.BLACK);
+
+        userBtn.setFocusPainted(false);
+        historyBtn.setFocusPainted(false);
+
+        userBtn.addActionListener(e -> openUserManagement());
+        historyBtn.addActionListener(e -> openLoginHistory());
+
+        gbc.gridx = 0; gbc.gridy = 1;
+        homePanel.add(userBtn, gbc);
+        gbc.gridx = 0; gbc.gridy = 2;
+        homePanel.add(historyBtn, gbc);
+
+        contentPanel.add(homePanel, BorderLayout.CENTER);
+        contentPanel.revalidate();
+        contentPanel.repaint();
+    }
+
     private void initializeComponents() {
         setTitle("Hệ thống quản trị - Chat System (Phiên bản 1)");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1200, 800);
         setLocationRelativeTo(null);
-        
+
         menuBar = new JMenuBar();
         contentPanel = new JPanel(new BorderLayout());
         statusLabel = new JLabel("Trạng thái: Sẵn sàng");
     }
-    
+
     private void setupLayout() {
         setJMenuBar(menuBar);
         add(contentPanel, BorderLayout.CENTER);
         add(statusLabel, BorderLayout.SOUTH);
     }
-    
+
     private void setupMenu() {
         // Menu Quản lý người dùng
-        JMenu userMenu = new JMenu("Quản lý người dùng");
-        JMenuItem userListMenuItem = new JMenuItem("Danh sách người dùng");
+        JMenu userMenu = new JMenu("Lựa chọn chức năng");
+        JMenuItem userListMenuItem = new JMenuItem("Quản lý người dùng");
         JMenuItem loginHistoryMenuItem = new JMenuItem("Lịch sử đăng nhập");
         userMenu.add(userListMenuItem);
-        userMenu.add(new JMenuItem("Thêm người dùng"));
-        userMenu.add(new JMenuItem("Cập nhật người dùng"));
-        userMenu.add(new JMenuItem("Xóa người dùng"));
-        userMenu.addSeparator();
-        userMenu.add(new JMenuItem("Khóa/Mở khóa tài khoản"));
-        userMenu.add(new JMenuItem("Cập nhật mật khẩu"));
+        // userMenu.add(new JMenuItem("Thêm người dùng"));
+        // userMenu.add(new JMenuItem("Cập nhật người dùng"));
+        // userMenu.add(new JMenuItem("Xóa người dùng"));
+        // userMenu.addSeparator();
+        // userMenu.add(new JMenuItem("Khóa/Mở khóa tài khoản"));
+        // userMenu.add(new JMenuItem("Cập nhật mật khẩu"));
+        // userMenu.add(loginHistoryMenuItem);
+        // userMenu.add(new JMenuItem("Danh sách bạn bè"));
         userMenu.add(loginHistoryMenuItem);
-        userMenu.add(new JMenuItem("Danh sách bạn bè"));
 
         // Thêm event handler cho chức năng quản lý người dùng (quan trọng)
         userListMenuItem.addActionListener(e -> openUserManagement());
+
+        loginHistoryMenuItem.addActionListener(e-> openLoginHistory());
         
         // // Menu Quản lý nhóm
         // JMenu groupMenu = new JMenu("Quản lý nhóm");
@@ -97,26 +146,66 @@ public class AdminMainFrame extends JFrame {
         // menuBar.add(systemMenu);
     }
     
+
+    //Hàm này giải quyết giao diện quản lý người dùng
     private void openUserManagement() {
-        // Xóa tất cả component cũ đang có trong contentPane
         contentPanel.removeAll();
+        JPanel wrapper = new JPanel(new BorderLayout());
+        // Tiêu đề trang
+        JLabel titleLabel = new JLabel("Quản lý người dùng");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 22));
+        titleLabel.setForeground(new Color(0, 102, 255));
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        wrapper.add(titleLabel, BorderLayout.NORTH);
 
-        // Sử dụng UserManagementFrame (là JPanel) cho giao diện quản lý người dùng
         UserManagementPanel userPanel = new UserManagementPanel();
+        wrapper.add(userPanel, BorderLayout.CENTER);
 
-        // Thêm panel mới vào (với cờ BorderLayout.CENTER để nó lấp đầy)
-        contentPanel.add(userPanel, BorderLayout.CENTER);
+        // Nút quay lại
+        JButton backBtn = new JButton("Quay lại trang chủ");
+        backBtn.setFont(new Font("Arial", Font.BOLD, 14));
+        backBtn.setBackground(new Color(108, 117, 125));
+        backBtn.setForeground(Color.BLACK);
+        backBtn.setFocusPainted(false);
+        backBtn.addActionListener(e -> showHomePage());
+        JPanel backPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        backPanel.add(backBtn);
+        wrapper.add(backPanel, BorderLayout.SOUTH);
 
-        // Yêu cầu contentPane vẽ lại giao diện mới
+        contentPanel.add(wrapper, BorderLayout.CENTER);
         contentPanel.revalidate();
         contentPanel.repaint();
     }
-    
-    // private void openLoginHistory() {
-    //     LoginHistoryFrame frame = new LoginHistoryFrame();
-    //     desktopPane.add(frame);
-    //     frame.setVisible(true);
-    // }
+
+    //Hàm này giải quyết giao diện lịch sử đăng nhập
+    private void openLoginHistory() {
+        contentPanel.removeAll();
+        JPanel wrapper = new JPanel(new BorderLayout());
+        // Tiêu đề trang
+        JLabel titleLabel = new JLabel("Lịch sử đăng nhập");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 22));
+        titleLabel.setForeground(new Color(0, 102, 255));
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        wrapper.add(titleLabel, BorderLayout.NORTH);
+
+        LoginHistoryPanel historyPanel = new LoginHistoryPanel();
+        wrapper.add(historyPanel, BorderLayout.CENTER);
+
+        // Nút quay lại
+        JButton backBtn = new JButton("Quay lại trang chủ");
+        backBtn.setFont(new Font("Arial", Font.BOLD, 14));
+        backBtn.setBackground(new Color(108, 117, 125));
+        backBtn.setForeground(Color.BLACK);
+        backBtn.setFocusPainted(false);
+        backBtn.addActionListener(e -> showHomePage());
+        JPanel backPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        backPanel.add(backBtn);
+        wrapper.add(backPanel, BorderLayout.SOUTH);
+
+        contentPanel.add(wrapper, BorderLayout.CENTER);
+        contentPanel.revalidate();
+        contentPanel.repaint();
+    }
     
     // private void openGroupManagement() {
     //     GroupManagementFrame frame = new GroupManagementFrame();
