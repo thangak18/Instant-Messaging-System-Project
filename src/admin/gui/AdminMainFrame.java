@@ -41,25 +41,33 @@ public class AdminMainFrame extends JFrame {
         // Nút lựa chọn chức năng
         JButton userBtn = new JButton("Quản lý người dùng");
         JButton historyBtn = new JButton("Xem lịch sử đăng nhập");
+        JButton groupBtn = new JButton("Quản lý nhóm chat");
 
         userBtn.setFont(new Font("Arial", Font.BOLD, 18));
         historyBtn.setFont(new Font("Arial", Font.BOLD, 18));
+        groupBtn.setFont(new Font("Arial", Font.BOLD, 18));
 
         userBtn.setBackground(new Color(0, 102, 255));
         userBtn.setForeground(Color.BLACK);
         historyBtn.setBackground(new Color(0, 102, 255));
         historyBtn.setForeground(Color.BLACK);
+        groupBtn.setBackground(new Color(0, 102, 255));
+        groupBtn.setForeground(Color.BLACK);
 
         userBtn.setFocusPainted(false);
         historyBtn.setFocusPainted(false);
+        groupBtn.setFocusPainted(false);
 
         userBtn.addActionListener(e -> openUserManagement());
         historyBtn.addActionListener(e -> openLoginHistory());
+        groupBtn.addActionListener(e -> openGroupManagement());
 
         gbc.gridx = 0; gbc.gridy = 1;
         homePanel.add(userBtn, gbc);
         gbc.gridx = 0; gbc.gridy = 2;
         homePanel.add(historyBtn, gbc);
+        gbc.gridx = 0; gbc.gridy = 3;
+        homePanel.add(groupBtn, gbc);
 
         contentPanel.add(homePanel, BorderLayout.CENTER);
         contentPanel.revalidate();
@@ -88,6 +96,7 @@ public class AdminMainFrame extends JFrame {
         JMenu userMenu = new JMenu("Lựa chọn chức năng");
         JMenuItem userListMenuItem = new JMenuItem("Quản lý người dùng");
         JMenuItem loginHistoryMenuItem = new JMenuItem("Lịch sử đăng nhập");
+        JMenuItem groupListMenuItem = new JMenuItem("Quản lý nhóm chat");
         userMenu.add(userListMenuItem);
         // userMenu.add(new JMenuItem("Thêm người dùng"));
         // userMenu.add(new JMenuItem("Cập nhật người dùng"));
@@ -98,16 +107,19 @@ public class AdminMainFrame extends JFrame {
         // userMenu.add(loginHistoryMenuItem);
         // userMenu.add(new JMenuItem("Danh sách bạn bè"));
         userMenu.add(loginHistoryMenuItem);
+        userMenu.add(groupListMenuItem);
 
         // Thêm event handler cho chức năng quản lý người dùng (quan trọng)
         userListMenuItem.addActionListener(e -> openUserManagement());
 
         loginHistoryMenuItem.addActionListener(e-> openLoginHistory());
+
+        groupListMenuItem.addActionListener(e-> openGroupManagement());
         
         // // Menu Quản lý nhóm
-        // JMenu groupMenu = new JMenu("Quản lý nhóm");
-        // JMenuItem groupListMenuItem = new JMenuItem("Danh sách nhóm chat");
-        // groupMenu.add(groupListMenuItem);
+        //JMenu groupMenu = new JMenu("Quản lý nhóm");
+        //JMenuItem groupListMenuItem = new JMenuItem("Danh sách nhóm chat");
+        //groupMenu.add(groupListMenuItem);
         // groupMenu.add(new JMenuItem("Thành viên nhóm"));
         // groupMenu.add(new JMenuItem("Admin nhóm"));
         
@@ -207,11 +219,34 @@ public class AdminMainFrame extends JFrame {
         contentPanel.repaint();
     }
     
-    // private void openGroupManagement() {
-    //     GroupManagementFrame frame = new GroupManagementFrame();
-    //     desktopPane.add(frame);
-    //     frame.setVisible(true);
-    // }
+    private void openGroupManagement() {
+        contentPanel.removeAll();
+        JPanel wrapper = new JPanel(new BorderLayout());
+        // Tiêu đề trang
+        JLabel titleLabel = new JLabel("Quản lý nhóm chat");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 22));
+        titleLabel.setForeground(new Color(0, 102, 255));
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        wrapper.add(titleLabel, BorderLayout.NORTH);
+
+        GroupManagementPanel groupPanel = new GroupManagementPanel();
+        wrapper.add(groupPanel, BorderLayout.CENTER);
+
+        // Nút quay lại
+        JButton backBtn = new JButton("Quay lại trang chủ");
+        backBtn.setFont(new Font("Arial", Font.BOLD, 14));
+        backBtn.setBackground(new Color(108, 117, 125));
+        backBtn.setForeground(Color.BLACK);
+        backBtn.setFocusPainted(false);
+        backBtn.addActionListener(e -> showHomePage());
+        JPanel backPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        backPanel.add(backBtn);
+        wrapper.add(backPanel, BorderLayout.SOUTH);
+
+        contentPanel.add(wrapper, BorderLayout.CENTER);
+        contentPanel.revalidate();
+        contentPanel.repaint();
+    }
     
     // private void openSpamReport() {
     //     SpamReportFrame frame = new SpamReportFrame();
