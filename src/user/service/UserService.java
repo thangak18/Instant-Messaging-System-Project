@@ -32,7 +32,7 @@ public class UserService {
     public boolean registerUser(String username, String password, String fullName, 
                                  String email, String address, Date birthDate, String gender) {
         
-        String sql = "INSERT INTO users (username, password, full_name, email, address, birth_date, gender, status) " +
+        String sql = "INSERT INTO users (username, password, full_name, email, address, dob, gender, status) " +
                      "VALUES (?, ?, ?, ?, ?, ?, ?, 'active')";
         
         Connection conn = null;
@@ -99,7 +99,7 @@ public class UserService {
         Map<String, Object> result = new HashMap<>();
         result.put("success", false);
         
-        String sql = "SELECT id, username, password, full_name, email, status FROM users " +
+        String sql = "SELECT user_id, username, password, full_name, email, status FROM users " +
                      "WHERE username = ? OR email = ?";
         
         Connection conn = null;
@@ -122,7 +122,7 @@ public class UserService {
             if (rs.next()) {
                 String storedPassword = rs.getString("password");
                 String status = rs.getString("status");
-                int userId = rs.getInt("id");
+                int userId = rs.getInt("user_id");
                 String username = rs.getString("username");
                 String fullName = rs.getString("full_name");
                 String email = rs.getString("email");
@@ -184,7 +184,7 @@ public class UserService {
                                   String address, Date birthDate, String gender) {
         
         String sql = "UPDATE users SET full_name = ?, email = ?, address = ?, " +
-                     "birth_date = ?, gender = ? WHERE username = ?";
+                     "dob = ?, gender = ? WHERE username = ?";
         
         Connection conn = null;
         PreparedStatement pstmt = null;
@@ -285,7 +285,7 @@ public class UserService {
         result.put("success", false);
         
         // Kiểm tra email có tồn tại không
-        String checkSql = "SELECT id, username, full_name FROM users WHERE email = ?";
+        String checkSql = "SELECT user_id, username, full_name FROM users WHERE email = ?";
         
         Connection conn = null;
         PreparedStatement pstmt = null;
@@ -308,7 +308,7 @@ public class UserService {
                 return result;
             }
             
-            int userId = rs.getInt("id");
+            int userId = rs.getInt("user_id");
             String username = rs.getString("username");
             String fullName = rs.getString("full_name");
             
