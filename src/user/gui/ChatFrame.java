@@ -1,5 +1,8 @@
 package user.gui;
 
+import user.socket.SocketClient;
+import user.socket.Message;
+
 import javax.swing.*;
 import java.awt.*;
 import java.time.LocalDateTime;
@@ -23,11 +26,16 @@ public class ChatFrame extends JInternalFrame {
     private JScrollPane scrollPane;
     private String currentChatUser;
     
-    public ChatFrame(String chatUser) {
+    // Socket client
+    private SocketClient socketClient;
+    private String myUsername;
+    
+    public ChatFrame(String chatUser, String myUsername) {
         this.currentChatUser = chatUser;
+        this.myUsername = myUsername;
         initializeComponents();
         setupLayout();
-        loadSampleMessages();
+        initializeSocket();
     }
     
     private void initializeComponents() {
@@ -164,6 +172,12 @@ public class ChatFrame extends JInternalFrame {
     private void sendMessage() {
         String message = messageField.getText().trim();
         if (!message.isEmpty()) {
+            // Gửi qua socket
+            if (socketClient != null && socketClient.isConnected()) {
+                socketClient.sendPrivateMessage(currentChatUser, message);
+            }
+            
+            // Hiển thị trong GUI
             addChatBubble(message, true, LocalDateTime.now());
             messageField.setText("");
             
@@ -173,6 +187,60 @@ public class ChatFrame extends JInternalFrame {
                 vertical.setValue(vertical.getMaximum());
             });
         }
+    }
+    
+    /**
+     * Khởi tạo socket connection
+     */
+    private void initializeSocket() {
+        socketClient = new SocketClient(myUsername, this::handleIncomingMessage);
+        
+        // Kết nối trong background thread
+        new Thread(() -> {
+            boolean connected = socketClient.connect();
+            if (!connected) {
+                SwingUtilities.invokeLater(() -> {
+                    JOptionPane.showMessageDialog(this,
+                        "Không thể kết nối đến server!\nVui lòng kiểm tra server đang chạy.",
+                        "Lỗi kết nối",
+                        JOptionPane.ERROR_MESSAGE);
+                });
+            }
+        }).start();
+    }
+    
+    /**
+     * Xử lý message nhận được từ server
+     */
+    private void handleIncomingMessage(Message message) {
+        SwingUtilities.invokeLater(() -> {
+            switch (message.getType()) {
+                case CHAT:
+                case PRIVATE_MESSAGE:
+                    // Chỉ hiển thị nếu message từ người đang chat
+                    if (message.getSender().equals(currentChatUser)) {
+                        addChatBubble(message.getContent(), false, LocalDateTime.now());
+                    }
+                    break;
+                    
+                case USER_JOINED:
+                    // Update status
+                    setTitle("Chat với " + currentChatUser + " - ● Online");
+                    break;
+                    
+                case USER_LEFT:
+                    // Update status
+                    setTitle("Chat với " + currentChatUser + " - ○ Offline");
+                    break;
+                    
+                case TYPING:
+                    // Show typing indicator (TODO)
+                    break;
+                    
+                default:
+                    break;
+            }
+        });
     }
     
     private void addChatBubble(String message, boolean isSent, LocalDateTime time) {
@@ -218,25 +286,5 @@ public class ChatFrame extends JInternalFrame {
         chatPanel.add(bubbleContainer);
         chatPanel.revalidate();
         chatPanel.repaint();
-    }
-    
-    private void loadSampleMessages() {
-        // Sample conversation
-        LocalDateTime now = LocalDateTime.now();
-        
-        addChatBubble("Chào bạn! Bạn có khỏe không?", false, now.minusMinutes(10));
-        addChatBubble("Chào bạn! Mình khỏe, cảm ơn nhé!", true, now.minusMinutes(9));
-        addChatBubble("Hôm nay thế nào?", false, now.minusMinutes(8));
-        addChatBubble("Tốt lắm! Bạn có rảnh không, mình muốn hỏi về project Java", true, now.minusMinutes(7));
-        addChatBubble("Có chứ! Bạn cần giúp gì?", false, now.minusMinutes(6));
-        addChatBubble("Mình đang làm đồ án chat app với Java Swing", true, now.minusMinutes(5));
-        addChatBubble("Nghe hay đấy! Bạn đã làm được những gì rồi?", false, now.minusMinutes(4));
-        addChatBubble("Mình đã thiết kế giao diện và database xong rồi!", true, now.minusMinutes(3));
-        
-        // Scroll to bottom
-        SwingUtilities.invokeLater(() -> {
-            JScrollBar vertical = scrollPane.getVerticalScrollBar();
-            vertical.setValue(vertical.getMaximum());
-        });
     }
 }

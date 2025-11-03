@@ -339,10 +339,10 @@ public class LoginFrame extends JFrame {
                             "Thành công",
                             JOptionPane.INFORMATION_MESSAGE);
                         
-                        // Đóng LoginFrame và mở UserMainFrame
+                        // Đóng LoginFrame và mở ZaloMainFrame (NEW!)
                         dispose();
                         SwingUtilities.invokeLater(() -> {
-                            UserMainFrame mainFrame = new UserMainFrame(username);
+                            ZaloMainFrame mainFrame = new ZaloMainFrame(username);
                             mainFrame.setVisible(true);
                         });
                         
