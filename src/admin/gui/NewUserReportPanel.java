@@ -1,3 +1,5 @@
+package admin.gui;
+
 import javax.swing.*;
 import javax.swing.border.Border;
 import javax.swing.border.EmptyBorder;
@@ -26,6 +28,12 @@ public class NewUserReportPanel extends JPanel {
     private JButton filterButton, refreshButton, exportButton;
 
     public NewUserReportPanel() {
+        setLayout(new BorderLayout());
+        JLabel label = new JLabel("Người dùng mới - Đang phát triển");
+        label.setFont(new Font("Arial", Font.BOLD, 18));
+        label.setHorizontalAlignment(SwingConstants.CENTER);
+        add(label, BorderLayout.CENTER);
+        
         initializeComponents();
         setupLayout();
         loadSampleData();

@@ -1,3 +1,5 @@
+package admin.gui;
+
 import javax.swing.*;
 import javax.swing.border.Border;
 import javax.swing.border.EmptyBorder;
@@ -120,6 +122,12 @@ public class SpamReportPanel extends JPanel {
         add(searchPanel, BorderLayout.NORTH);
         add(centerPanel, BorderLayout.CENTER);
         add(buttonPanel, BorderLayout.SOUTH);
+        
+        // --- THÊM LABEL THÔNG TIN PHÁT TRIỂN ---
+        JLabel devLabel = new JLabel("Báo cáo spam - Đang phát triển");
+        devLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        devLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        add(devLabel, BorderLayout.CENTER);
     }
 
     private void loadSampleData() {

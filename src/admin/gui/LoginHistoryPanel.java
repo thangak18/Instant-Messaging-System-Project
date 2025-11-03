@@ -1,6 +1,3 @@
-// Đổi tên file thành LoginHistoryPanel.java
-// package admin.gui;
-
 import javax.swing.*;
 import javax.swing.border.Border;
 import javax.swing.border.EmptyBorder;
@@ -84,23 +81,90 @@ public class LoginHistoryPanel extends JPanel {
     private void setupLayout() {
         // --- ÁP DỤNG BORDER VÀ PADDING ---
         setLayout(new BorderLayout(10, 10));
-        setBorder(new EmptyBorder(10, 10, 10, 10));
+        setBorder(new EmptyBorder(15, 15, 15, 15));
+        setBackground(new Color(248, 249, 250));
+
+        // Panel tìm kiếm và lọc
+        JPanel topPanel = createSearchPanel();
+        add(topPanel, BorderLayout.NORTH);
 
         // Panel Bảng
         JPanel centerPanel = new JPanel(new BorderLayout());
-        centerPanel.setBorder(createTitledBorder("Lịch sử đăng nhập"));
+        centerPanel.setBackground(Color.WHITE);
+        centerPanel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(Color.LIGHT_GRAY),
+            new EmptyBorder(10, 10, 10, 10)
+        ));
+        
+        JLabel tableTitle = new JLabel("📋 Lịch sử đăng nhập");
+        tableTitle.setFont(new Font("Arial", Font.BOLD, 16));
+        tableTitle.setForeground(ZALO_BLUE);
+        tableTitle.setBorder(new EmptyBorder(0, 0, 10, 0));
+        
         JScrollPane scrollPane = new JScrollPane(historyTable);
+        scrollPane.setBorder(null);
+        
+        centerPanel.add(tableTitle, BorderLayout.NORTH);
         centerPanel.add(scrollPane, BorderLayout.CENTER);
 
         // Panel nút chức năng
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
-        buttonPanel.setBorder(createTitledBorder("Chức năng"));
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
+        buttonPanel.setOpaque(false);
         buttonPanel.add(refreshButton);
         buttonPanel.add(exportButton);
 
-        // Chỉ thêm bảng và nút chức năng vào panel chính
         add(centerPanel, BorderLayout.CENTER);
         add(buttonPanel, BorderLayout.SOUTH);
+    }
+
+    private JPanel createSearchPanel() {
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(Color.LIGHT_GRAY),
+            new EmptyBorder(15, 15, 15, 15)
+        ));
+
+        JLabel titleLabel = new JLabel("🔍 Tìm kiếm & Lọc");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        titleLabel.setForeground(ZALO_BLUE);
+
+        JPanel formPanel = new JPanel(new GridBagLayout());
+        formPanel.setOpaque(false);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        // Row 1: Search field
+        gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 0;
+        JLabel searchLabel = new JLabel("Tìm kiếm:");
+        searchLabel.setFont(new Font("Arial", Font.BOLD, 12));
+        formPanel.add(searchLabel, gbc);
+
+        gbc.gridx = 1; gbc.weightx = 1;
+        searchField.setPreferredSize(new Dimension(250, 30));
+        formPanel.add(searchField, gbc);
+
+        gbc.gridx = 2; gbc.weightx = 0;
+        formPanel.add(searchButton, gbc);
+
+        // Row 2: Sort combo
+        gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = 0;
+        JLabel sortLabel = new JLabel("Sắp xếp:");
+        sortLabel.setFont(new Font("Arial", Font.BOLD, 12));
+        formPanel.add(sortLabel, gbc);
+
+        gbc.gridx = 1; gbc.weightx = 1;
+        sortCombo.setPreferredSize(new Dimension(250, 30));
+        formPanel.add(sortCombo, gbc);
+
+        gbc.gridx = 2; gbc.weightx = 0;
+        formPanel.add(filterButton, gbc);
+
+        panel.add(titleLabel, BorderLayout.NORTH);
+        panel.add(formPanel, BorderLayout.CENTER);
+
+        return panel;
     }
 
     // --- CÁC HÀM HỖ TRỢ TẠO KIỂU (HELPER METHODS) ---

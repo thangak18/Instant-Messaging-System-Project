@@ -1,3 +1,5 @@
+package admin.gui;
+
 import javax.swing.*;
 import javax.swing.border.Border;
 import javax.swing.border.EmptyBorder;
@@ -21,6 +23,12 @@ public class StatisticsPanel extends JPanel {
     private BarChartPanel chartPanel; // Panel tùy chỉnh để vẽ
 
     public StatisticsPanel() {
+        setLayout(new BorderLayout());
+        JLabel label = new JLabel("Thống kê người dùng - Đang phát triển");
+        label.setFont(new Font("Arial", Font.BOLD, 18));
+        label.setHorizontalAlignment(SwingConstants.CENTER);
+        add(label, BorderLayout.CENTER);
+        
         initializeComponents();
         setupLayout();
         setupEventHandlers();

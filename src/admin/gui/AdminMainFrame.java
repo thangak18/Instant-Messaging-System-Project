@@ -1,133 +1,225 @@
-// package admin.gui;
+package admin.gui;
 
 import javax.swing.*;
+import javax.swing.border.*;
 import java.awt.*;
 
 /**
- * Giao diện chính của phân hệ quản trị - PHIÊN BẢN 1
- * Chỉ có giao diện, chưa có logic xử lý
+ * Giao diện chính của phân hệ quản trị - Tích hợp đầy đủ các chức năng
  */
 public class AdminMainFrame extends JFrame {
+    private static final Color ZALO_BLUE = new Color(0, 102, 255);
+    private static final Color SUCCESS_GREEN = new Color(40, 167, 69);
+    private static final Color WARNING_ORANGE = new Color(255, 193, 7);
+    private static final Color DANGER_RED = new Color(220, 53, 69);
+    private static final Color LIGHT_GRAY = new Color(248, 249, 250);
+    private static final Color INFO_CYAN = new Color(23, 162, 184);
+    
     private JMenuBar menuBar;
     private JPanel contentPanel;
     private JLabel statusLabel;
-
-    // Thêm biến trang chủ
     private JPanel homePanel;
 
     public AdminMainFrame() {
         initializeComponents();
         setupLayout();
         setupMenu();
-        showHomePage(); // Hiển thị trang chủ khi khởi động
+        showHomePage();
     }
 
-    // Thêm hàm tạo giao diện trang chủ với các nút chức năng
     private void showHomePage() {
         contentPanel.removeAll();
 
-        homePanel = new JPanel();
-        homePanel.setLayout(new GridBagLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(20, 20, 20, 20);
+        homePanel = new JPanel(new BorderLayout(15, 15));
+        homePanel.setBackground(LIGHT_GRAY);
+        homePanel.setBorder(new EmptyBorder(20, 20, 20, 20));
 
-        // Tiêu đề trang chủ
-        JLabel titleLabel = new JLabel("Trang chủ quản trị hệ thống chat");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 28));
-        titleLabel.setForeground(new Color(0, 102, 255));
-        gbc.gridx = 0; gbc.gridy = 0;
-        homePanel.add(titleLabel, gbc);
+        // Header với tiêu đề và thời gian
+        JPanel headerPanel = createHeaderPanel();
+        homePanel.add(headerPanel, BorderLayout.NORTH);
 
-        // Nút lựa chọn chức năng
-        JButton userBtn = new JButton("Quản lý người dùng");
-        JButton historyBtn = new JButton("Xem lịch sử đăng nhập");
-        JButton groupBtn = new JButton("Xem danh sách nhóm chat");
-        JButton spamBtn = new JButton("Xem danh sách báo cáo spam");
-        JButton newUserBtn = new JButton("Xem danh sách người dùng mới");
-        JButton statsBtn = new JButton("Thống kê người dùng");
-        JButton friendStasBtn = new JButton("Danh sách người dùng và số lượng bạn bè");
-        JButton activeUserReport = new JButton("Xem danh sách người dùng hoạt động");
-        JButton activeUserReportChart = new JButton("Xem biểu đồ người dùng hoạt động");
-        
-        userBtn.setFont(new Font("Arial", Font.BOLD, 18));
-        historyBtn.setFont(new Font("Arial", Font.BOLD, 18));
-        groupBtn.setFont(new Font("Arial", Font.BOLD, 18));
-        spamBtn.setFont(new Font("Arial", Font.BOLD, 18));
-        newUserBtn.setFont(new Font("Arial", Font.BOLD, 18));
-        statsBtn.setFont(new Font("Arial", Font.BOLD, 18));
-        friendStasBtn.setFont(new Font("Arial", Font.BOLD, 18));
-        activeUserReport.setFont(new Font("Arial", Font.BOLD, 18));
-        activeUserReportChart.setFont(new Font("Arial", Font.BOLD, 18));
+        // Main content
+        JPanel mainPanel = new JPanel(new BorderLayout(15, 15));
+        mainPanel.setOpaque(false);
 
-         // ÁP DỤNG MÀU SẮC CHO NÚT
+        // Statistics cards
+        JPanel statsPanel = createStatisticsPanel();
+        mainPanel.add(statsPanel, BorderLayout.NORTH);
 
-        userBtn.setBackground(new Color(0, 102, 255));
-        userBtn.setForeground(Color.BLACK);
-        historyBtn.setBackground(new Color(0, 102, 255));
-        historyBtn.setForeground(Color.BLACK);
-        groupBtn.setBackground(new Color(0, 102, 255));
-        groupBtn.setForeground(Color.BLACK);
-        spamBtn.setBackground(new Color(0, 102, 255));
-        spamBtn.setForeground(Color.BLACK);
-        newUserBtn.setBackground(new Color(0, 102, 255));
-        newUserBtn.setForeground(Color.BLACK);
-        statsBtn.setBackground(new Color(0, 102, 255));
-        statsBtn.setForeground(Color.BLACK);
-        friendStasBtn.setBackground(new Color(0, 102, 255));
-        friendStasBtn.setForeground(Color.BLACK);
-        activeUserReport.setBackground(new Color(0, 102, 255));
-        activeUserReport.setForeground(Color.BLACK);
-        activeUserReportChart.setBackground(new Color(0, 102, 255));
-        activeUserReportChart.setForeground(Color.BLACK);
+        // Quick actions grid
+        JPanel actionsPanel = createQuickActionsPanel();
+        mainPanel.add(actionsPanel, BorderLayout.CENTER);
 
-        userBtn.setFocusPainted(false);
-        historyBtn.setFocusPainted(false);
-        groupBtn.setFocusPainted(false);
-        spamBtn.setFocusPainted(false);
-        newUserBtn.setFocusPainted(false);
-        statsBtn.setFocusPainted(false);
-        friendStasBtn.setFocusPainted(false);
-        activeUserReport.setFocusPainted(false);
-        activeUserReportChart.setFocusPainted(false);
-
-         // Thêm event handlers cho các nút chức năng
-
-        userBtn.addActionListener(e -> openUserManagement());
-        historyBtn.addActionListener(e -> openLoginHistory());
-        groupBtn.addActionListener(e -> openGroupManagement());
-        spamBtn.addActionListener(e -> openSpamReport());
-        newUserBtn.addActionListener(e -> openNewUserReport());
-        statsBtn.addActionListener(e -> openStatistics());
-        friendStasBtn.addActionListener(e -> openFriendStats());
-        activeUserReport.addActionListener(e -> openActiveUserReport());
-        activeUserReportChart.addActionListener(e -> openActiveUserChart());
-
-        gbc.gridx = 0; gbc.gridy = 1;
-        homePanel.add(userBtn, gbc);
-        gbc.gridx = 0; gbc.gridy = 2;
-        homePanel.add(historyBtn, gbc);
-        gbc.gridx = 0; gbc.gridy = 3;
-        homePanel.add(groupBtn, gbc);
-        gbc.gridx = 0; gbc.gridy = 4;
-        homePanel.add(spamBtn, gbc);
-        gbc.gridx = 0; gbc.gridy = 5;
-        homePanel.add(newUserBtn, gbc);
-        gbc.gridx = 0; gbc.gridy = 6;
-        homePanel.add(statsBtn, gbc);
-        gbc.gridx = 0; gbc.gridy = 7;
-        homePanel.add(friendStasBtn, gbc);
-        gbc.gridx = 0; gbc.gridy = 8;
-        homePanel.add(activeUserReport, gbc);
-        gbc.gridx = 0; gbc.gridy = 9;
-        homePanel.add(activeUserReportChart, gbc);
+        homePanel.add(mainPanel, BorderLayout.CENTER);
 
         contentPanel.add(homePanel, BorderLayout.CENTER);
         contentPanel.revalidate();
         contentPanel.repaint();
     }
 
+    private JPanel createHeaderPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 0, 3, 0, ZALO_BLUE),
+            new EmptyBorder(20, 25, 20, 25)
+        ));
+
+        JLabel titleLabel = new JLabel("🏠 Trang chủ quản trị hệ thống chat");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 28));
+        titleLabel.setForeground(ZALO_BLUE);
+
+        JLabel timeLabel = new JLabel(java.time.LocalDateTime.now().format(
+            java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss - dd/MM/yyyy")
+        ));
+        timeLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+        timeLabel.setForeground(Color.GRAY);
+
+        panel.add(titleLabel, BorderLayout.WEST);
+        panel.add(timeLabel, BorderLayout.EAST);
+
+        return panel;
+    }
+
+    private JPanel createStatisticsPanel() {
+        JPanel panel = new JPanel(new GridLayout(1, 4, 15, 0));
+        panel.setOpaque(false);
+
+        panel.add(createStatCard("Người dùng", "1,234", ZALO_BLUE, "👥"));
+        panel.add(createStatCard("Đang online", "87", SUCCESS_GREEN, "🟢"));
+        panel.add(createStatCard("Nhóm chat", "45", WARNING_ORANGE, "💬"));
+        panel.add(createStatCard("Tin nhắn hôm nay", "2,156", DANGER_RED, "📨"));
+
+        return panel;
+    }
+
+    private JPanel createStatCard(String title, String value, Color color, String icon) {
+        JPanel card = new JPanel(new BorderLayout(10, 10));
+        card.setBackground(Color.WHITE);
+        card.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(color, 2),
+            new EmptyBorder(20, 20, 20, 20)
+        ));
+
+        // Top section with icon and title
+        JPanel topPanel = new JPanel(new BorderLayout());
+        topPanel.setOpaque(false);
+
+        JLabel iconLabel = new JLabel(icon);
+        iconLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 32));
+
+        JLabel titleLabel = new JLabel(title);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 13));
+        titleLabel.setForeground(Color.GRAY);
+
+        topPanel.add(iconLabel, BorderLayout.WEST);
+        topPanel.add(titleLabel, BorderLayout.CENTER);
+
+        // Value label
+        JLabel valueLabel = new JLabel(value);
+        valueLabel.setFont(new Font("Arial", Font.BOLD, 32));
+        valueLabel.setForeground(color);
+        valueLabel.setHorizontalAlignment(SwingConstants.CENTER);
+
+        card.add(topPanel, BorderLayout.NORTH);
+        card.add(valueLabel, BorderLayout.CENTER);
+
+        return card;
+    }
+
+    private JPanel createQuickActionsPanel() {
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+        panel.setOpaque(false);
+
+        JLabel titleLabel = new JLabel("⚡ Thao tác nhanh");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 20));
+        titleLabel.setForeground(ZALO_BLUE);
+        titleLabel.setBorder(new EmptyBorder(10, 0, 15, 0));
+
+        JPanel gridPanel = new JPanel(new GridLayout(3, 3, 15, 15));
+        gridPanel.setOpaque(false);
+
+        gridPanel.add(createActionCard("👤 Quản lý người dùng", 
+            "Quản lý thông tin người dùng", ZALO_BLUE, e -> openUserManagement()));
+        gridPanel.add(createActionCard("📜 Lịch sử đăng nhập", 
+            "Xem lịch sử truy cập", SUCCESS_GREEN, e -> openLoginHistory()));
+        gridPanel.add(createActionCard("👥 Danh sách nhóm", 
+            "Quản lý nhóm chat", WARNING_ORANGE, e -> openGroupManagement()));
+        gridPanel.add(createActionCard("🔔 Báo cáo spam", 
+            "Xem các báo cáo spam", DANGER_RED, e -> openSpamReport()));
+        gridPanel.add(createActionCard("🆕 Người dùng mới", 
+            "Danh sách người dùng mới", INFO_CYAN, e -> openNewUserReport()));
+        gridPanel.add(createActionCard("📊 Thống kê", 
+            "Thống kê hệ thống", new Color(111, 66, 193), e -> openStatistics()));
+        gridPanel.add(createActionCard("👨‍💼 Bạn bè", 
+            "Thống kê bạn bè", new Color(255, 99, 132), e -> openFriendStats()));
+        gridPanel.add(createActionCard("📈 Người dùng hoạt động", 
+            "Báo cáo hoạt động", new Color(54, 162, 235), e -> openActiveUserReport()));
+        gridPanel.add(createActionCard("📉 Biểu đồ hoạt động", 
+            "Xem biểu đồ chi tiết", new Color(75, 192, 192), e -> openActiveUserChart()));
+
+        panel.add(titleLabel, BorderLayout.NORTH);
+        panel.add(gridPanel, BorderLayout.CENTER);
+
+        return panel;
+    }
+
+    private JPanel createActionCard(String title, String description, Color color, 
+                                    java.awt.event.ActionListener action) {
+        JPanel card = new JPanel();
+        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setBackground(Color.WHITE);
+        card.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(color.brighter(), 2),
+            new EmptyBorder(20, 15, 20, 15)
+        ));
+        card.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        JLabel titleLabel = new JLabel(title);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        titleLabel.setForeground(color);
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel descLabel = new JLabel(description);
+        descLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        descLabel.setForeground(Color.GRAY);
+        descLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        card.add(titleLabel);
+        card.add(Box.createVerticalStrut(8));
+        card.add(descLabel);
+
+        // Hover effect
+        card.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent e) {
+                card.setBackground(color.brighter().brighter());
+                card.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(color, 3),
+                    new EmptyBorder(20, 15, 20, 15)
+                ));
+            }
+
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent e) {
+                card.setBackground(Color.WHITE);
+                card.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(color.brighter(), 2),
+                    new EmptyBorder(20, 15, 20, 15)
+                ));
+            }
+
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                action.actionPerformed(null);
+            }
+        });
+
+        return card;
+    }
+
     private void initializeComponents() {
-        setTitle("Hệ thống quản trị - Chat System (Phiên bản 1)");
+        setTitle("Hệ thống quản trị - Chat System");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1200, 800);
         setLocationRelativeTo(null);
@@ -144,335 +236,96 @@ public class AdminMainFrame extends JFrame {
     }
 
     private void setupMenu() {
-        // Menu Quản lý người dùng
         JMenu userMenu = new JMenu("Lựa chọn chức năng");
-        JMenuItem userListMenuItem = new JMenuItem("Quản lý người dùng");
-        JMenuItem loginHistoryMenuItem = new JMenuItem("Lịch sử đăng nhập");
-        JMenuItem groupListMenuItem = new JMenuItem("Xem danh sách nhóm chat");
-        JMenuItem spamReportMenuItem = new JMenuItem("Xem danh sách báo cáo spam");
-        JMenuItem newUserReportMenuItem = new JMenuItem("Xem danh sách người dùng mới");
-        JMenuItem statisticsMenuItem = new JMenuItem("Thống kê người dùng");
-        JMenuItem friendStatsMenuItem = new JMenuItem("Danh sách người dùng và số lượng bạn bè");
-        JMenuItem activeUserReportMenuItem = new JMenuItem("Xem danh sách người dùng hoạt động");
-        JMenuItem activeUserChartMenuItem = new JMenuItem("Xem biểu đồ người dùng hoạt động");
-        userMenu.add(userListMenuItem);
-        // userMenu.add(new JMenuItem("Thêm người dùng"));
-        // userMenu.add(new JMenuItem("Cập nhật người dùng"));
-        // userMenu.add(new JMenuItem("Xóa người dùng"));
-        // userMenu.addSeparator();
-        // userMenu.add(new JMenuItem("Khóa/Mở khóa tài khoản"));
-        // userMenu.add(new JMenuItem("Cập nhật mật khẩu"));
-        // userMenu.add(loginHistoryMenuItem);
-        // userMenu.add(new JMenuItem("Danh sách bạn bè"));
-        userMenu.add(loginHistoryMenuItem);
-        userMenu.add(groupListMenuItem);
-        userMenu.add(spamReportMenuItem);
-        userMenu.add(newUserReportMenuItem);
-        userMenu.add(statisticsMenuItem);
-        userMenu.add(friendStatsMenuItem);
-        userMenu.add(activeUserReportMenuItem);
-        userMenu.add(activeUserChartMenuItem);
-
-        // Thêm event handler cho chức năng quản lý người dùng (quan trọng)
-        userListMenuItem.addActionListener(e -> openUserManagement());
-        loginHistoryMenuItem.addActionListener(e-> openLoginHistory());
-        groupListMenuItem.addActionListener(e-> openGroupManagement());
-        spamReportMenuItem.addActionListener(e-> openSpamReport());
-        newUserReportMenuItem.addActionListener(e-> openNewUserReport());
-        statisticsMenuItem.addActionListener(e-> openStatistics());
-        friendStatsMenuItem.addActionListener(e-> openFriendStats());
-        activeUserReportMenuItem.addActionListener(e-> openActiveUserReport());
-        activeUserChartMenuItem.addActionListener(e-> openActiveUserChart());
         
-        // // Menu Quản lý nhóm
-        //JMenu groupMenu = new JMenu("Quản lý nhóm");
-        //JMenuItem groupListMenuItem = new JMenuItem("Danh sách nhóm chat");
-        //groupMenu.add(groupListMenuItem);
-        // groupMenu.add(new JMenuItem("Thành viên nhóm"));
-        // groupMenu.add(new JMenuItem("Admin nhóm"));
+        addMenuItem(userMenu, "Quản lý người dùng", e -> openUserManagement());
+        addMenuItem(userMenu, "Lịch sử đăng nhập", e -> openLoginHistory());
+        addMenuItem(userMenu, "Xem danh sách nhóm chat", e -> openGroupManagement());
+        addMenuItem(userMenu, "Xem danh sách báo cáo spam", e -> openSpamReport());
+        addMenuItem(userMenu, "Xem danh sách người dùng mới", e -> openNewUserReport());
+        addMenuItem(userMenu, "Thống kê người dùng", e -> openStatistics());
+        addMenuItem(userMenu, "Danh sách người dùng và số lượng bạn bè", e -> openFriendStats());
+        addMenuItem(userMenu, "Xem danh sách người dùng hoạt động", e -> openActiveUserReport());
+        addMenuItem(userMenu, "Xem biểu đồ người dùng hoạt động", e -> openActiveUserChart());
         
-        // // Menu Báo cáo
-        // JMenu reportMenu = new JMenu("Báo cáo");
-        // JMenuItem spamReportMenuItem = new JMenuItem("Báo cáo spam");
-        // reportMenu.add(spamReportMenuItem);
-        // reportMenu.add(new JMenuItem("Người dùng mới"));
-        // reportMenu.add(new JMenuItem("Người dùng hoạt động"));
-        // reportMenu.add(new JMenuItem("Thống kê bạn bè"));
-        
-        // // Menu Thống kê
-        // JMenu statsMenu = new JMenu("Thống kê");
-        // JMenuItem statisticsMenuItem = new JMenuItem("Biểu đồ đăng ký theo năm");
-        // statsMenu.add(statisticsMenuItem);
-        // statsMenu.add(new JMenuItem("Biểu đồ hoạt động theo năm"));
-        
-        // // Menu Hệ thống
-        // JMenu systemMenu = new JMenu("Hệ thống");
-        // systemMenu.add(new JMenuItem("Đăng xuất"));
-        // JMenuItem exitMenuItem = new JMenuItem("Thoát");
-        // systemMenu.add(exitMenuItem);
-        
-        // // Thêm event handlers
-        // userListMenuItem.addActionListener(e -> openUserManagement());
-        // loginHistoryMenuItem.addActionListener(e -> openLoginHistory());
-        // groupListMenuItem.addActionListener(e -> openGroupManagement());
-        // spamReportMenuItem.addActionListener(e -> openSpamReport());
-        // statisticsMenuItem.addActionListener(e -> openStatistics());
-        // exitMenuItem.addActionListener(e -> System.exit(0));
-        
-         menuBar.add(userMenu);
-        // menuBar.add(groupMenu);
-        // menuBar.add(reportMenu);
-        // menuBar.add(statsMenu);
-        // menuBar.add(systemMenu);
+        menuBar.add(userMenu);
     }
-    
 
-    //Hàm này giải quyết giao diện quản lý người dùng
+    private void addMenuItem(JMenu menu, String text, java.awt.event.ActionListener action) {
+        JMenuItem item = new JMenuItem(text);
+        item.addActionListener(action);
+        menu.add(item);
+    }
+
+    // ==================== MỞ CÁC PANEL CHỨC NĂNG ====================
+
     private void openUserManagement() {
-        contentPanel.removeAll();
-        JPanel wrapper = new JPanel(new BorderLayout());
-        // Tiêu đề trang
-        JLabel titleLabel = new JLabel("Quản lý người dùng");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 22));
-        titleLabel.setForeground(new Color(0, 102, 255));
-        titleLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        wrapper.add(titleLabel, BorderLayout.NORTH);
-
-        UserManagementPanel userPanel = new UserManagementPanel();
-        wrapper.add(userPanel, BorderLayout.CENTER);
-
-        // Nút quay lại
-        JButton backBtn = new JButton("Quay lại trang chủ");
-        backBtn.setFont(new Font("Arial", Font.BOLD, 14));
-        backBtn.setBackground(new Color(108, 117, 125));
-        backBtn.setForeground(Color.BLACK);
-        backBtn.setFocusPainted(false);
-        backBtn.addActionListener(e -> showHomePage());
-        JPanel backPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        backPanel.add(backBtn);
-        wrapper.add(backPanel, BorderLayout.SOUTH);
-
-        contentPanel.add(wrapper, BorderLayout.CENTER);
-        contentPanel.revalidate();
-        contentPanel.repaint();
+        openPanel("Quản lý người dùng", loadPanelByClassName("admin.gui.UserManagementPanel"));
     }
 
-    //Hàm này giải quyết giao diện lịch sử đăng nhập
     private void openLoginHistory() {
-        contentPanel.removeAll();
-        JPanel wrapper = new JPanel(new BorderLayout());
-        // Tiêu đề trang
-        JLabel titleLabel = new JLabel("Lịch sử đăng nhập");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 22));
-        titleLabel.setForeground(new Color(0, 102, 255));
-        titleLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        wrapper.add(titleLabel, BorderLayout.NORTH);
-
-        LoginHistoryPanel historyPanel = new LoginHistoryPanel();
-        wrapper.add(historyPanel, BorderLayout.CENTER);
-
-        // Nút quay lại
-        JButton backBtn = new JButton("Quay lại trang chủ");
-        backBtn.setFont(new Font("Arial", Font.BOLD, 14));
-        backBtn.setBackground(new Color(108, 117, 125));
-        backBtn.setForeground(Color.BLACK);
-        backBtn.setFocusPainted(false);
-        backBtn.addActionListener(e -> showHomePage());
-        JPanel backPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        backPanel.add(backBtn);
-        wrapper.add(backPanel, BorderLayout.SOUTH);
-
-        contentPanel.add(wrapper, BorderLayout.CENTER);
-        contentPanel.revalidate();
-        contentPanel.repaint();
+        openPanel("Lịch sử đăng nhập", loadPanelByClassName("admin.gui.LoginHistoryPanel"));
     }
-    
+
     private void openGroupManagement() {
-        contentPanel.removeAll();
-        JPanel wrapper = new JPanel(new BorderLayout());
-        // Tiêu đề trang
-        JLabel titleLabel = new JLabel("Quản lý nhóm chat");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 22));
-        titleLabel.setForeground(new Color(0, 102, 255));
-        titleLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        wrapper.add(titleLabel, BorderLayout.NORTH);
-
-        GroupManagementPanel groupPanel = new GroupManagementPanel();
-        wrapper.add(groupPanel, BorderLayout.CENTER);
-
-        // Nút quay lại
-        JButton backBtn = new JButton("Quay lại trang chủ");
-        backBtn.setFont(new Font("Arial", Font.BOLD, 14));
-        backBtn.setBackground(new Color(108, 117, 125));
-        backBtn.setForeground(Color.BLACK);
-        backBtn.setFocusPainted(false);
-        backBtn.addActionListener(e -> showHomePage());
-        JPanel backPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        backPanel.add(backBtn);
-        wrapper.add(backPanel, BorderLayout.SOUTH);
-
-        contentPanel.add(wrapper, BorderLayout.CENTER);
-        contentPanel.revalidate();
-        contentPanel.repaint();
+        openPanel("Quản lý nhóm chat", loadPanelByClassName("admin.gui.GroupManagementPanel"));
     }
-    
+
     private void openSpamReport() {
-        contentPanel.removeAll();
-        JPanel wrapper = new JPanel(new BorderLayout());
-        // Tiêu đề trang
-        JLabel titleLabel = new JLabel("Xem danh sách báo cáo spam");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 22));
-        titleLabel.setForeground(new Color(0, 102, 255));
-        titleLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        wrapper.add(titleLabel, BorderLayout.NORTH);
-
-        SpamReportPanel spamPanel = new SpamReportPanel();
-        wrapper.add(spamPanel, BorderLayout.CENTER);
-
-        // Nút quay lại
-        JButton backBtn = new JButton("Quay lại trang chủ");
-        backBtn.setFont(new Font("Arial", Font.BOLD, 14));
-        backBtn.setBackground(new Color(108, 117, 125));
-        backBtn.setForeground(Color.BLACK);
-        backBtn.setFocusPainted(false);
-        backBtn.addActionListener(e -> showHomePage());
-        JPanel backPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        backPanel.add(backBtn);
-        wrapper.add(backPanel, BorderLayout.SOUTH);
-
-        contentPanel.add(wrapper, BorderLayout.CENTER);
-        contentPanel.revalidate();
-        contentPanel.repaint();
+        openPanel("Xem danh sách báo cáo spam", loadPanelByClassName("admin.gui.SpamReportPanel"));
     }
 
     private void openNewUserReport() {
-        contentPanel.removeAll();
-        JPanel wrapper = new JPanel(new BorderLayout());
-        // Tiêu đề trang
-        JLabel titleLabel = new JLabel("Xem danh sách người dùng mới");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 22));
-        titleLabel.setForeground(new Color(0, 102, 255));
-        titleLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        wrapper.add(titleLabel, BorderLayout.NORTH);
-
-        NewUserReportPanel newUserPanel = new NewUserReportPanel();
-        wrapper.add(newUserPanel, BorderLayout.CENTER);
-
-        // Nút quay lại
-        JButton backBtn = new JButton("Quay lại trang chủ");
-        backBtn.setFont(new Font("Arial", Font.BOLD, 14));
-        backBtn.setBackground(new Color(108, 117, 125));
-        backBtn.setForeground(Color.BLACK);
-        backBtn.setFocusPainted(false);
-        backBtn.addActionListener(e -> showHomePage());
-        JPanel backPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        backPanel.add(backBtn);
-        wrapper.add(backPanel, BorderLayout.SOUTH);
-
-        contentPanel.add(wrapper, BorderLayout.CENTER);
-        contentPanel.revalidate();
-        contentPanel.repaint();
+        openPanel("Xem danh sách người dùng mới", loadPanelByClassName("admin.gui.NewUserReportPanel"));
     }
-    
-   private void openStatistics() {
-        contentPanel.removeAll();
-        JPanel wrapper = new JPanel(new BorderLayout());
-        // Tiêu đề trang
-        JLabel titleLabel = new JLabel("Thống kê người dùng");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 22));
-        titleLabel.setForeground(new Color(0, 102, 255));
-        titleLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        wrapper.add(titleLabel, BorderLayout.NORTH);
 
-        StatisticsPanel statsPanel = new StatisticsPanel();
-        wrapper.add(statsPanel, BorderLayout.CENTER);
-
-        // Nút quay lại
-        JButton backBtn = new JButton("Quay lại trang chủ");
-        backBtn.setFont(new Font("Arial", Font.BOLD, 14));
-        backBtn.setBackground(new Color(108, 117, 125));
-        backBtn.setForeground(Color.BLACK);
-        backBtn.setFocusPainted(false);
-        backBtn.addActionListener(e -> showHomePage());
-        JPanel backPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        backPanel.add(backBtn);
-        wrapper.add(backPanel, BorderLayout.SOUTH);
-
-        contentPanel.add(wrapper, BorderLayout.CENTER);
-        contentPanel.revalidate();
-        contentPanel.repaint();
+    private void openStatistics() {
+        openPanel("Thống kê người dùng", loadPanelByClassName("admin.gui.StatisticsPanel"));
     }
 
     private void openFriendStats() {
-        contentPanel.removeAll();
-        JPanel wrapper = new JPanel(new BorderLayout());
-        // Tiêu đề trang
-        JLabel titleLabel = new JLabel("Thống kê bạn bè");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 22));
-        titleLabel.setForeground(new Color(0, 102, 255));
-        titleLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        wrapper.add(titleLabel, BorderLayout.NORTH);
-
-        FriendStatsPanel friendStatsPanel = new FriendStatsPanel();
-        wrapper.add(friendStatsPanel, BorderLayout.CENTER);
-
-        // Nút quay lại
-        JButton backBtn = new JButton("Quay lại trang chủ");
-        backBtn.setFont(new Font("Arial", Font.BOLD, 14));
-        backBtn.setBackground(new Color(108, 117, 125));
-        backBtn.setForeground(Color.BLACK);
-        backBtn.setFocusPainted(false);
-        backBtn.addActionListener(e -> showHomePage());
-        JPanel backPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        backPanel.add(backBtn);
-        wrapper.add(backPanel, BorderLayout.SOUTH);
-
-        contentPanel.add(wrapper, BorderLayout.CENTER);
-        contentPanel.revalidate();
-        contentPanel.repaint();
+        openPanel("Thống kê bạn bè", loadPanelByClassName("admin.gui.FriendStatsPanel"));
     }
 
     private void openActiveUserReport() {
-        contentPanel.removeAll();
-        JPanel wrapper = new JPanel(new BorderLayout());
-        // Tiêu đề trang
-        JLabel titleLabel = new JLabel("Báo cáo người dùng hoạt động");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 22));
-        titleLabel.setForeground(new Color(0, 102, 255));
-        titleLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        wrapper.add(titleLabel, BorderLayout.NORTH);
-
-        ActiveUserReportPanel activeUserPanel = new ActiveUserReportPanel();
-        wrapper.add(activeUserPanel, BorderLayout.CENTER);
-
-        // Nút quay lại
-        JButton backBtn = new JButton("Quay lại trang chủ");
-        backBtn.setFont(new Font("Arial", Font.BOLD, 14));
-        backBtn.setBackground(new Color(108, 117, 125));
-        backBtn.setForeground(Color.BLACK);
-        backBtn.setFocusPainted(false);
-        backBtn.addActionListener(e -> showHomePage());
-        JPanel backPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        backPanel.add(backBtn);
-        wrapper.add(backPanel, BorderLayout.SOUTH);
-
-        contentPanel.add(wrapper, BorderLayout.CENTER);
-        contentPanel.revalidate();
-        contentPanel.repaint();
+        openPanel("Báo cáo người dùng hoạt động", loadPanelByClassName("admin.gui.ActiveUserReportPanel"));
     }
 
     private void openActiveUserChart() {
+        openPanel("Biểu đồ người dùng hoạt động", loadPanelByClassName("admin.gui.ActiveUserChartPanel"));
+    }
+
+    // ==================== HELPER METHODS ====================
+
+    private JPanel loadPanelByClassName(String className) {
+        try {
+            Class<?> clazz = Class.forName(className);
+            Object instance = clazz.getDeclaredConstructor().newInstance();
+            if (instance instanceof JPanel) {
+                return (JPanel) instance;
+            } else {
+                return createErrorPanel("Class " + className + " không phải là JPanel");
+            }
+        } catch (ClassNotFoundException e) {
+            return createErrorPanel("Chức năng đang phát triển - Class chưa tồn tại: " + className);
+        } catch (Exception e) {
+            return createErrorPanel("Lỗi khi tạo panel: " + e.getMessage());
+        }
+    }
+
+    private void openPanel(String title, JPanel panel) {
         contentPanel.removeAll();
         JPanel wrapper = new JPanel(new BorderLayout());
-        // Tiêu đề trang
-        JLabel titleLabel = new JLabel("Biểu đồ người dùng hoạt động");
+
+        // Tiêu đề
+        JLabel titleLabel = new JLabel(title);
         titleLabel.setFont(new Font("Arial", Font.BOLD, 22));
         titleLabel.setForeground(new Color(0, 102, 255));
         titleLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         wrapper.add(titleLabel, BorderLayout.NORTH);
 
-        ActiveUserChartPanel activeUserChartPanel = new ActiveUserChartPanel();
-        wrapper.add(activeUserChartPanel, BorderLayout.CENTER);
+        // Nội dung
+        wrapper.add(panel, BorderLayout.CENTER);
 
         // Nút quay lại
         JButton backBtn = new JButton("Quay lại trang chủ");
@@ -481,6 +334,7 @@ public class AdminMainFrame extends JFrame {
         backBtn.setForeground(Color.BLACK);
         backBtn.setFocusPainted(false);
         backBtn.addActionListener(e -> showHomePage());
+        
         JPanel backPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         backPanel.add(backBtn);
         wrapper.add(backPanel, BorderLayout.SOUTH);
@@ -489,7 +343,17 @@ public class AdminMainFrame extends JFrame {
         contentPanel.revalidate();
         contentPanel.repaint();
     }
-    
+
+    private JPanel createErrorPanel(String message) {
+        JPanel panel = new JPanel(new BorderLayout());
+        JLabel label = new JLabel("<html><center>" + message + "<br><br>Vui lòng tạo file class tương ứng</center></html>");
+        label.setFont(new Font("Arial", Font.PLAIN, 16));
+        label.setForeground(Color.RED);
+        label.setHorizontalAlignment(SwingConstants.CENTER);
+        panel.add(label, BorderLayout.CENTER);
+        return panel;
+    }
+
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
             try {
