@@ -162,7 +162,7 @@ public class AdminMainFrame extends JFrame {
 
         return card;
     }
-
+    //
     private JPanel createQuickActionsPanel() {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setOpaque(false);
