@@ -3,8 +3,6 @@ package admin.gui;
 import javax.swing.*;
 import javax.swing.border.*;
 import java.awt.*;
-import database.DatabaseConnection; // Uncomment khi có class này
-import database.UserDAO; // Uncomment khi có class này
 
 /**
  * Giao diện chính của phân hệ quản trị - Tích hợp đầy đủ các chức năng
@@ -21,39 +19,31 @@ public class AdminMainFrame extends JFrame {
     private JPanel contentPanel;
     private JLabel statusLabel;
     private JPanel homePanel;
-
-    // Thêm biến database
-    private DatabaseConnection dbConnection;
-    private UserDAO userDAO;
     
-    private JLabel totalUsersLabel;
-    private JLabel onlineUsersLabel;
-    private JLabel totalGroupsLabel;
-    private JLabel totalMessagesLabel;
+    // Thêm biến database (comment lại khi chưa có database)
+    // private DatabaseConnection dbConnection;
+    // private UserDAO userDAO;
 
     public AdminMainFrame() {
-        // Khởi tạo database connection
-        initDatabase();
+        // Khởi tạo database connection (comment lại khi chưa có database)
+        // initDatabase();
         
         initializeComponents();
         setupLayout();
         setupMenu();
         showHomePage();
-        
-        // Load dữ liệu thực từ database
-        loadRealTimeStatistics();
     }
     
-    private void initDatabase() {
-        try {
-            dbConnection = DatabaseConnection.getInstance();
-            userDAO = new UserDAO();
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, 
-                "Không thể kết nối database: " + e.getMessage(),
-                "Lỗi Database", JOptionPane.ERROR_MESSAGE);
-        }
-    }
+    // private void initDatabase() {
+    //     try {
+    //         dbConnection = DatabaseConnection.getInstance();
+    //         userDAO = new UserDAO();
+    //     } catch (Exception e) {
+    //         JOptionPane.showMessageDialog(this, 
+    //             "Không thể kết nối database: " + e.getMessage(),
+    //             "Lỗi Database", JOptionPane.ERROR_MESSAGE);
+    //     }
+    // }
 
     private void showHomePage() {
         contentPanel.removeAll();
@@ -113,20 +103,15 @@ public class AdminMainFrame extends JFrame {
         JPanel panel = new JPanel(new GridLayout(1, 4, 15, 0));
         panel.setOpaque(false);
 
-        totalUsersLabel = new JLabel("0");
-        onlineUsersLabel = new JLabel("0");
-        totalGroupsLabel = new JLabel("0");
-        totalMessagesLabel = new JLabel("0");
-
-        panel.add(createStatCard("Người dùng", totalUsersLabel, ZALO_BLUE, "👥"));
-        panel.add(createStatCard("Đang online", onlineUsersLabel, SUCCESS_GREEN, "🟢"));
-        panel.add(createStatCard("Nhóm chat", totalGroupsLabel, WARNING_ORANGE, "💬"));
-        panel.add(createStatCard("Tin nhắn hôm nay", totalMessagesLabel, DANGER_RED, "📨"));
+        panel.add(createStatCard("Người dùng", "1,234", ZALO_BLUE, "👥"));
+        panel.add(createStatCard("Đang online", "87", SUCCESS_GREEN, "🟢"));
+        panel.add(createStatCard("Nhóm chat", "45", WARNING_ORANGE, "💬"));
+        panel.add(createStatCard("Tin nhắn hôm nay", "2,156", DANGER_RED, "📨"));
 
         return panel;
     }
 
-    private JPanel createStatCard(String title, JLabel valueLabel, Color color, String icon) {
+    private JPanel createStatCard(String title, String value, Color color, String icon) {
         JPanel card = new JPanel(new BorderLayout(10, 10));
         card.setBackground(Color.WHITE);
         card.setBorder(BorderFactory.createCompoundBorder(
@@ -149,10 +134,10 @@ public class AdminMainFrame extends JFrame {
         topPanel.add(titleLabel, BorderLayout.CENTER);
 
         // Value label
+        JLabel valueLabel = new JLabel(value);
         valueLabel.setFont(new Font("Arial", Font.BOLD, 32));
         valueLabel.setForeground(color);
         valueLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        valueLabel.setText("...");  // Loading state
 
         card.add(topPanel, BorderLayout.NORTH);
         card.add(valueLabel, BorderLayout.CENTER);
@@ -385,53 +370,6 @@ public class AdminMainFrame extends JFrame {
         label.setHorizontalAlignment(SwingConstants.CENTER);
         panel.add(label, BorderLayout.CENTER);
         return panel;
-    }
-
-    private void loadRealTimeStatistics() {
-        // SwingWorker để load data không block UI
-        SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
-            private int totalUsers = 0;
-            private int onlineUsers = 0;
-            private int totalGroups = 0;
-            private int totalMessages = 0;
-            
-            @Override
-            protected Void doInBackground() throws Exception {
-                // Load từ database (uncomment khi có database)
-                // totalUsers = userDAO.getTotalUsers();
-                // onlineUsers = userDAO.getOnlineUsers();
-                // totalGroups = groupDAO.getTotalGroups();
-                // totalMessages = messageDAO.getTodayMessages();
-                
-                // Giá trị mẫu (xóa khi có database thật)
-                totalUsers = 1234;
-                onlineUsers = 87;
-                totalGroups = 45;
-                totalMessages = 2156;
-                
-                return null;
-            }
-            
-            @Override
-            protected void done() {
-                totalUsersLabel.setText(String.format("%,d", totalUsers));
-                onlineUsersLabel.setText(String.format("%,d", onlineUsers));
-                totalGroupsLabel.setText(String.format("%,d", totalGroups));
-                totalMessagesLabel.setText(String.format("%,d", totalMessages));
-            }
-        };
-        
-        worker.execute();
-    }
-    
-    // Thêm method refresh statistics
-    private void refreshStatistics() {
-        totalUsersLabel.setText("...");
-        onlineUsersLabel.setText("...");
-        totalGroupsLabel.setText("...");
-        totalMessagesLabel.setText("...");
-        
-        loadRealTimeStatistics();
     }
 
     public static void main(String[] args) {

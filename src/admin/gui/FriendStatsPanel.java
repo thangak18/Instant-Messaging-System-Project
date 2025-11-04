@@ -1,11 +1,8 @@
 package admin.gui;
 
 import javax.swing.*;
-import javax.swing.border.Border;
-import javax.swing.border.EmptyBorder;
-import javax.swing.border.TitledBorder;
-import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableColumnModel;
+import javax.swing.border.*;
+import javax.swing.table.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -15,8 +12,8 @@ import java.awt.event.ActionListener;
  * (Bao gồm các yêu cầu a, b, c)
  */
 public class FriendStatsPanel extends JPanel {
-
     // Định nghĩa màu sắc
+    private static final Color PINK = new Color(255, 99, 132);
     private static final Color ZALO_BLUE = new Color(0, 102, 255);
     private static final Color NEUTRAL_GRAY = new Color(108, 117, 125);
 
@@ -31,13 +28,13 @@ public class FriendStatsPanel extends JPanel {
     private JButton filterButton, refreshButton, exportButton;
 
     public FriendStatsPanel() {
-        initializeComponents();
+        initComponents();
         setupLayout();
         loadSampleData();
         setupEventHandlers();
     }
 
-    private void initializeComponents() {
+    private void initComponents() {
         // --- Bảng hiển thị báo cáo ---
         String[] columns = {"ID", "Tên đăng nhập", "Họ tên", "Ngày tạo", "Số bạn (Trực tiếp)", "Số bạn (Bạn của bạn)"};
         DefaultTableModel model = new DefaultTableModel(columns, 0) {
@@ -49,9 +46,8 @@ public class FriendStatsPanel extends JPanel {
         reportTable.setAutoCreateRowSorter(true);
 
         // Áp dụng màu sắc cho tiêu đề bảng
-        Color lightBlue = new Color(135, 206, 250);
         reportTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 13));
-        reportTable.getTableHeader().setBackground(lightBlue);
+        reportTable.getTableHeader().setBackground(PINK);
         reportTable.getTableHeader().setForeground(Color.WHITE);
 
         // Chỉnh độ rộng cột

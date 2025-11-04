@@ -1,11 +1,8 @@
 package admin.gui;
 
 import javax.swing.*;
-import javax.swing.border.Border;
-import javax.swing.border.EmptyBorder;
-import javax.swing.border.TitledBorder;
-import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableColumnModel;
+import javax.swing.border.*;
+import javax.swing.table.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -15,14 +12,11 @@ import java.awt.event.ActionListener;
  * (Bao gồm chọn khoảng thời gian, lọc theo tên, sắp xếp)
  */
 public class NewUserReportPanel extends JPanel {
-
-    // Định nghĩa màu sắc
+    private static final Color INFO_CYAN = new Color(23, 162, 184);
     private static final Color ZALO_BLUE = new Color(0, 102, 255);
-    private static final Color NEUTRAL_GRAY = new Color(108, 117, 125);
-
-    private JTable reportTable;
-    private JTextField dateFromField;   // Ô "Từ ngày"
-    private JTextField dateToField;     // Ô "Đến ngày"
+    
+    private JTable userTable;
+    private JTextField dateFromField, dateToField;
     private JTextField searchNameField; // Yêu cầu (b) Lọc theo tên
     private JComboBox<String> sortCombo; // Yêu cầu (a) Sắp xếp
     private JButton filterButton, refreshButton, exportButton;
@@ -34,41 +28,27 @@ public class NewUserReportPanel extends JPanel {
         label.setHorizontalAlignment(SwingConstants.CENTER);
         add(label, BorderLayout.CENTER);
         
-        initializeComponents();
+        initComponents();
         setupLayout();
         loadSampleData();
         setupEventHandlers();
     }
 
-    private void initializeComponents() {
-        // --- Bảng hiển thị báo cáo ---
-        String[] columns = {"ID", "Tên đăng nhập", "Họ tên", "Email", "Ngày tạo"};
+    private void initComponents() {
+        String[] columns = {"ID", "Tên đăng nhập", "Họ tên", "Email", "Ngày đăng ký", "Trạng thái"};
         DefaultTableModel model = new DefaultTableModel(columns, 0) {
-            @Override public boolean isCellEditable(int row, int column) { return false; }
+            @Override
+            public boolean isCellEditable(int row, int column) { return false; }
         };
-        reportTable = new JTable(model);
-        reportTable.setRowHeight(25);
-        reportTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        reportTable.setAutoCreateRowSorter(true); // Cho phép sắp xếp khi nhấn vào tiêu đề
-
-        // Áp dụng màu sắc cho tiêu đề bảng
-        Color lightBlue = new Color(135, 206, 250);
-        reportTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 13));
-        reportTable.getTableHeader().setBackground(lightBlue);
-        reportTable.getTableHeader().setForeground(Color.WHITE);
-
-        // Chỉnh độ rộng cột
-        TableColumnModel columnModel = reportTable.getColumnModel();
-        columnModel.getColumn(0).setPreferredWidth(40);  // ID
-        columnModel.getColumn(1).setPreferredWidth(100); // Tên đăng nhập
-        columnModel.getColumn(2).setPreferredWidth(120); // Họ tên
-        columnModel.getColumn(3).setPreferredWidth(150); // Email
-        columnModel.getColumn(4).setPreferredWidth(130); // Ngày tạo
-
-        // --- Các component Lọc và Sắp xếp ---
         
-        // Yêu cầu (chính): Chọn khoảng thời gian
-        dateFromField = new JTextField(10); // Kích thước cho "yyyy-mm-dd"
+        userTable = new JTable(model);
+        userTable.setRowHeight(25);
+        userTable.setAutoCreateRowSorter(true);
+        userTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 13));
+        userTable.getTableHeader().setBackground(INFO_CYAN);
+        userTable.getTableHeader().setForeground(Color.WHITE);
+        
+        dateFromField = new JTextField(10);
         dateToField = new JTextField(10);
         
         // Yêu cầu (b): Lọc theo tên
@@ -108,7 +88,7 @@ public class NewUserReportPanel extends JPanel {
         // --- Panel 2: Danh sách Báo cáo (CENTER) ---
         JPanel centerPanel = new JPanel(new BorderLayout());
         centerPanel.setBorder(createTitledBorder("Danh sách người dùng đăng ký mới"));
-        centerPanel.add(new JScrollPane(reportTable), BorderLayout.CENTER);
+        centerPanel.add(new JScrollPane(userTable), BorderLayout.CENTER);
 
         // --- Panel 3: Chức năng (SOUTH) ---
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
@@ -127,12 +107,12 @@ public class NewUserReportPanel extends JPanel {
         // loadSampleDataByDateRange("2024-01-01", "2024-01-31");
         
         // Tạm thời hiển thị tất cả
-        DefaultTableModel model = (DefaultTableModel) reportTable.getModel();
-        model.addRow(new Object[]{"1", "admin", "Quản trị viên", "admin@chat.com", "2024-01-01"});
-        model.addRow(new Object[]{"2", "user1", "Nguyễn Văn A", "user1@email.com", "2024-01-02"});
-        model.addRow(new Object[]{"3", "user2", "Trần Thị B", "user2@email.com", "2024-01-03"});
-        model.addRow(new Object[]{"4", "user3", "Lê Văn C", "user3@email.com", "2024-01-04"});
-        model.addRow(new Object[]{"5", "user4", "Phạm Thị D", "user4@email.com", "2024-01-05"});
+        DefaultTableModel model = (DefaultTableModel) userTable.getModel();
+        model.addRow(new Object[]{"1", "admin", "Quản trị viên", "admin@chat.com", "2024-01-01", "Hoạt động"});
+        model.addRow(new Object[]{"2", "user1", "Nguyễn Văn A", "user1@email.com", "2024-01-02", "Hoạt động"});
+        model.addRow(new Object[]{"3", "user2", "Trần Thị B", "user2@email.com", "2024-01-03", "Chưa xác thực"});
+        model.addRow(new Object[]{"4", "user3", "Lê Văn C", "user3@email.com", "2024-01-04", "Hoạt động"});
+        model.addRow(new Object[]{"5", "user4", "Phạm Thị D", "user4@email.com", "2024-01-05", "Chưa xác thực"});
     }
 
     /**
@@ -192,7 +172,7 @@ public class NewUserReportPanel extends JPanel {
     }
     
     private void styleNeutralButton(JButton button) {
-        button.setBackground(NEUTRAL_GRAY);
+        button.setBackground(INFO_CYAN);
         button.setForeground(Color.WHITE);
         button.setFont(new Font("Arial", Font.BOLD, 12));
         button.setOpaque(true);
