@@ -3,150 +3,330 @@ package admin.gui;
 import javax.swing.*;
 import javax.swing.border.*;
 import java.awt.*;
+import java.util.Random;
 
 /**
- * Giao diện Thống kê (Biểu đồ người dùng HOẠT ĐỘNG theo năm)
+ * Giao diện Biểu đồ người dùng hoạt động theo năm
+ * Yêu cầu: Chọn năm, vẽ biểu đồ với trục hoành là tháng, trục tung là số lượng người có mở ứng dụng
  */
 public class ActiveUserChartPanel extends JPanel {
-    // Định nghĩa màu sắc
     private static final Color TEAL = new Color(75, 192, 192);
     private static final Color ZALO_BLUE = new Color(0, 102, 255);
+    private static final Color SUCCESS_GREEN = new Color(40, 167, 69);
+    private static final Color NEUTRAL_GRAY = new Color(108, 117, 125);
     
-    private JComboBox<String> yearCombo;
-    private JComboBox<String> chartTypeCombo;
+    private JComboBox<Integer> yearSelector;
+    private JButton viewButton, refreshButton;
+    private BarChartPanel chartPanel;
+    private JLabel currentYearLabel;
+    private JLabel totalActiveLabel;
 
     public ActiveUserChartPanel() {
         initComponents();
         setupLayout();
+        setupEventHandlers();
+        
+        // Tải dữ liệu mẫu cho lần chạy đầu tiên
+        loadDataForYear(2024);
     }
 
     private void initComponents() {
-        yearCombo = new JComboBox<>(new String[]{"2024", "2023", "2022", "2021"});
-        chartTypeCombo = new JComboBox<>(new String[]{"Biểu đồ cột", "Biểu đồ đường", "Biểu đồ tròn"});
+        // Bộ lọc - Chọn năm
+        Integer[] years = {2024, 2023, 2022, 2021, 2020};
+        yearSelector = new JComboBox<>(years);
+        yearSelector.setPreferredSize(new Dimension(100, 30));
+        
+        viewButton = new JButton("📊 Xem biểu đồ");
+        refreshButton = new JButton("🔄 Làm mới");
+        stylePrimaryButton(viewButton);
+        styleNeutralButton(refreshButton);
+
+        // Panel vẽ biểu đồ
+        chartPanel = new BarChartPanel();
+        
+        // Labels hiển thị thông tin
+        currentYearLabel = new JLabel("Năm: 2024");
+        currentYearLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        currentYearLabel.setForeground(TEAL);
+        
+        totalActiveLabel = new JLabel("Tổng số người dùng hoạt động: 0");
+        totalActiveLabel.setFont(new Font("Arial", Font.BOLD, 13));
     }
 
     private void setupLayout() {
-        setLayout(new BorderLayout(15, 15));
-        setBorder(new EmptyBorder(20, 20, 20, 20));
+        setLayout(new BorderLayout(10, 10));
+        setBorder(new EmptyBorder(15, 15, 15, 15));
         setBackground(new Color(248, 249, 250));
 
-        // Header
-        JPanel headerPanel = createHeaderPanel();
-        add(headerPanel, BorderLayout.NORTH);
+        // Panel 1: Bộ lọc (NORTH)
+        JPanel filterPanel = createFilterPanel();
+        add(filterPanel, BorderLayout.NORTH);
 
-        // Chart area (placeholder)
-        JPanel chartPanel = new JPanel(new BorderLayout());
-        chartPanel.setBackground(Color.WHITE);
-        chartPanel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(TEAL, 2),
-            new EmptyBorder(30, 30, 30, 30)
-        ));
-        
-        JPanel chartContent = new JPanel();
-        chartContent.setLayout(new BoxLayout(chartContent, BoxLayout.Y_AXIS));
-        chartContent.setOpaque(false);
-        
-        JLabel chartIcon = new JLabel("📊", SwingConstants.CENTER);
-        chartIcon.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 64));
-        chartIcon.setAlignmentX(Component.CENTER_ALIGNMENT);
-        
-        JLabel chartLabel = new JLabel("Biểu đồ người dùng hoạt động theo năm");
-        chartLabel.setFont(new Font("Arial", Font.BOLD, 20));
-        chartLabel.setForeground(TEAL);
-        chartLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        
-        JLabel infoLabel = new JLabel("Biểu đồ sẽ hiển thị số lượng người dùng hoạt động theo từng tháng");
-        infoLabel.setFont(new Font("Arial", Font.PLAIN, 14));
-        infoLabel.setForeground(Color.GRAY);
-        infoLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        
-        chartContent.add(chartIcon);
-        chartContent.add(Box.createVerticalStrut(20));
-        chartContent.add(chartLabel);
-        chartContent.add(Box.createVerticalStrut(10));
-        chartContent.add(infoLabel);
-        
-        chartPanel.add(chartContent, BorderLayout.CENTER);
-        add(chartPanel, BorderLayout.CENTER);
-
-        // Legend panel
-        JPanel legendPanel = createLegendPanel();
-        add(legendPanel, BorderLayout.SOUTH);
+        // Panel 2: Biểu đồ (CENTER)
+        JPanel chartDisplayPanel = createChartPanel();
+        add(chartDisplayPanel, BorderLayout.CENTER);
     }
 
-    private JPanel createHeaderPanel() {
-        JPanel panel = new JPanel(new BorderLayout());
+    private JPanel createFilterPanel() {
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setBackground(Color.WHITE);
         panel.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(TEAL, 2),
-            new EmptyBorder(15, 20, 15, 20)
+            new EmptyBorder(15, 15, 15, 15)
         ));
 
-        JLabel titleLabel = new JLabel("📉 Biểu đồ người dùng hoạt động");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 20));
+        JLabel titleLabel = new JLabel("📈 Tùy chọn biểu đồ");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 14));
         titleLabel.setForeground(TEAL);
 
-        JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        filterPanel.setOpaque(false);
+        JPanel formPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
+        formPanel.setOpaque(false);
         
-        filterPanel.add(new JLabel("Năm:"));
-        filterPanel.add(yearCombo);
-        filterPanel.add(new JLabel("Loại biểu đồ:"));
-        filterPanel.add(chartTypeCombo);
-        
-        JButton viewBtn = createStyledButton("Xem biểu đồ", TEAL);
-        JButton exportBtn = createStyledButton("Xuất ảnh", ZALO_BLUE);
-        
-        filterPanel.add(viewBtn);
-        filterPanel.add(exportBtn);
+        formPanel.add(new JLabel("Chọn năm:"));
+        formPanel.add(yearSelector);
+        formPanel.add(viewButton);
+        formPanel.add(refreshButton);
 
-        panel.add(titleLabel, BorderLayout.WEST);
-        panel.add(filterPanel, BorderLayout.EAST);
+        panel.add(titleLabel, BorderLayout.NORTH);
+        panel.add(formPanel, BorderLayout.CENTER);
 
         return panel;
     }
 
-    private JPanel createLegendPanel() {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 20, 10));
+    private JPanel createChartPanel() {
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setBackground(Color.WHITE);
         panel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(Color.LIGHT_GRAY),
-            new EmptyBorder(10, 15, 10, 15)
+            BorderFactory.createLineBorder(TEAL, 2),
+            new EmptyBorder(10, 10, 10, 10)
         ));
 
-        panel.add(createLegendItem("🟦", "Người dùng hoạt động", ZALO_BLUE));
-        panel.add(createLegendItem("🟩", "Người dùng mới", new Color(40, 167, 69)));
-        panel.add(createLegendItem("🟨", "Tổng người dùng", new Color(255, 193, 7)));
+        // Header
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setOpaque(false);
+        
+        JLabel titleLabel = new JLabel("📊 Biểu đồ số lượng người dùng hoạt động");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        titleLabel.setForeground(TEAL);
+        
+        JPanel statsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 0));
+        statsPanel.setOpaque(false);
+        statsPanel.add(currentYearLabel);
+        statsPanel.add(new JLabel("|"));
+        statsPanel.add(totalActiveLabel);
+        
+        headerPanel.add(titleLabel, BorderLayout.WEST);
+        headerPanel.add(statsPanel, BorderLayout.EAST);
+        headerPanel.setBorder(new EmptyBorder(0, 0, 10, 0));
+
+        // Chart area
+        JPanel chartContainer = new JPanel(new BorderLayout());
+        chartContainer.setBackground(Color.WHITE);
+        chartContainer.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
+        chartContainer.add(chartPanel, BorderLayout.CENTER);
+
+        panel.add(headerPanel, BorderLayout.NORTH);
+        panel.add(chartContainer, BorderLayout.CENTER);
 
         return panel;
     }
 
-    private JPanel createLegendItem(String icon, String text, Color color) {
-        JPanel item = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
-        item.setOpaque(false);
+    private void setupEventHandlers() {
+        viewButton.addActionListener(e -> {
+            Integer selectedYear = (Integer) yearSelector.getSelectedItem();
+            loadDataForYear(selectedYear);
+        });
         
-        JLabel iconLabel = new JLabel(icon);
-        iconLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 16));
-        
-        JLabel textLabel = new JLabel(text);
-        textLabel.setFont(new Font("Arial", Font.PLAIN, 12));
-        textLabel.setForeground(color);
-        
-        item.add(iconLabel);
-        item.add(textLabel);
-        
-        return item;
+        refreshButton.addActionListener(e -> {
+            Integer selectedYear = (Integer) yearSelector.getSelectedItem();
+            loadDataForYear(selectedYear);
+            JOptionPane.showMessageDialog(this, 
+                "Đã làm mới dữ liệu năm " + selectedYear + "!",
+                "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+        });
     }
 
-    private JButton createStyledButton(String text, Color color) {
-        JButton button = new JButton(text);
-        button.setFont(new Font("Arial", Font.BOLD, 12));
-        button.setBackground(color);
+    /**
+     * Tải dữ liệu cho năm được chọn
+     * Trục hoành: 12 tháng (T1 -> T12)
+     * Trục tung: Số lượng người dùng có mở ứng dụng
+     */
+    private void loadDataForYear(int year) {
+        // TODO: Trong thực tế, gọi database tại đây
+        // int[] data = UserDAO.getActiveUserCountByYear(year);
+        
+        // Dữ liệu giả lập (Demo)
+        int[] data = new int[12];
+        Random rand = new Random(year); // Seed theo năm để có dữ liệu nhất quán
+        
+        int baseValue = 100;
+        if (year == 2023) {
+            baseValue = 80;
+        } else if (year == 2022) {
+            baseValue = 60;
+        } else if (year == 2021) {
+            baseValue = 40;
+        } else if (year == 2020) {
+            baseValue = 30;
+        }
+        
+        int totalActive = 0;
+        for (int i = 0; i < 12; i++) {
+            data[i] = baseValue + rand.nextInt(50);
+            totalActive += data[i];
+        }
+        
+        // Cập nhật biểu đồ
+        chartPanel.updateData(data);
+        
+        // Cập nhật labels
+        currentYearLabel.setText("Năm: " + year);
+        totalActiveLabel.setText("Tổng số người dùng hoạt động: " + totalActive);
+    }
+    
+    /**
+     * Lớp con để vẽ biểu đồ cột
+     * Trục hoành (X): 12 tháng
+     * Trục tung (Y): Số lượng người dùng có mở ứng dụng
+     */
+    private class BarChartPanel extends JPanel {
+        private int[] data = new int[12]; // 12 tháng
+        private String[] months = {"T1", "T2", "T3", "T4", "T5", "T6", 
+                                   "T7", "T8", "T9", "T10", "T11", "T12"};
+
+        public BarChartPanel() {
+            setBackground(Color.WHITE);
+            setPreferredSize(new Dimension(800, 400));
+        }
+        
+        public void updateData(int[] newData) {
+            if (newData != null && newData.length == 12) {
+                this.data = newData;
+                repaint();
+            }
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            
+            Graphics2D g2 = (Graphics2D) g;
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            int panelWidth = getWidth();
+            int panelHeight = getHeight();
+            
+            // Định nghĩa lề
+            int padding = 40;
+            int labelPadding = 25;
+            
+            // Gốc tọa độ biểu đồ
+            int chartOriginX = padding + labelPadding;
+            int chartOriginY = panelHeight - padding - labelPadding;
+            
+            // Kích thước khu vực vẽ
+            int chartWidth = panelWidth - 2 * padding - labelPadding;
+            int chartHeight = panelHeight - 2 * padding - labelPadding;
+
+            // Vẽ 2 trục
+            g2.setColor(Color.BLACK);
+            g2.setStroke(new BasicStroke(2));
+            g2.drawLine(chartOriginX, chartOriginY, chartOriginX, padding); // Trục Y
+            g2.drawLine(chartOriginX, chartOriginY, chartOriginX + chartWidth, chartOriginY); // Trục X
+
+            // Vẽ nhãn trục
+            g2.setFont(new Font("Arial", Font.BOLD, 12));
+            g2.drawString("Số người dùng", 5, padding - 5); // Nhãn trục Y
+            g2.drawString("Tháng", chartOriginX + chartWidth + 10, chartOriginY + 5); // Nhãn trục X
+
+            // Tìm giá trị max để chia tỉ lệ
+            int maxDataValue = 0;
+            for (int value : data) {
+                if (value > maxDataValue) {
+                    maxDataValue = value;
+                }
+            }
+            maxDataValue = (int) (Math.ceil(maxDataValue / 50.0) * 50);
+            if (maxDataValue == 0) maxDataValue = 100;
+
+            // Vẽ các vạch chia trục Y
+            int yTickCount = 5;
+            g2.setStroke(new BasicStroke(1));
+            for (int i = 0; i <= yTickCount; i++) {
+                int y = chartOriginY - (i * chartHeight) / yTickCount;
+                
+                // Vạch chia ngang
+                g2.setColor(new Color(220, 220, 220));
+                g2.drawLine(chartOriginX, y, chartOriginX + chartWidth, y);
+                
+                // Nhãn số
+                g2.setColor(Color.BLACK);
+                String yLabel = String.valueOf((i * maxDataValue) / yTickCount);
+                FontMetrics fm = g2.getFontMetrics();
+                int labelWidth = fm.stringWidth(yLabel);
+                g2.drawString(yLabel, chartOriginX - labelWidth - 8, y + (fm.getHeight() / 2) - 3);
+            }
+
+            // Vẽ các cột cho 12 tháng
+            int barWidth = chartWidth / (data.length * 2);
+            int barSpacing = barWidth;
+
+            for (int i = 0; i < data.length; i++) {
+                int barX = chartOriginX + (i * (barWidth + barSpacing)) + barSpacing / 2;
+                
+                // Tính chiều cao cột dựa trên dữ liệu
+                int barHeight = (int) (((double) data[i] / maxDataValue) * chartHeight);
+                int barY = chartOriginY - barHeight;
+                
+                // Vẽ cột với gradient màu xanh lá
+                GradientPaint gradient = new GradientPaint(
+                    barX, barY, TEAL,
+                    barX, chartOriginY, new Color(120, 220, 220)
+                );
+                g2.setPaint(gradient);
+                g2.fillRect(barX, barY, barWidth, barHeight);
+                
+                // Vẽ viền cột
+                g2.setColor(TEAL.darker());
+                g2.drawRect(barX, barY, barWidth, barHeight);
+                
+                // Vẽ giá trị trên đầu cột
+                g2.setColor(Color.BLACK);
+                g2.setFont(new Font("Arial", Font.BOLD, 11));
+                String valueLabel = String.valueOf(data[i]);
+                FontMetrics fm = g2.getFontMetrics();
+                int labelWidth = fm.stringWidth(valueLabel);
+                g2.drawString(valueLabel, barX + (barWidth - labelWidth) / 2, barY - 5);
+                
+                // Vẽ nhãn tháng (Trục X)
+                g2.setFont(new Font("Arial", Font.PLAIN, 11));
+                String monthLabel = months[i];
+                labelWidth = fm.stringWidth(monthLabel);
+                g2.drawString(monthLabel, barX + (barWidth - labelWidth) / 2, 
+                             chartOriginY + fm.getHeight() + 2);
+            }
+        }
+    }
+
+    private void stylePrimaryButton(JButton button) {
+        button.setBackground(TEAL);
         button.setForeground(Color.WHITE);
+        button.setFont(new Font("Arial", Font.BOLD, 12));
         button.setOpaque(true);
         button.setBorderPainted(false);
         button.setFocusPainted(false);
         button.setMargin(new Insets(5, 12, 5, 12));
-        return button;
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+    }
+
+    private void styleNeutralButton(JButton button) {
+        button.setBackground(NEUTRAL_GRAY);
+        button.setForeground(Color.WHITE);
+        button.setFont(new Font("Arial", Font.BOLD, 12));
+        button.setOpaque(true);
+        button.setBorderPainted(false);
+        button.setFocusPainted(false);
+        button.setMargin(new Insets(5, 12, 5, 12));
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
     }
 }

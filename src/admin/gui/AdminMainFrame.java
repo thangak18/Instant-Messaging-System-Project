@@ -80,67 +80,85 @@ public class AdminMainFrame extends JFrame {
         panel.setBackground(Color.WHITE);
         panel.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createMatteBorder(0, 0, 3, 0, ZALO_BLUE),
-            new EmptyBorder(20, 25, 20, 25)
+            new EmptyBorder(15, 20, 15, 20)
         ));
 
-        JLabel titleLabel = new JLabel("🏠 Trang chủ quản trị hệ thống chat");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 28));
+        // Title panel
+        JPanel titlePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        titlePanel.setOpaque(false);
+        
+        JLabel titleLabel = new JLabel("🏠 Trang chủ quản trị");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
         titleLabel.setForeground(ZALO_BLUE);
+        titlePanel.add(titleLabel);
 
-        JLabel timeLabel = new JLabel(java.time.LocalDateTime.now().format(
-            java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss - dd/MM/yyyy")
+        // Time panel
+        JPanel timePanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        timePanel.setOpaque(false);
+        
+        JLabel timeLabel = new JLabel("🕐 " + java.time.LocalDateTime.now().format(
+            java.time.format.DateTimeFormatter.ofPattern("HH:mm - dd/MM/yyyy")
         ));
-        timeLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+        timeLabel.setFont(new Font("Arial", Font.PLAIN, 13));
         timeLabel.setForeground(Color.GRAY);
+        timePanel.add(timeLabel);
 
-        panel.add(titleLabel, BorderLayout.WEST);
-        panel.add(timeLabel, BorderLayout.EAST);
+        panel.add(titlePanel, BorderLayout.WEST);
+        panel.add(timePanel, BorderLayout.EAST);
 
         return panel;
     }
 
     private JPanel createStatisticsPanel() {
-        JPanel panel = new JPanel(new GridLayout(1, 4, 15, 0));
+        JPanel panel = new JPanel(new GridLayout(1, 4, 12, 0));
         panel.setOpaque(false);
+        panel.setPreferredSize(new Dimension(1160, 140)); // Fix height
 
         panel.add(createStatCard("Người dùng", "1,234", ZALO_BLUE, "👥"));
         panel.add(createStatCard("Đang online", "87", SUCCESS_GREEN, "🟢"));
         panel.add(createStatCard("Nhóm chat", "45", WARNING_ORANGE, "💬"));
-        panel.add(createStatCard("Tin nhắn hôm nay", "2,156", DANGER_RED, "📨"));
+        panel.add(createStatCard("Tin nhắn", "2,156", DANGER_RED, "📨"));
 
         return panel;
     }
 
     private JPanel createStatCard(String title, String value, Color color, String icon) {
-        JPanel card = new JPanel(new BorderLayout(10, 10));
+        JPanel card = new JPanel();
+        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBackground(Color.WHITE);
         card.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(color, 2),
-            new EmptyBorder(20, 20, 20, 20)
+            new EmptyBorder(12, 12, 12, 12)
         ));
 
-        // Top section with icon and title
-        JPanel topPanel = new JPanel(new BorderLayout());
-        topPanel.setOpaque(false);
-
+        // Icon
         JLabel iconLabel = new JLabel(icon);
-        iconLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 32));
+        try {
+            iconLabel.setFont(new Font("Apple Color Emoji", Font.PLAIN, 32));
+        } catch (Exception e) {
+            iconLabel.setFont(new Font("Dialog", Font.PLAIN, 32));
+        }
+        iconLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
+        // Title
         JLabel titleLabel = new JLabel(title);
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 13));
+        titleLabel.setFont(new Font("Arial", Font.PLAIN, 13));
         titleLabel.setForeground(Color.GRAY);
+        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        topPanel.add(iconLabel, BorderLayout.WEST);
-        topPanel.add(titleLabel, BorderLayout.CENTER);
-
-        // Value label
+        // Value
         JLabel valueLabel = new JLabel(value);
-        valueLabel.setFont(new Font("Arial", Font.BOLD, 32));
+        valueLabel.setFont(new Font("Arial", Font.BOLD, 30));
         valueLabel.setForeground(color);
-        valueLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        valueLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        card.add(topPanel, BorderLayout.NORTH);
-        card.add(valueLabel, BorderLayout.CENTER);
+        card.add(Box.createVerticalGlue());
+        card.add(iconLabel);
+        card.add(Box.createVerticalStrut(8));
+        card.add(titleLabel);
+        card.add(Box.createVerticalStrut(5));
+        card.add(valueLabel);
+        card.add(Box.createVerticalGlue());
 
         return card;
     }
@@ -149,12 +167,12 @@ public class AdminMainFrame extends JFrame {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setOpaque(false);
 
-        JLabel titleLabel = new JLabel("⚡ Thao tác nhanh");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 20));
+        JLabel titleLabel = new JLabel(">> Thao tác nhanh");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
         titleLabel.setForeground(ZALO_BLUE);
-        titleLabel.setBorder(new EmptyBorder(10, 0, 15, 0));
+        titleLabel.setBorder(new EmptyBorder(8, 0, 10, 0));
 
-        JPanel gridPanel = new JPanel(new GridLayout(3, 3, 15, 15));
+        JPanel gridPanel = new JPanel(new GridLayout(3, 3, 10, 10));
         gridPanel.setOpaque(false);
 
         gridPanel.add(createActionCard("👤 Quản lý người dùng", 
@@ -166,14 +184,14 @@ public class AdminMainFrame extends JFrame {
         gridPanel.add(createActionCard("🔔 Báo cáo spam", 
             "Xem các báo cáo spam", DANGER_RED, e -> openSpamReport()));
         gridPanel.add(createActionCard("🆕 Người dùng mới", 
-            "Danh sách người dùng mới", INFO_CYAN, e -> openNewUserReport()));
+            "Danh sách người đăng ký", INFO_CYAN, e -> openNewUserReport()));
         gridPanel.add(createActionCard("📊 Thống kê", 
             "Thống kê hệ thống", new Color(111, 66, 193), e -> openStatistics()));
-        gridPanel.add(createActionCard("👨‍💼 Bạn bè", 
-            "Thống kê bạn bè", new Color(255, 99, 132), e -> openFriendStats()));
-        gridPanel.add(createActionCard("📈 Người dùng hoạt động", 
+        gridPanel.add(createActionCard("💝 Bạn bè", 
+            "Thống kê mối quan hệ", new Color(255, 99, 132), e -> openFriendStats()));
+        gridPanel.add(createActionCard("📈 Người hoạt động", 
             "Báo cáo hoạt động", new Color(54, 162, 235), e -> openActiveUserReport()));
-        gridPanel.add(createActionCard("📉 Biểu đồ hoạt động", 
+        gridPanel.add(createActionCard("📉 Biểu đồ", 
             "Xem biểu đồ chi tiết", new Color(75, 192, 192), e -> openActiveUserChart()));
 
         panel.add(titleLabel, BorderLayout.NORTH);
@@ -188,13 +206,13 @@ public class AdminMainFrame extends JFrame {
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBackground(Color.WHITE);
         card.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(color.brighter(), 2),
-            new EmptyBorder(20, 15, 20, 15)
+            BorderFactory.createLineBorder(color, 2),
+            new EmptyBorder(18, 15, 18, 15)
         ));
         card.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
         JLabel titleLabel = new JLabel(title);
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 15));
         titleLabel.setForeground(color);
         titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
@@ -204,17 +222,19 @@ public class AdminMainFrame extends JFrame {
         descLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         card.add(titleLabel);
-        card.add(Box.createVerticalStrut(8));
+        card.add(Box.createVerticalStrut(6));
         card.add(descLabel);
 
         // Hover effect
         card.addMouseListener(new java.awt.event.MouseAdapter() {
+            private final Color hoverColor = new Color(245, 245, 245);
+            
             @Override
             public void mouseEntered(java.awt.event.MouseEvent e) {
-                card.setBackground(color.brighter().brighter());
+                card.setBackground(hoverColor);
                 card.setBorder(BorderFactory.createCompoundBorder(
                     BorderFactory.createLineBorder(color, 3),
-                    new EmptyBorder(20, 15, 20, 15)
+                    new EmptyBorder(18, 15, 18, 15)
                 ));
             }
 
@@ -222,8 +242,8 @@ public class AdminMainFrame extends JFrame {
             public void mouseExited(java.awt.event.MouseEvent e) {
                 card.setBackground(Color.WHITE);
                 card.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(color.brighter(), 2),
-                    new EmptyBorder(20, 15, 20, 15)
+                    BorderFactory.createLineBorder(color, 2),
+                    new EmptyBorder(18, 15, 18, 15)
                 ));
             }
 
@@ -239,12 +259,13 @@ public class AdminMainFrame extends JFrame {
     private void initializeComponents() {
         setTitle("Hệ thống quản trị - Chat System");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1200, 800);
+        setSize(1200, 820); // Tăng height một chút
         setLocationRelativeTo(null);
 
         menuBar = new JMenuBar();
         contentPanel = new JPanel(new BorderLayout());
-        statusLabel = new JLabel("Trạng thái: Sẵn sàng");
+        statusLabel = new JLabel(" Trạng thái: Sẵn sàng"); // Thêm space
+        statusLabel.setBorder(new EmptyBorder(5, 10, 5, 10));
     }
 
     private void setupLayout() {
@@ -335,8 +356,9 @@ public class AdminMainFrame extends JFrame {
         contentPanel.removeAll();
         JPanel wrapper = new JPanel(new BorderLayout());
 
-        // Tiêu đề
-        JLabel titleLabel = new JLabel(title);
+        // Tiêu đề với emoji
+        String emojiTitle = getEmojiForTitle(title) + " " + title;
+        JLabel titleLabel = new JLabel(emojiTitle);
         titleLabel.setFont(new Font("Arial", Font.BOLD, 22));
         titleLabel.setForeground(new Color(0, 102, 255));
         titleLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -346,20 +368,36 @@ public class AdminMainFrame extends JFrame {
         wrapper.add(panel, BorderLayout.CENTER);
 
         // Nút quay lại
-        JButton backBtn = new JButton("Quay lại trang chủ");
+        JButton backBtn = new JButton("🏠 Quay lại trang chủ");
         backBtn.setFont(new Font("Arial", Font.BOLD, 14));
         backBtn.setBackground(new Color(108, 117, 125));
-        backBtn.setForeground(Color.BLACK);
+        backBtn.setForeground(Color.WHITE);
         backBtn.setFocusPainted(false);
+        backBtn.setBorderPainted(false);
+        backBtn.setOpaque(true);
+        backBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
         backBtn.addActionListener(e -> showHomePage());
         
-        JPanel backPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JPanel backPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
         backPanel.add(backBtn);
         wrapper.add(backPanel, BorderLayout.SOUTH);
 
         contentPanel.add(wrapper, BorderLayout.CENTER);
         contentPanel.revalidate();
         contentPanel.repaint();
+    }
+
+    private String getEmojiForTitle(String title) {
+        if (title.contains("người dùng")) return "👤";
+        if (title.contains("lịch sử")) return "📜";
+        if (title.contains("nhóm")) return "👥";
+        if (title.contains("spam")) return "🔔";
+        if (title.contains("mới")) return "🆕";
+        if (title.contains("Thống kê")) return "📊";
+        if (title.contains("bạn bè")) return "💝";
+        if (title.contains("hoạt động")) return "📈";
+        if (title.contains("Biểu đồ")) return "📉";
+        return "📋";
     }
 
     private JPanel createErrorPanel(String message) {
@@ -373,8 +411,7 @@ public class AdminMainFrame extends JFrame {
     }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            try {
+        SwingUtilities.invokeLater(() -> {            try {
                 UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
             } catch (Exception e) {
                 e.printStackTrace();

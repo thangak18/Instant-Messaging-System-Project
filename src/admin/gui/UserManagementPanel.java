@@ -150,19 +150,21 @@ public class UserManagementPanel extends JPanel {
         JPanel buttonsContainer = new JPanel(new GridLayout(2, 1, 0, 10));
         buttonsContainer.setOpaque(false);
         
-        // Row 1: CRUD operations (4 nút: Thêm, Sửa, Xóa, Khóa/Mở khóa)
+        // Row 1: CRUD operations (5 nút: Thêm, Sửa, Xóa, Khóa, Mở khóa)
         JPanel row1 = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 5));
         row1.setOpaque(false);
         
         JButton addBtn = createStyledButton("➕ Thêm người dùng", SUCCESS_GREEN);
         JButton editBtn = createStyledButton("✏️ Sửa thông tin", ZALO_BLUE);
         JButton deleteBtn = createStyledButton("🗑️ Xóa người dùng", DANGER_RED);
-        JButton lockBtn = createStyledButton("🔒 Khóa/Mở khóa", WARNING_ORANGE);
+        JButton lockBtn = createStyledButton("🔒 Khóa tài khoản", WARNING_ORANGE);
+        JButton unlockBtn = createStyledButton("🔓 Mở khóa", SUCCESS_GREEN);
         
         row1.add(addBtn);
         row1.add(editBtn);
         row1.add(deleteBtn);
         row1.add(lockBtn);
+        row1.add(unlockBtn);
         
         // Row 2: Các chức năng bổ sung (3 nút: Đổi mật khẩu, Lịch sử, Danh sách bạn bè)
         JPanel row2 = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 5));
@@ -194,8 +196,11 @@ public class UserManagementPanel extends JPanel {
         // Yêu cầu b: Xóa người dùng
         addActionToButton("🗑️ Xóa người dùng", e -> showDeleteUserDialog());
         
-        // Yêu cầu c: Khóa/mở khóa
-        addActionToButton("🔒 Khóa/Mở khóa", e -> showLockUnlockDialog());
+        // Yêu cầu c: Khóa tài khoản
+        addActionToButton("🔒 Khóa tài khoản", e -> showLockAccountDialog());
+        
+        // Yêu cầu c: Mở khóa tài khoản
+        addActionToButton("🔓 Mở khóa", e -> showUnlockAccountDialog());
         
         // Yêu cầu d: Cập nhật mật khẩu
         addActionToButton("🔑 Đổi mật khẩu", e -> showChangePasswordDialog());
@@ -310,27 +315,69 @@ public class UserManagementPanel extends JPanel {
         }
     }
     
-    // Yêu cầu c: Khóa/Mở khóa tài khoản
-    private void showLockUnlockDialog() {
+    // Yêu cầu c: Khóa tài khoản
+    private void showLockAccountDialog() {
         int selectedRow = userTable.getSelectedRow();
         if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Vui lòng chọn người dùng!", 
+            JOptionPane.showMessageDialog(this, "Vui lòng chọn người dùng cần khóa!", 
                                          "Cảnh báo", JOptionPane.WARNING_MESSAGE);
             return;
         }
         
         String username = userTable.getValueAt(selectedRow, 1).toString();
         String currentStatus = userTable.getValueAt(selectedRow, 7).toString();
-        String newStatus = currentStatus.equals("Hoạt động") ? "Bị khóa" : "Hoạt động";
-        String action = currentStatus.equals("Hoạt động") ? "khóa" : "mở khóa";
+        
+        // Kiểm tra xem tài khoản đã bị khóa chưa
+        if (currentStatus.equals("Bị khóa")) {
+            JOptionPane.showMessageDialog(this, 
+                "Tài khoản " + username + " đã bị khóa rồi!",
+                "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
         
         int confirm = JOptionPane.showConfirmDialog(this, 
-            "Bạn có chắc muốn " + action + " tài khoản: " + username + "?",
-            "Xác nhận", JOptionPane.YES_NO_OPTION);
+            "Bạn có chắc muốn khóa tài khoản: " + username + "?\n\n" +
+            "Người dùng sẽ không thể đăng nhập sau khi bị khóa.",
+            "Xác nhận khóa tài khoản", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
         
         if (confirm == JOptionPane.YES_OPTION) {
-            userTable.setValueAt(newStatus, selectedRow, 7);
-            JOptionPane.showMessageDialog(this, "Đã " + action + " tài khoản thành công!");
+            userTable.setValueAt("Bị khóa", selectedRow, 7);
+            JOptionPane.showMessageDialog(this, 
+                "Đã khóa tài khoản " + username + " thành công!",
+                "Thành công", JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+    
+    // Yêu cầu c: Mở khóa tài khoản
+    private void showUnlockAccountDialog() {
+        int selectedRow = userTable.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Vui lòng chọn người dùng cần mở khóa!", 
+                                         "Cảnh báo", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        String username = userTable.getValueAt(selectedRow, 1).toString();
+        String currentStatus = userTable.getValueAt(selectedRow, 7).toString();
+        
+        // Kiểm tra xem tài khoản có đang bị khóa không
+        if (currentStatus.equals("Hoạt động")) {
+            JOptionPane.showMessageDialog(this, 
+                "Tài khoản " + username + " đang hoạt động bình thường!",
+                "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        
+        int confirm = JOptionPane.showConfirmDialog(this, 
+            "Bạn có chắc muốn mở khóa tài khoản: " + username + "?\n\n" +
+            "Người dùng sẽ có thể đăng nhập trở lại sau khi được mở khóa.",
+            "Xác nhận mở khóa tài khoản", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+        
+        if (confirm == JOptionPane.YES_OPTION) {
+            userTable.setValueAt("Hoạt động", selectedRow, 7);
+            JOptionPane.showMessageDialog(this, 
+                "Đã mở khóa tài khoản " + username + " thành công!",
+                "Thành công", JOptionPane.INFORMATION_MESSAGE);
         }
     }
     
