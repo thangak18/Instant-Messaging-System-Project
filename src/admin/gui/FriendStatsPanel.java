@@ -1,9 +1,16 @@
 package admin.gui;
 
+import admin.dao.StatisticsDAO;
+import admin.model.FriendStats;
+
 import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.table.*;
 import java.awt.*;
+import java.sql.SQLException;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Giao diện Thống kê bạn bè - ĐẦY ĐỦ CHỨC NĂNG
@@ -16,16 +23,23 @@ public class FriendStatsPanel extends JPanel {
     private static final Color NEUTRAL_GRAY = new Color(108, 117, 125);
 
     private JTable reportTable;
+    private DefaultTableModel tableModel;
     private JTextField searchNameField;
     private JComboBox<String> sortCombo;
     private JComboBox<String> friendFilterCombo;
     private JTextField friendCountField;
     private JButton filterButton, resetButton, refreshButton, exportButton;
+    
+    // Backend
+    private StatisticsDAO statisticsDAO;
+    private DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private List<FriendStats> allStats; // Cache toàn bộ dữ liệu để filter/sort
 
     public FriendStatsPanel() {
+        this.statisticsDAO = new StatisticsDAO();
         initComponents();
         setupLayout();
-        loadSampleData();
+        loadFriendStatsFromDatabase();
         setupEventHandlers();
     }
 
@@ -33,14 +47,14 @@ public class FriendStatsPanel extends JPanel {
         // Bảng hiển thị thống kê
         String[] columns = {"ID", "Tên đăng nhập", "Họ tên", "Ngày tạo", 
                            "Số bạn trực tiếp", "Số bạn của bạn"};
-        DefaultTableModel model = new DefaultTableModel(columns, 0) {
+        tableModel = new DefaultTableModel(columns, 0) {
             @Override 
             public boolean isCellEditable(int row, int column) { 
                 return false; 
             }
         };
         
-        reportTable = new JTable(model);
+        reportTable = new JTable(tableModel);
         reportTable.setRowHeight(28);
         reportTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         reportTable.setAutoCreateRowSorter(true);
@@ -335,11 +349,43 @@ public class FriendStatsPanel extends JPanel {
     }
 
     /**
+     * Load thống kê bạn bè từ database
+     */
+    private void loadFriendStatsFromDatabase() {
+        try {
+            allStats = statisticsDAO.getFriendStatistics();
+            displayFriendStats(allStats);
+            updateStatistics();
+        } catch (SQLException e) {
+            showError("Lỗi load dữ liệu thống kê bạn bè: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+     * Hiển thị danh sách thống kê lên table
+     */
+    private void displayFriendStats(List<FriendStats> stats) {
+        tableModel.setRowCount(0); // Clear table
+        
+        for (FriendStats stat : stats) {
+            Object[] row = {
+                stat.getUserId(),
+                stat.getUsername(),
+                stat.getFullName(),
+                "", // Ngày tạo - không có trong model
+                stat.getFriendCount(),
+                0 // TODO: Số bạn của bạn - cần query riêng nếu có
+            };
+            tableModel.addRow(row);
+        }
+    }
+
+    /**
      * Làm mới dữ liệu
      */
     private void handleRefresh() {
-        loadSampleData();
-        updateStatistics();
+        loadFriendStatsFromDatabase();
         JOptionPane.showMessageDialog(this, 
             "Đã làm mới dữ liệu!",
             "Thông báo", JOptionPane.INFORMATION_MESSAGE);
@@ -361,19 +407,12 @@ public class FriendStatsPanel extends JPanel {
             "Dữ liệu: " + reportTable.getRowCount() + " người dùng",
             "Xuất Excel", JOptionPane.INFORMATION_MESSAGE);
     }
-
-    private void loadSampleData() {
-        DefaultTableModel model = (DefaultTableModel) reportTable.getModel();
-        model.setRowCount(0);
-        
-        model.addRow(new Object[]{"1", "admin", "Quản trị viên", "2024-01-01", 50, 1500});
-        model.addRow(new Object[]{"2", "user1", "Nguyễn Văn A", "2024-01-02", 120, 3200});
-        model.addRow(new Object[]{"3", "user2", "Trần Thị B", "2024-01-03", 5, 80});
-        model.addRow(new Object[]{"4", "user3", "Lê Văn C", "2024-01-04", 200, 15000});
-        model.addRow(new Object[]{"5", "user4", "Phạm Thị D", "2024-01-05", 0, 0});
-        model.addRow(new Object[]{"6", "user5", "Hoàng Văn E", "2024-01-06", 35, 800});
-        
-        updateStatistics();
+    
+    /**
+     * Hiển thị thông báo lỗi
+     */
+    private void showError(String message) {
+        JOptionPane.showMessageDialog(this, message, "Lỗi", JOptionPane.ERROR_MESSAGE);
     }
 
     private void stylePrimaryButton(JButton button) {

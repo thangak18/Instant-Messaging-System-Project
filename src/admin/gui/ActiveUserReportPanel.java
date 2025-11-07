@@ -1,9 +1,17 @@
 package admin.gui;
 
+import admin.dao.StatisticsDAO;
+import admin.model.UserActivity;
+
 import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.table.*;
 import java.awt.*;
+import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.List;
 
 /**
  * Giao diện Báo cáo Người dùng hoạt động - ĐẦY ĐỦ CHỨC NĂNG
@@ -17,6 +25,7 @@ public class ActiveUserReportPanel extends JPanel {
     private static final Color INFO_CYAN = new Color(23, 162, 184);
 
     private JTable reportTable;
+    private DefaultTableModel tableModel;
     private JTextField dateFromField;
     private JTextField dateToField;
     private JTextField searchNameField;
@@ -25,8 +34,14 @@ public class ActiveUserReportPanel extends JPanel {
     private JComboBox<String> comparisonCombo;
     private JTextField activityCountField;
     private JButton filterButton, resetButton, refreshButton, exportButton;
+    
+    // Backend
+    private StatisticsDAO statisticsDAO;
+    private DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     public ActiveUserReportPanel() {
+        this.statisticsDAO = new StatisticsDAO();
         initializeComponents();
         setupLayout();
         setupEventHandlers();
@@ -34,16 +49,16 @@ public class ActiveUserReportPanel extends JPanel {
 
     private void initializeComponents() {
         // Bảng hiển thị báo cáo
-        String[] columns = {"ID", "Tên đăng nhập", "Họ tên", "Mở ứng dụng", 
-                           "Chat với người", "Chat nhóm", "Ngày tạo"};
-        DefaultTableModel model = new DefaultTableModel(columns, 0) {
+        String[] columns = {"ID", "Tên đăng nhập", "Họ tên", "Loại hoạt động", 
+                           "Số lượng", "Ngày tạo"};
+        tableModel = new DefaultTableModel(columns, 0) {
             @Override 
             public boolean isCellEditable(int row, int column) { 
                 return false; 
             }
         };
         
-        reportTable = new JTable(model);
+        reportTable = new JTable(tableModel);
         reportTable.setRowHeight(28);
         reportTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         reportTable.setAutoCreateRowSorter(true);
@@ -57,10 +72,9 @@ public class ActiveUserReportPanel extends JPanel {
         columnModel.getColumn(0).setPreferredWidth(50);   // ID
         columnModel.getColumn(1).setPreferredWidth(120);  // Tên đăng nhập
         columnModel.getColumn(2).setPreferredWidth(150);  // Họ tên
-        columnModel.getColumn(3).setPreferredWidth(110);  // Mở ứng dụng
-        columnModel.getColumn(4).setPreferredWidth(110);  // Chat với người
-        columnModel.getColumn(5).setPreferredWidth(100);  // Chat nhóm
-        columnModel.getColumn(6).setPreferredWidth(120);  // Ngày tạo
+        columnModel.getColumn(3).setPreferredWidth(150);  // Loại hoạt động
+        columnModel.getColumn(4).setPreferredWidth(100);  // Số lượng
+        columnModel.getColumn(5).setPreferredWidth(120);  // Ngày tạo
 
         // Chọn khoảng thời gian
         dateFromField = new JTextField(10);
@@ -268,12 +282,6 @@ public class ActiveUserReportPanel extends JPanel {
     private void handleFilterReport() {
         String fromDate = dateFromField.getText().trim();
         String toDate = dateToField.getText().trim();
-        String nameFilter = searchNameField.getText().trim();
-        String sortOption = (String) sortCombo.getSelectedItem();
-        
-        String activityType = (String) activityTypeCombo.getSelectedItem();
-        String comparison = (String) comparisonCombo.getSelectedItem();
-        String activityCountText = activityCountField.getText().trim();
         
         // Kiểm tra khoảng thời gian
         if (fromDate.isEmpty() || toDate.isEmpty()) {
@@ -295,75 +303,67 @@ public class ActiveUserReportPanel extends JPanel {
             return;
         }
         
-        // Yêu cầu c: Validate input cho lọc số lượng hoạt động
-        if (!comparison.equals("Tất cả")) {
-            if (activityCountText.isEmpty()) {
-                JOptionPane.showMessageDialog(this, 
-                    "Vui lòng nhập số lượng để so sánh!",
-                    "Cảnh báo", JOptionPane.WARNING_MESSAGE);
-                return;
-            }
+        // Load dữ liệu từ database
+        try {
+            LocalDate startDate = LocalDate.parse(fromDate, inputFormatter);
+            LocalDate endDate = LocalDate.parse(toDate, inputFormatter);
             
-            try {
-                int count = Integer.parseInt(activityCountText);
-                if (count < 0) {
-                    JOptionPane.showMessageDialog(this, 
-                        "Số lượng phải >= 0!",
-                        "Lỗi", JOptionPane.ERROR_MESSAGE);
-                    return;
-                }
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(this, 
-                    "Số lượng không hợp lệ!",
-                    "Lỗi", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
+            // Calculate days between
+            long daysBetween = java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate);
+            
+            // Get active users
+            List<UserActivity> activities = statisticsDAO.getActiveUsers((int)daysBetween);
+            displayActiveUsers(activities);
+            updateStatistics();
+            
+            JOptionPane.showMessageDialog(this, 
+                "Đã tải " + activities.size() + " hoạt động người dùng\n" +
+                "Từ: " + fromDate + " đến: " + toDate,
+                "Thành công", JOptionPane.INFORMATION_MESSAGE);
+                
+        } catch (DateTimeParseException e) {
+            showError("Lỗi định dạng ngày: " + e.getMessage());
+        } catch (SQLException e) {
+            showError("Lỗi load dữ liệu: " + e.getMessage());
+            e.printStackTrace();
         }
+    }
+    
+    /**
+     * Hiển thị danh sách hoạt động người dùng
+     */
+    private void displayActiveUsers(List<UserActivity> activities) {
+        tableModel.setRowCount(0); // Clear table
         
-        // Load dữ liệu với bộ lọc
-        loadFilteredData(fromDate, toDate, nameFilter, activityType, 
-                        comparison, activityCountText, sortOption);
-        
-        // Thông báo
-        String filterMessage;
-        if (comparison.equals("Tất cả")) {
-            filterMessage = "Tất cả";
-        } else {
-            filterMessage = activityType + " " + comparison + " " + activityCountText;
+        for (UserActivity activity : activities) {
+            Object[] row = {
+                activity.getUserId(),
+                activity.getUsername(),
+                activity.getFullName(),
+                activity.getActivityType(),
+                activity.getActivityCount(),
+                activity.getLastActivity() != null ? 
+                    dateFormatter.format(activity.getLastActivity()) : ""
+            };
+            tableModel.addRow(row);
         }
-
-        JOptionPane.showMessageDialog(this, 
-            "Đã tải báo cáo người dùng hoạt động:\n\n" +
-            "Từ ngày: " + fromDate + "\n" +
-            "Đến ngày: " + toDate + "\n" +
-            "Lọc tên: " + (nameFilter.isEmpty() ? "Tất cả" : nameFilter) + "\n" +
-            "Lọc hoạt động: " + filterMessage + "\n" +
-            "Sắp xếp: " + sortOption + "\n\n" +
-            "Chức năng sẽ được kết nối với database",
-            "Báo cáo", JOptionPane.INFORMATION_MESSAGE);
+    }
+    
+    /**
+     * Hiển thị thông báo lỗi
+     */
+    private void showError(String message) {
+        JOptionPane.showMessageDialog(this, message, "Lỗi", JOptionPane.ERROR_MESSAGE);
     }
 
     /**
-     * Load dữ liệu theo bộ lọc
+     * Load dữ liệu theo bộ lọc - deprecated
      */
     private void loadFilteredData(String fromDate, String toDate, String nameFilter,
                                    String activityType, String comparison, 
                                    String activityCount, String sortOption) {
-        DefaultTableModel model = (DefaultTableModel) reportTable.getModel();
-        model.setRowCount(0);
-        
-        // TODO: Trong thực tế, gọi database với các tham số này
-        // List<ActiveUserReport> reports = UserDAO.getActiveUserReport(...);
-        
-        // Dữ liệu mẫu
-        model.addRow(new Object[]{"1", "admin", "Quản trị viên", 150, 20, 5, "2024-01-01"});
-        model.addRow(new Object[]{"2", "user1", "Nguyễn Văn A", 300, 120, 10, "2024-01-02"});
-        model.addRow(new Object[]{"3", "user2", "Trần Thị B", 50, 10, 2, "2024-01-03"});
-        model.addRow(new Object[]{"4", "user3", "Lê Văn C", 10, 1, 1, "2024-01-04"});
-        model.addRow(new Object[]{"5", "user4", "Phạm Thị D", 5, 0, 0, "2024-01-05"});
-        model.addRow(new Object[]{"6", "user5", "Hoàng Văn E", 80, 30, 8, "2024-01-06"});
-        
-        updateStatistics();
+        // Deprecated - now using handleFilterReport with database
+        handleFilterReport();
     }
 
     /**

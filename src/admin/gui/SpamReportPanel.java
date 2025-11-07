@@ -1,9 +1,16 @@
 package admin.gui;
 
+import admin.dao.SpamReportDAO;
+import admin.model.SpamReport;
+
 import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.table.*;
 import java.awt.*;
+import java.sql.SQLException;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Giao diện quản lý báo cáo spam - ĐẦY ĐỦ CHỨC NĂNG
@@ -17,28 +24,34 @@ public class SpamReportPanel extends JPanel {
     private static final Color NEUTRAL_GRAY = new Color(108, 117, 125);
     
     private JTable spamTable;
+    private DefaultTableModel tableModel;
     private JComboBox<String> statusFilter;
     private JComboBox<String> timeFilterCombo;
     private JComboBox<String> sortCombo;
     private JTextField searchField;
     private JComboBox<String> searchTypeCombo;
+    
+    // Backend
+    private SpamReportDAO spamReportDAO;
+    private DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     public SpamReportPanel() {
+        this.spamReportDAO = new SpamReportDAO();
         initComponents();
         setupLayout();
-        loadSampleData();
+        loadSpamReportsFromDatabase();
         setupEventHandlers();
     }
 
     private void initComponents() {
         // Bảng với cột đầy đủ thông tin
         String[] columns = {"ID", "Người báo cáo", "Người bị báo cáo", "Lý do", "Trạng thái", "Ngày báo cáo"};
-        DefaultTableModel model = new DefaultTableModel(columns, 0) {
+        tableModel = new DefaultTableModel(columns, 0) {
             @Override
             public boolean isCellEditable(int row, int column) { return false; }
         };
         
-        spamTable = new JTable(model);
+        spamTable = new JTable(tableModel);
         spamTable.setRowHeight(28);
         spamTable.setAutoCreateRowSorter(true);
         spamTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 13));
@@ -84,6 +97,38 @@ public class SpamReportPanel extends JPanel {
             "Sắp xếp theo người bị báo cáo (A-Z)",
             "Sắp xếp theo người báo cáo (A-Z)"
         });
+    }
+    
+    /**
+     * Load báo cáo spam từ database
+     */
+    private void loadSpamReportsFromDatabase() {
+        try {
+            List<SpamReport> reports = spamReportDAO.getAllSpamReports();
+            displaySpamReports(reports);
+        } catch (SQLException e) {
+            showError("Lỗi load dữ liệu báo cáo spam: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+     * Hiển thị danh sách báo cáo spam lên table
+     */
+    private void displaySpamReports(List<SpamReport> reports) {
+        tableModel.setRowCount(0); // Clear table
+        
+        for (SpamReport report : reports) {
+            Object[] row = {
+                report.getId(),
+                report.getReporterName(),
+                report.getReportedUserName(),
+                report.getReason(),
+                report.getStatus(),
+                report.getCreatedAt() != null ? report.getCreatedAt().format(dateTimeFormatter) : ""
+            };
+            tableModel.addRow(row);
+        }
     }
 
     private void setupLayout() {
@@ -427,19 +472,6 @@ public class SpamReportPanel extends JPanel {
         dialog.setVisible(true);
     }
 
-    
-
-    private void loadSampleData() {
-        DefaultTableModel model = (DefaultTableModel) spamTable.getModel();
-        model.setRowCount(0);
-        
-        model.addRow(new Object[]{"1", "user1", "user456", "Spam quảng cáo", "Chờ xử lý", "2024-01-15"});
-        model.addRow(new Object[]{"2", "user2", "user789", "Ngôn từ thô tục", "Đã xử lý", "2024-01-14"});
-        model.addRow(new Object[]{"3", "user3", "user123", "Lừa đảo", "Chờ xử lý", "2024-01-13"});
-        model.addRow(new Object[]{"4", "user4", "user999", "Spam tin nhắn", "Chờ xử lý", "2024-01-12"});
-        model.addRow(new Object[]{"5", "user5", "user888", "Quấy rối", "Đã xử lý", "2024-01-11"});
-    }
-
     private JButton createStyledButton(String text, Color color) {
         JButton button = new JButton(text);
         button.setFont(new Font("Arial", Font.BOLD, 12));
@@ -451,6 +483,13 @@ public class SpamReportPanel extends JPanel {
         button.setMargin(new Insets(5, 12, 5, 12));
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
         return button;
+    }
+    
+    /**
+     * Hiển thị thông báo lỗi
+     */
+    private void showError(String message) {
+        JOptionPane.showMessageDialog(this, message, "Lỗi", JOptionPane.ERROR_MESSAGE);
     }
 
     private void addActionToButton(String buttonText, java.awt.event.ActionListener action) {

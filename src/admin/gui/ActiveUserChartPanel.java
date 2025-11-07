@@ -1,9 +1,13 @@
 package admin.gui;
 
+import admin.dao.StatisticsDAO;
+import admin.model.UserActivity;
+
 import javax.swing.*;
 import javax.swing.border.*;
 import java.awt.*;
-import java.util.Random;
+import java.sql.SQLException;
+import java.util.List;
 
 /**
  * Giao diện Biểu đồ người dùng hoạt động theo năm
@@ -20,13 +24,17 @@ public class ActiveUserChartPanel extends JPanel {
     private BarChartPanel chartPanel;
     private JLabel currentYearLabel;
     private JLabel totalActiveLabel;
+    
+    // Backend
+    private StatisticsDAO statisticsDAO;
 
     public ActiveUserChartPanel() {
+        this.statisticsDAO = new StatisticsDAO();
         initComponents();
         setupLayout();
         setupEventHandlers();
         
-        // Tải dữ liệu mẫu cho lần chạy đầu tiên
+        // Tải dữ liệu từ database
         loadDataForYear(2024);
     }
 
@@ -152,36 +160,43 @@ public class ActiveUserChartPanel extends JPanel {
      * Trục tung: Số lượng người dùng có mở ứng dụng
      */
     private void loadDataForYear(int year) {
-        // TODO: Trong thực tế, gọi database tại đây
-        // int[] data = UserDAO.getActiveUserCountByYear(year);
-        
-        // Dữ liệu giả lập (Demo)
-        int[] data = new int[12];
-        Random rand = new Random(year); // Seed theo năm để có dữ liệu nhất quán
-        
-        int baseValue = 100;
-        if (year == 2023) {
-            baseValue = 80;
-        } else if (year == 2022) {
-            baseValue = 60;
-        } else if (year == 2021) {
-            baseValue = 40;
-        } else if (year == 2020) {
-            baseValue = 30;
+        try {
+            // Lấy người dùng hoạt động trong 30 ngày gần nhất
+            List<UserActivity> activeUsers = statisticsDAO.getActiveUsers(30);
+            
+            // TODO: Thực tế cần query theo tháng trong năm
+            // Tạm thời phân bố đều dữ liệu vào 12 tháng để demo
+            int[] data = new int[12];
+            int totalActive = activeUsers.size();
+            
+            // Phân bố người dùng vào các tháng (demo - cần query riêng cho từng tháng)
+            for (int i = 0; i < 12; i++) {
+                data[i] = totalActive / 12 + (i * 5); // Demo distribution
+            }
+            
+            // Cập nhật biểu đồ
+            chartPanel.updateData(data);
+            
+            // Cập nhật labels
+            currentYearLabel.setText("Năm: " + year);
+            totalActiveLabel.setText("Tổng số người dùng hoạt động: " + totalActive);
+            
+        } catch (SQLException e) {
+            showError("Lỗi load dữ liệu người dùng hoạt động: " + e.getMessage());
+            e.printStackTrace();
+            
+            // Fallback: hiển thị dữ liệu rỗng
+            chartPanel.updateData(new int[12]);
+            currentYearLabel.setText("Năm: " + year);
+            totalActiveLabel.setText("Tổng số người dùng hoạt động: 0");
         }
-        
-        int totalActive = 0;
-        for (int i = 0; i < 12; i++) {
-            data[i] = baseValue + rand.nextInt(50);
-            totalActive += data[i];
-        }
-        
-        // Cập nhật biểu đồ
-        chartPanel.updateData(data);
-        
-        // Cập nhật labels
-        currentYearLabel.setText("Năm: " + year);
-        totalActiveLabel.setText("Tổng số người dùng hoạt động: " + totalActive);
+    }
+    
+    /**
+     * Hiển thị thông báo lỗi
+     */
+    private void showError(String message) {
+        JOptionPane.showMessageDialog(this, message, "Lỗi", JOptionPane.ERROR_MESSAGE);
     }
     
     /**

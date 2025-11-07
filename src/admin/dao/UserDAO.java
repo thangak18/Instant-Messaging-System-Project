@@ -1,0 +1,266 @@
+package admin.dao;
+
+import admin.model.User;
+import admin.service.DatabaseConnection;
+
+import java.sql.*;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Data Access Object cho User
+ * Xử lý tất cả truy vấn database liên quan đến người dùng
+ */
+public class UserDAO {
+    private DatabaseConnection dbConnection;
+    
+    public UserDAO() {
+        this.dbConnection = DatabaseConnection.getInstance();
+    }
+    
+    /**
+     * Lấy tất cả người dùng
+     */
+    public List<User> getAllUsers() throws SQLException {
+        List<User> users = new ArrayList<>();
+        String sql = "SELECT * FROM users ORDER BY created_at DESC";
+        
+        try (Connection conn = dbConnection.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            
+            while (rs.next()) {
+                users.add(extractUserFromResultSet(rs));
+            }
+        }
+        return users;
+    }
+    
+    /**
+     * Tìm kiếm người dùng theo tên hoặc username
+     */
+    public List<User> searchUsers(String keyword) throws SQLException {
+        List<User> users = new ArrayList<>();
+        String sql = "SELECT * FROM users WHERE username LIKE ? OR full_name LIKE ? " +
+                    "ORDER BY created_at DESC";
+        
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            String searchPattern = "%" + keyword + "%";
+            pstmt.setString(1, searchPattern);
+            pstmt.setString(2, searchPattern);
+            
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    users.add(extractUserFromResultSet(rs));
+                }
+            }
+        }
+        return users;
+    }
+    
+    /**
+     * Lọc người dùng theo trạng thái
+     */
+    public List<User> getUsersByStatus(String status) throws SQLException {
+        List<User> users = new ArrayList<>();
+        String sql = "SELECT * FROM users WHERE status = ? ORDER BY created_at DESC";
+        
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setString(1, status);
+            
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    users.add(extractUserFromResultSet(rs));
+                }
+            }
+        }
+        return users;
+    }
+    
+    /**
+     * Lấy người dùng theo ID
+     */
+    public User getUserById(int id) throws SQLException {
+        String sql = "SELECT * FROM users WHERE id = ?";
+        
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setInt(1, id);
+            
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return extractUserFromResultSet(rs);
+                }
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * Thêm người dùng mới
+     */
+    public boolean addUser(User user) throws SQLException {
+        String sql = "INSERT INTO users (username, password, full_name, email, address, " +
+                    "birth_date, gender, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setString(1, user.getUsername());
+            pstmt.setString(2, user.getPassword());
+            pstmt.setString(3, user.getFullName());
+            pstmt.setString(4, user.getEmail());
+            pstmt.setString(5, user.getAddress());
+            pstmt.setDate(6, user.getBirthDate() != null ? Date.valueOf(user.getBirthDate()) : null);
+            pstmt.setString(7, user.getGender());
+            pstmt.setString(8, user.getStatus());
+            
+            return pstmt.executeUpdate() > 0;
+        }
+    }
+    
+    /**
+     * Cập nhật thông tin người dùng
+     */
+    public boolean updateUser(User user) throws SQLException {
+        String sql = "UPDATE users SET full_name = ?, email = ?, address = ?, " +
+                    "birth_date = ?, gender = ?, status = ? WHERE id = ?";
+        
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setString(1, user.getFullName());
+            pstmt.setString(2, user.getEmail());
+            pstmt.setString(3, user.getAddress());
+            pstmt.setDate(4, user.getBirthDate() != null ? Date.valueOf(user.getBirthDate()) : null);
+            pstmt.setString(5, user.getGender());
+            pstmt.setString(6, user.getStatus());
+            pstmt.setInt(7, user.getId());
+            
+            return pstmt.executeUpdate() > 0;
+        }
+    }
+    
+    /**
+     * Xóa người dùng
+     */
+    public boolean deleteUser(int userId) throws SQLException {
+        String sql = "DELETE FROM users WHERE id = ?";
+        
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setInt(1, userId);
+            return pstmt.executeUpdate() > 0;
+        }
+    }
+    
+    /**
+     * Khóa/Mở khóa tài khoản
+     */
+    public boolean updateUserStatus(int userId, String status) throws SQLException {
+        String sql = "UPDATE users SET status = ? WHERE id = ?";
+        
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setString(1, status);
+            pstmt.setInt(2, userId);
+            
+            return pstmt.executeUpdate() > 0;
+        }
+    }
+    
+    /**
+     * Cập nhật mật khẩu
+     */
+    public boolean updatePassword(int userId, String newPassword) throws SQLException {
+        String sql = "UPDATE users SET password = ? WHERE id = ?";
+        
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setString(1, newPassword);
+            pstmt.setInt(2, userId);
+            
+            return pstmt.executeUpdate() > 0;
+        }
+    }
+    
+    /**
+     * Đếm tổng số người dùng
+     */
+    public int getTotalUsers() throws SQLException {
+        String sql = "SELECT COUNT(*) FROM users";
+        
+        try (Connection conn = dbConnection.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        }
+        return 0;
+    }
+    
+    /**
+     * Đếm số người dùng theo trạng thái
+     */
+    public int countUsersByStatus(String status) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM users WHERE status = ?";
+        
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setString(1, status);
+            
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        }
+        return 0;
+    }
+    
+    /**
+     * Helper method: Extract User object from ResultSet
+     */
+    private User extractUserFromResultSet(ResultSet rs) throws SQLException {
+        User user = new User();
+        user.setId(rs.getInt("id"));
+        user.setUsername(rs.getString("username"));
+        user.setPassword(rs.getString("password"));
+        user.setFullName(rs.getString("full_name"));
+        user.setEmail(rs.getString("email"));
+        user.setAddress(rs.getString("address"));
+        
+        Date birthDate = rs.getDate("birth_date");
+        if (birthDate != null) {
+            user.setBirthDate(birthDate.toLocalDate());
+        }
+        
+        user.setGender(rs.getString("gender"));
+        user.setStatus(rs.getString("status"));
+        
+        Timestamp createdAt = rs.getTimestamp("created_at");
+        if (createdAt != null) {
+            user.setCreatedAt(createdAt.toLocalDateTime());
+        }
+        
+        Timestamp updatedAt = rs.getTimestamp("updated_at");
+        if (updatedAt != null) {
+            user.setUpdatedAt(updatedAt.toLocalDateTime());
+        }
+        
+        return user;
+    }
+}

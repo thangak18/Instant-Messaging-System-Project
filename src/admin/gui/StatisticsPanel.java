@@ -1,9 +1,14 @@
 package admin.gui;
 
+import admin.dao.StatisticsDAO;
+import admin.model.UserActivity;
+
 import javax.swing.*;
 import javax.swing.border.*;
 import java.awt.*;
-import java.util.Random;
+import java.sql.SQLException;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Giao diện Thống kê - Biểu đồ số lượng người đăng ký mới theo năm
@@ -21,13 +26,17 @@ public class StatisticsPanel extends JPanel {
     private BarChartPanel chartPanel;
     private JLabel currentYearLabel;
     private JLabel totalUsersLabel;
+    
+    // Backend
+    private StatisticsDAO statisticsDAO;
 
     public StatisticsPanel() {
+        this.statisticsDAO = new StatisticsDAO();
         initializeComponents();
         setupLayout();
         setupEventHandlers();
         
-        // Tải dữ liệu mẫu cho lần chạy đầu tiên
+        // Tải dữ liệu từ database cho năm hiện tại
         loadDataForYear(2024); 
     }
 
@@ -153,36 +162,55 @@ public class StatisticsPanel extends JPanel {
      * Trục tung: Số lượng người đăng ký mới
      */
     private void loadDataForYear(int year) {
-        // TODO: Trong thực tế, gọi database tại đây
-        // int[] data = UserDAO.getRegistrationCountByYear(year);
-        
-        // Dữ liệu giả lập (Demo)
-        int[] data = new int[12];
-        Random rand = new Random(year); // Seed theo năm để có dữ liệu nhất quán
-        
-        int baseValue = 50;
-        if (year == 2023) {
-            baseValue = 40;
-        } else if (year == 2022) {
-            baseValue = 30;
-        } else if (year == 2021) {
-            baseValue = 20;
-        } else if (year == 2020) {
-            baseValue = 15;
+        try {
+            // Lấy dữ liệu tăng trưởng người dùng theo tháng
+            Map<String, Integer> growthData = statisticsDAO.getUserGrowthByMonth();
+            
+            // Convert Map sang mảng 12 tháng
+            int[] data = new int[12];
+            int totalUsers = 0;
+            
+            for (Map.Entry<String, Integer> entry : growthData.entrySet()) {
+                String monthStr = entry.getKey(); // Format: "2024-01"
+                int count = entry.getValue();
+                
+                // Extract month number from string
+                if (monthStr.length() >= 7) {
+                    try {
+                        int monthNum = Integer.parseInt(monthStr.substring(5, 7));
+                        if (monthNum >= 1 && monthNum <= 12) {
+                            data[monthNum - 1] = count;
+                            totalUsers += count;
+                        }
+                    } catch (NumberFormatException e) {
+                        // Skip invalid format
+                    }
+                }
+            }
+            
+            // Cập nhật biểu đồ
+            chartPanel.updateData(data);
+            
+            // Cập nhật labels
+            currentYearLabel.setText("Năm: " + year);
+            totalUsersLabel.setText("Tổng số người đăng ký: " + totalUsers);
+            
+        } catch (SQLException e) {
+            showError("Lỗi load dữ liệu thống kê: " + e.getMessage());
+            e.printStackTrace();
+            
+            // Fallback: hiển thị dữ liệu rỗng
+            chartPanel.updateData(new int[12]);
+            currentYearLabel.setText("Năm: " + year);
+            totalUsersLabel.setText("Tổng số người đăng ký: 0");
         }
-        
-        int totalUsers = 0;
-        for (int i = 0; i < 12; i++) {
-            data[i] = baseValue + rand.nextInt(30);
-            totalUsers += data[i];
-        }
-        
-        // Cập nhật biểu đồ
-        chartPanel.updateData(data);
-        
-        // Cập nhật labels
-        currentYearLabel.setText("Năm: " + year);
-        totalUsersLabel.setText("Tổng số người đăng ký: " + totalUsers);
+    }
+    
+    /**
+     * Hiển thị thông báo lỗi
+     */
+    private void showError(String message) {
+        JOptionPane.showMessageDialog(this, message, "Lỗi", JOptionPane.ERROR_MESSAGE);
     }
     
     /**

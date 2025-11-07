@@ -1,13 +1,19 @@
 package admin.gui;
 
+import admin.dao.UserDAO;
+import admin.model.User;
+
 import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.table.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.sql.SQLException;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 /**
- * Quản lý danh sách người dùng - Đầy đủ chức năng
+ * Quản lý danh sách người dùng - Backend Integration
  * Yêu cầu: a) Lọc và sắp xếp, b) CRUD, c) Khóa/mở khóa, 
  * d) Cập nhật mật khẩu, e) Lịch sử đăng nhập, f) Danh sách bạn bè
  */
@@ -19,28 +25,40 @@ public class UserManagementPanel extends JPanel {
     private static final Color INFO_CYAN = new Color(23, 162, 184);
     
     private JTable userTable;
+    private DefaultTableModel tableModel;
     private JTextField searchField;
     private JComboBox<String> statusFilter;
     private JComboBox<String> sortCombo;
     private JComboBox<String> searchTypeCombo;
+    
+    // Backend DAO
+    private UserDAO userDAO;
+    private DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     public UserManagementPanel() {
-        initComponents();
-        setupLayout();
-        loadSampleData();
-        setupEventHandlers();
+        try {
+            this.userDAO = new UserDAO();
+            initComponents();
+            setupLayout();
+            loadUsersFromDatabase(); // Load từ database thay vì sample data
+            setupEventHandlers();
+        } catch (Exception e) {
+            showError("Lỗi khởi tạo: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     private void initComponents() {
         // Yêu cầu: Thông tin đầy đủ
         String[] columns = {"ID", "Tên đăng nhập", "Họ tên", "Địa chỉ", "Ngày sinh", 
                            "Giới tính", "Email", "Trạng thái", "Ngày tạo"};
-        DefaultTableModel model = new DefaultTableModel(columns, 0) {
+        tableModel = new DefaultTableModel(columns, 0) {
             @Override
             public boolean isCellEditable(int row, int column) { return false; }
         };
         
-        userTable = new JTable(model);
+        userTable = new JTable(tableModel);
         userTable.setRowHeight(25);
         userTable.setAutoCreateRowSorter(true);
         userTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 13));
@@ -67,6 +85,41 @@ public class UserManagementPanel extends JPanel {
         columnModel.getColumn(6).setPreferredWidth(150);  // Email
         columnModel.getColumn(7).setPreferredWidth(80);   // Trạng thái
         columnModel.getColumn(8).setPreferredWidth(90);   // Ngày tạo
+    }
+    
+    /**
+     * Load users từ database
+     */
+    private void loadUsersFromDatabase() {
+        try {
+            List<User> users = userDAO.getAllUsers();
+            displayUsers(users);
+        } catch (SQLException e) {
+            showError("Lỗi load dữ liệu: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+     * Hiển thị danh sách users lên table
+     */
+    private void displayUsers(List<User> users) {
+        tableModel.setRowCount(0); // Clear table
+        
+        for (User user : users) {
+            Object[] row = {
+                user.getId(),
+                user.getUsername(),
+                user.getFullName(),
+                user.getAddress() != null ? user.getAddress() : "",
+                user.getBirthDate() != null ? user.getBirthDate().format(dateFormatter) : "",
+                user.getGender() != null ? user.getGender() : "",
+                user.getEmail(),
+                user.getStatus().equals("active") ? "Hoạt động" : "Bị khóa",
+                user.getCreatedAt() != null ? user.getCreatedAt().format(dateTimeFormatter) : ""
+            };
+            tableModel.addRow(row);
+        }
     }
 
     private void setupLayout() {
@@ -205,11 +258,9 @@ public class UserManagementPanel extends JPanel {
         // Yêu cầu d: Cập nhật mật khẩu
         addActionToButton("🔑 Đổi mật khẩu", e -> showChangePasswordDialog());
         
-        // Yêu cầu e: Lịch sử đăng nhập
-        addActionToButton("📜 Lịch sử đăng nhập", e -> showLoginHistoryDialog());
-        
-        // Yêu cầu f: Danh sách bạn bè
-        addActionToButton("👥 Danh sách bạn bè", e -> showFriendsListDialog());
+        // TODO: Implement these features later
+        // addActionToButton("📜 Lịch sử đăng nhập", e -> showLoginHistoryDialog());
+        // addActionToButton("👥 Danh sách bạn bè", e -> showFriendsListDialog());
         
         // Yêu cầu a: Tìm kiếm
         addActionToButton("🔍 Tìm kiếm", e -> handleSearch());
@@ -294,24 +345,74 @@ public class UserManagementPanel extends JPanel {
             "Sửa thông tin", JOptionPane.INFORMATION_MESSAGE);
     }
     
+    // Yêu cầu a: Tìm kiếm
+    private void handleSearch() {
+        String keyword = searchField.getText().trim();
+        
+        if (keyword.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Vui lòng nhập từ khóa tìm kiếm!");
+            return;
+        }
+        
+        try {
+            List<User> users = userDAO.searchUsers(keyword);
+            displayUsers(users);
+            showSuccess("Tìm thấy " + users.size() + " kết quả");
+        } catch (SQLException e) {
+            showError("Lỗi tìm kiếm: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    // Yêu cầu a: Lọc và sắp xếp
+    private void handleFilterAndSort() {
+        try {
+            String statusValue = (String) statusFilter.getSelectedItem();
+            List<User> users;
+            
+            if ("Tất cả".equals(statusValue)) {
+                users = userDAO.getAllUsers();
+            } else {
+                String status = statusValue.equals("Hoạt động") ? "active" : "locked";
+                users = userDAO.getUsersByStatus(status);
+            }
+            
+            displayUsers(users);
+            showSuccess("Đã lọc " + users.size() + " người dùng");
+        } catch (SQLException e) {
+            showError("Lỗi lọc dữ liệu: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
     // Yêu cầu b: Xóa người dùng
     private void showDeleteUserDialog() {
         int selectedRow = userTable.getSelectedRow();
         if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Vui lòng chọn người dùng cần xóa!", 
-                                         "Cảnh báo", JOptionPane.WARNING_MESSAGE);
+            showWarning("Vui lòng chọn người dùng cần xóa!");
             return;
         }
         
+        int userId = (int) userTable.getValueAt(selectedRow, 0);
         String username = userTable.getValueAt(selectedRow, 1).toString();
-        int confirm = JOptionPane.showConfirmDialog(this, 
+        
+        int confirm = JOptionPane.showConfirmDialog(this,
             "Bạn có chắc muốn xóa người dùng: " + username + "?",
-            "Xác nhận xóa", JOptionPane.YES_NO_OPTION);
+            "Xác nhận xóa", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
         
         if (confirm == JOptionPane.YES_OPTION) {
-            DefaultTableModel model = (DefaultTableModel) userTable.getModel();
-            model.removeRow(selectedRow);
-            JOptionPane.showMessageDialog(this, "Đã xóa người dùng thành công!");
+            try {
+                boolean success = userDAO.deleteUser(userId);
+                if (success) {
+                    showSuccess("Xóa người dùng thành công!");
+                    loadUsersFromDatabase(); // Reload table
+                } else {
+                    showError("Không thể xóa người dùng");
+                }
+            } catch (SQLException e) {
+                showError("Lỗi xóa người dùng: " + e.getMessage());
+                e.printStackTrace();
+            }
         }
     }
     
@@ -319,32 +420,30 @@ public class UserManagementPanel extends JPanel {
     private void showLockAccountDialog() {
         int selectedRow = userTable.getSelectedRow();
         if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Vui lòng chọn người dùng cần khóa!", 
-                                         "Cảnh báo", JOptionPane.WARNING_MESSAGE);
+            showWarning("Vui lòng chọn người dùng cần khóa!");
             return;
         }
         
+        int userId = (int) userTable.getValueAt(selectedRow, 0);
         String username = userTable.getValueAt(selectedRow, 1).toString();
-        String currentStatus = userTable.getValueAt(selectedRow, 7).toString();
         
-        // Kiểm tra xem tài khoản đã bị khóa chưa
-        if (currentStatus.equals("Bị khóa")) {
-            JOptionPane.showMessageDialog(this, 
-                "Tài khoản " + username + " đã bị khóa rồi!",
-                "Thông báo", JOptionPane.INFORMATION_MESSAGE);
-            return;
-        }
-        
-        int confirm = JOptionPane.showConfirmDialog(this, 
-            "Bạn có chắc muốn khóa tài khoản: " + username + "?\n\n" +
-            "Người dùng sẽ không thể đăng nhập sau khi bị khóa.",
-            "Xác nhận khóa tài khoản", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+        int confirm = JOptionPane.showConfirmDialog(this,
+            "Khóa tài khoản: " + username + "?",
+            "Xác nhận khóa", JOptionPane.YES_NO_OPTION);
         
         if (confirm == JOptionPane.YES_OPTION) {
-            userTable.setValueAt("Bị khóa", selectedRow, 7);
-            JOptionPane.showMessageDialog(this, 
-                "Đã khóa tài khoản " + username + " thành công!",
-                "Thành công", JOptionPane.INFORMATION_MESSAGE);
+            try {
+                boolean success = userDAO.updateUserStatus(userId, "locked");
+                if (success) {
+                    showSuccess("Đã khóa tài khoản thành công!");
+                    loadUsersFromDatabase();
+                } else {
+                    showError("Không thể khóa tài khoản");
+                }
+            } catch (SQLException e) {
+                showError("Lỗi khóa tài khoản: " + e.getMessage());
+                e.printStackTrace();
+            }
         }
     }
     
@@ -352,194 +451,100 @@ public class UserManagementPanel extends JPanel {
     private void showUnlockAccountDialog() {
         int selectedRow = userTable.getSelectedRow();
         if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Vui lòng chọn người dùng cần mở khóa!", 
-                                         "Cảnh báo", JOptionPane.WARNING_MESSAGE);
+            showWarning("Vui lòng chọn người dùng cần mở khóa!");
             return;
         }
         
+        int userId = (int) userTable.getValueAt(selectedRow, 0);
         String username = userTable.getValueAt(selectedRow, 1).toString();
-        String currentStatus = userTable.getValueAt(selectedRow, 7).toString();
         
-        // Kiểm tra xem tài khoản có đang bị khóa không
-        if (currentStatus.equals("Hoạt động")) {
-            JOptionPane.showMessageDialog(this, 
-                "Tài khoản " + username + " đang hoạt động bình thường!",
-                "Thông báo", JOptionPane.INFORMATION_MESSAGE);
-            return;
-        }
-        
-        int confirm = JOptionPane.showConfirmDialog(this, 
-            "Bạn có chắc muốn mở khóa tài khoản: " + username + "?\n\n" +
-            "Người dùng sẽ có thể đăng nhập trở lại sau khi được mở khóa.",
-            "Xác nhận mở khóa tài khoản", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+        int confirm = JOptionPane.showConfirmDialog(this,
+            "Mở khóa tài khoản: " + username + "?",
+            "Xác nhận mở khóa", JOptionPane.YES_NO_OPTION);
         
         if (confirm == JOptionPane.YES_OPTION) {
-            userTable.setValueAt("Hoạt động", selectedRow, 7);
-            JOptionPane.showMessageDialog(this, 
-                "Đã mở khóa tài khoản " + username + " thành công!",
-                "Thành công", JOptionPane.INFORMATION_MESSAGE);
+            try {
+                boolean success = userDAO.updateUserStatus(userId, "active");
+                if (success) {
+                    showSuccess("Đã mở khóa tài khoản thành công!");
+                    loadUsersFromDatabase();
+                } else {
+                    showError("Không thể mở khóa tài khoản");
+                }
+            } catch (SQLException e) {
+                showError("Lỗi mở khóa tài khoản: " + e.getMessage());
+                e.printStackTrace();
+            }
         }
     }
     
-    // Yêu cầu d: Cập nhật mật khẩu
+    // Yêu cầu d: Đổi mật khẩu
     private void showChangePasswordDialog() {
         int selectedRow = userTable.getSelectedRow();
         if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Vui lòng chọn người dùng!", 
-                                         "Cảnh báo", JOptionPane.WARNING_MESSAGE);
+            showWarning("Vui lòng chọn người dùng cần đổi mật khẩu!");
             return;
         }
         
+        int userId = (int) userTable.getValueAt(selectedRow, 0);
         String username = userTable.getValueAt(selectedRow, 1).toString();
         
-        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), 
-                                    "Đổi mật khẩu - " + username, true);
-        dialog.setLayout(new BorderLayout(10, 10));
-        dialog.setSize(400, 250);
-        dialog.setLocationRelativeTo(this);
+        JPasswordField newPassword = new JPasswordField(20);
+        JPasswordField confirmPassword = new JPasswordField(20);
         
-        JPanel formPanel = new JPanel(new GridLayout(2, 2, 10, 15));
-        formPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
+        JPanel panel = new JPanel(new GridLayout(3, 2, 10, 10));
+        panel.add(new JLabel("Người dùng:"));
+        panel.add(new JLabel(username));
+        panel.add(new JLabel("Mật khẩu mới:"));
+        panel.add(newPassword);
+        panel.add(new JLabel("Xác nhận:"));
+        panel.add(confirmPassword);
         
-        formPanel.add(new JLabel("Mật khẩu mới:"));
-        JPasswordField newPassField = new JPasswordField();
-        formPanel.add(newPassField);
+        int result = JOptionPane.showConfirmDialog(this, panel, 
+            "Đổi mật khẩu", JOptionPane.OK_CANCEL_OPTION);
         
-        formPanel.add(new JLabel("Xác nhận mật khẩu:"));
-        JPasswordField confirmPassField = new JPasswordField();
-        formPanel.add(confirmPassField);
-        
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
-        JButton saveBtn = createStyledButton("💾 Lưu", SUCCESS_GREEN);
-        JButton cancelBtn = createStyledButton("❌ Hủy", DANGER_RED);
-        
-        saveBtn.addActionListener(e -> {
-            String newPass = new String(newPassField.getPassword());
-            String confirmPass = new String(confirmPassField.getPassword());
+        if (result == JOptionPane.OK_OPTION) {
+            String newPwd = new String(newPassword.getPassword());
+            String confirmPwd = new String(confirmPassword.getPassword());
             
-            if (newPass.isEmpty()) {
-                JOptionPane.showMessageDialog(dialog, "Mật khẩu không được để trống!");
+            if (newPwd.isEmpty()) {
+                showWarning("Mật khẩu không được để trống!");
                 return;
             }
             
-            if (!newPass.equals(confirmPass)) {
-                JOptionPane.showMessageDialog(dialog, "Mật khẩu xác nhận không khớp!");
+            if (!newPwd.equals(confirmPwd)) {
+                showWarning("Mật khẩu xác nhận không khớp!");
                 return;
             }
             
-            // TODO: Update password in database
-            JOptionPane.showMessageDialog(dialog, "Đổi mật khẩu thành công!");
-            dialog.dispose();
-        });
-        
-        cancelBtn.addActionListener(e -> dialog.dispose());
-        
-        buttonPanel.add(saveBtn);
-        buttonPanel.add(cancelBtn);
-        
-        dialog.add(formPanel, BorderLayout.CENTER);
-        dialog.add(buttonPanel, BorderLayout.SOUTH);
-        dialog.setVisible(true);
-    }
-    
-    // Yêu cầu e: Xem lịch sử đăng nhập
-    private void showLoginHistoryDialog() {
-        int selectedRow = userTable.getSelectedRow();
-        if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Vui lòng chọn người dùng!", 
-                                         "Cảnh báo", JOptionPane.WARNING_MESSAGE);
-            return;
+            try {
+                boolean success = userDAO.updatePassword(userId, newPwd);
+                if (success) {
+                    showSuccess("Đổi mật khẩu thành công!");
+                } else {
+                    showError("Không thể đổi mật khẩu");
+                }
+            } catch (SQLException e) {
+                showError("Lỗi đổi mật khẩu: " + e.getMessage());
+                e.printStackTrace();
+            }
         }
-        
-        String username = userTable.getValueAt(selectedRow, 1).toString();
-        
-        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), 
-                                    "Lịch sử đăng nhập - " + username, true);
-        dialog.setSize(700, 400);
-        dialog.setLocationRelativeTo(this);
-        
-        String[] columns = {"Thời gian", "IP Address", "Thiết bị", "Trạng thái"};
-        DefaultTableModel model = new DefaultTableModel(columns, 0);
-        
-        // Sample data
-        model.addRow(new Object[]{"2024-01-15 10:30:00", "192.168.1.100", "Windows 10", "Thành công"});
-        model.addRow(new Object[]{"2024-01-14 14:20:00", "192.168.1.101", "iPhone 12", "Thành công"});
-        model.addRow(new Object[]{"2024-01-13 08:15:00", "192.168.1.100", "Windows 10", "Thành công"});
-        
-        JTable historyTable = new JTable(model);
-        historyTable.setRowHeight(25);
-        
-        dialog.add(new JScrollPane(historyTable));
-        dialog.setVisible(true);
     }
     
-    // Yêu cầu f: Danh sách bạn bè
-    private void showFriendsListDialog() {
-        int selectedRow = userTable.getSelectedRow();
-        if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Vui lòng chọn người dùng!", 
-                                         "Cảnh báo", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-        
-        String username = userTable.getValueAt(selectedRow, 1).toString();
-        
-        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), 
-                                    "Danh sách bạn bè - " + username, true);
-        dialog.setSize(600, 400);
-        dialog.setLocationRelativeTo(this);
-        
-        String[] columns = {"Tên đăng nhập", "Họ tên", "Ngày kết bạn", "Trạng thái"};
-        DefaultTableModel model = new DefaultTableModel(columns, 0);
-        
-        // Sample data
-        model.addRow(new Object[]{"user2", "Trần Thị B", "2024-01-10", "Bạn bè"});
-        model.addRow(new Object[]{"user3", "Lê Văn C", "2024-01-12", "Bạn bè"});
-        model.addRow(new Object[]{"user4", "Phạm Thị D", "2024-01-14", "Bạn bè"});
-        
-        JTable friendsTable = new JTable(model);
-        friendsTable.setRowHeight(25);
-        
-        dialog.add(new JScrollPane(friendsTable));
-        dialog.setVisible(true);
+    // Helper methods for showing messages
+    private void showSuccess(String message) {
+        JOptionPane.showMessageDialog(this, message, "Thành công", 
+            JOptionPane.INFORMATION_MESSAGE);
     }
     
-    // Yêu cầu a: Tìm kiếm
-    private void handleSearch() {
-        String keyword = searchField.getText().trim();
-        String searchType = (String) searchTypeCombo.getSelectedItem();
-        
-        if (keyword.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Vui lòng nhập từ khóa tìm kiếm!");
-            return;
-        }
-        
-        JOptionPane.showMessageDialog(this, 
-            "Đang tìm kiếm: " + keyword + "\nLoại: " + searchType + "\n\nChức năng sẽ được triển khai với database",
-            "Tìm kiếm", JOptionPane.INFORMATION_MESSAGE);
+    private void showError(String message) {
+        JOptionPane.showMessageDialog(this, message, "Lỗi", 
+            JOptionPane.ERROR_MESSAGE);
     }
     
-    // Yêu cầu a: Lọc và sắp xếp
-    private void handleFilterAndSort() {
-        String status = (String) statusFilter.getSelectedItem();
-        String sortOption = (String) sortCombo.getSelectedItem();
-        
-        JOptionPane.showMessageDialog(this, 
-            "Áp dụng lọc:\nTrạng thái: " + status + "\nSắp xếp: " + sortOption + 
-            "\n\nChức năng sẽ được triển khai với database",
-            "Lọc & Sắp xếp", JOptionPane.INFORMATION_MESSAGE);
-    }
-
-    private void loadSampleData() {
-        DefaultTableModel model = (DefaultTableModel) userTable.getModel();
-        model.addRow(new Object[]{"1", "admin", "Quản trị viên", "Hà Nội", "1990-01-01", 
-                                  "Nam", "admin@chat.com", "Hoạt động", "2024-01-01"});
-        model.addRow(new Object[]{"2", "user1", "Nguyễn Văn A", "TP HCM", "1995-05-15", 
-                                  "Nam", "user1@gmail.com", "Hoạt động", "2024-01-02"});
-        model.addRow(new Object[]{"3", "user2", "Trần Thị B", "Đà Nẵng", "1998-08-20", 
-                                  "Nữ", "user2@gmail.com", "Bị khóa", "2024-01-03"});
-        model.addRow(new Object[]{"4", "user3", "Lê Văn C", "Hải Phòng", "1992-03-10", 
-                                  "Nam", "user3@gmail.com", "Hoạt động", "2024-01-04"});
+    private void showWarning(String message) {
+        JOptionPane.showMessageDialog(this, message, "Cảnh báo", 
+            JOptionPane.WARNING_MESSAGE);
     }
 
     private JButton createStyledButton(String text, Color color) {

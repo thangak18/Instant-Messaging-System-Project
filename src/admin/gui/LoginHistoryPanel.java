@@ -1,14 +1,19 @@
 package admin.gui;
 
+import admin.dao.LoginHistoryDAO;
+import admin.model.LoginHistory;
+
 import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumnModel;
 import java.awt.*;
+import java.sql.SQLException;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 /**
- * Giao diện xem lịch sử đăng nhập - Phiên bản đơn giản
- * Chỉ hiển thị bảng lịch sử, không có tìm kiếm/lọc
+ * Giao diện xem lịch sử đăng nhập - Backend Integration
  */
 public class LoginHistoryPanel extends JPanel {
 
@@ -18,25 +23,37 @@ public class LoginHistoryPanel extends JPanel {
     private static final Color DANGER_RED = new Color(220, 53, 69);
 
     private JTable historyTable;
+    private DefaultTableModel tableModel;
     private JButton refreshButton, exportButton;
+    private JLabel totalLabel;
+    
+    // Backend DAO
+    private LoginHistoryDAO loginHistoryDAO;
+    private DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
 
     public LoginHistoryPanel() {
-        initializeComponents();
-        setupLayout();
-        loadSampleData();
-        setupEventHandlers();
+        try {
+            this.loginHistoryDAO = new LoginHistoryDAO();
+            initializeComponents();
+            setupLayout();
+            loadLoginHistoryFromDatabase();
+            setupEventHandlers();
+        } catch (Exception e) {
+            showError("Lỗi khởi tạo: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     private void initializeComponents() {
-        // Bảng hiển thị lịch sử đăng nhập - chỉ 4 cột cơ bản
-        String[] columns = {"ID", "Thời gian", "Tên đăng nhập", "Họ tên"};
-        DefaultTableModel model = new DefaultTableModel(columns, 0) {
+        // Bảng hiển thị lịch sử đăng nhập
+        String[] columns = {"ID", "Thời gian", "Tên đăng nhập", "Họ tên", "IP Address"};
+        tableModel = new DefaultTableModel(columns, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
                 return false;
             }
         };
-        historyTable = new JTable(model);
+        historyTable = new JTable(tableModel);
         historyTable.setRowHeight(28);
         historyTable.setAutoCreateRowSorter(true);
         historyTable.setFillsViewportHeight(true);
@@ -48,10 +65,11 @@ public class LoginHistoryPanel extends JPanel {
 
         // Thiết lập độ rộng cột
         TableColumnModel columnModel = historyTable.getColumnModel();
-        columnModel.getColumn(0).setPreferredWidth(80);   // ID
-        columnModel.getColumn(1).setPreferredWidth(200);  // Thời gian
+        columnModel.getColumn(0).setPreferredWidth(60);   // ID
+        columnModel.getColumn(1).setPreferredWidth(180);  // Thời gian
         columnModel.getColumn(2).setPreferredWidth(150);  // Tên đăng nhập
         columnModel.getColumn(3).setPreferredWidth(200);  // Họ tên
+        columnModel.getColumn(4).setPreferredWidth(150);  // IP Address
 
         // Các nút chức năng
         refreshButton = new JButton("🔄 Làm mới");
@@ -59,6 +77,42 @@ public class LoginHistoryPanel extends JPanel {
         
         stylePrimaryButton(refreshButton);
         stylePrimaryButton(exportButton);
+        
+        // Label thống kê
+        totalLabel = new JLabel("📊 Tổng số lượt: 0");
+        totalLabel.setFont(new Font("Arial", Font.BOLD, 12));
+    }
+    
+    /**
+     * Load lịch sử đăng nhập từ database
+     */
+    private void loadLoginHistoryFromDatabase() {
+        try {
+            List<LoginHistory> histories = loginHistoryDAO.getAllLoginHistory();
+            displayLoginHistories(histories);
+            totalLabel.setText("📊 Tổng số lượt: " + histories.size());
+        } catch (SQLException e) {
+            showError("Lỗi load dữ liệu: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+     * Hiển thị danh sách lịch sử lên table
+     */
+    private void displayLoginHistories(List<LoginHistory> histories) {
+        tableModel.setRowCount(0); // Clear table
+        
+        for (LoginHistory history : histories) {
+            Object[] row = {
+                history.getId(),
+                history.getLoginTime() != null ? history.getLoginTime().format(dateTimeFormatter) : "",
+                history.getUsername(),
+                history.getFullName(),
+                history.getIpAddress() != null ? history.getIpAddress() : "N/A"
+            };
+            tableModel.addRow(row);
+        }
     }
 
     private void setupLayout() {
@@ -129,7 +183,7 @@ public class LoginHistoryPanel extends JPanel {
     }
 
     private void handleRefresh() {
-        loadSampleData();
+        loadLoginHistoryFromDatabase();
         JOptionPane.showMessageDialog(this, 
             "Đã làm mới dữ liệu!",
             "Thông báo", JOptionPane.INFORMATION_MESSAGE);
@@ -152,17 +206,10 @@ public class LoginHistoryPanel extends JPanel {
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
     }
     
-    private void loadSampleData() {
-        DefaultTableModel model = (DefaultTableModel) historyTable.getModel();
-        model.setRowCount(0); // Xóa dữ liệu cũ
-        
-        // Dữ liệu mẫu - chỉ 4 cột
-        model.addRow(new Object[]{"1", "2024-01-02 14:00:00", "user4", "Phạm Thị D"});
-        model.addRow(new Object[]{"2", "2024-01-02 11:00:00", "user3", "Lê Văn C"});
-        model.addRow(new Object[]{"3", "2024-01-02 09:15:00", "user1", "Nguyễn Văn A"});
-        model.addRow(new Object[]{"4", "2024-01-02 08:30:00", "admin", "Quản trị viên"});
-        model.addRow(new Object[]{"5", "2024-01-01 10:00:00", "user2", "Trần Thị B"});
-        model.addRow(new Object[]{"6", "2024-01-01 09:00:00", "user1", "Nguyễn Văn A"});
-        model.addRow(new Object[]{"7", "2024-01-01 08:00:00", "admin", "Quản trị viên"});
+    /**
+     * Hiển thị thông báo lỗi
+     */
+    private void showError(String message) {
+        JOptionPane.showMessageDialog(this, message, "Lỗi", JOptionPane.ERROR_MESSAGE);
     }
 }

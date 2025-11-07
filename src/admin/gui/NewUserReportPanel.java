@@ -1,9 +1,18 @@
 package admin.gui;
 
+import admin.dao.StatisticsDAO;
+import admin.model.User;
+
 import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.table.*;
 import java.awt.*;
+import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Giao diện Báo cáo Người dùng mới - ĐẦY ĐỦ CHỨC NĂNG
@@ -16,12 +25,19 @@ public class NewUserReportPanel extends JPanel {
     private static final Color NEUTRAL_GRAY = new Color(108, 117, 125);
     
     private JTable userTable;
+    private DefaultTableModel tableModel;
     private JTextField dateFromField, dateToField;
     private JTextField searchNameField;
     private JComboBox<String> sortCombo;
     private JButton filterButton, resetButton, refreshButton, exportButton;
+    
+    // Backend
+    private StatisticsDAO statisticsDAO;
+    private DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     public NewUserReportPanel() {
+        this.statisticsDAO = new StatisticsDAO();
         initComponents();
         setupLayout();
         setupEventHandlers();
@@ -29,12 +45,12 @@ public class NewUserReportPanel extends JPanel {
 
     private void initComponents() {
         String[] columns = {"ID", "Tên đăng nhập", "Họ tên", "Email", "Ngày đăng ký", "Trạng thái"};
-        DefaultTableModel model = new DefaultTableModel(columns, 0) {
+        tableModel = new DefaultTableModel(columns, 0) {
             @Override
             public boolean isCellEditable(int row, int column) { return false; }
         };
         
-        userTable = new JTable(model);
+        userTable = new JTable(tableModel);
         userTable.setRowHeight(28);
         userTable.setAutoCreateRowSorter(true);
         userTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 13));
@@ -229,8 +245,6 @@ public class NewUserReportPanel extends JPanel {
     private void handleFilterReport() {
         String fromDate = dateFromField.getText().trim();
         String toDate = dateToField.getText().trim();
-        String nameFilter = searchNameField.getText().trim();
-        String sortOption = (String) sortCombo.getSelectedItem();
         
         // Kiểm tra đầu vào
         if (fromDate.isEmpty() || toDate.isEmpty()) {
@@ -242,7 +256,7 @@ public class NewUserReportPanel extends JPanel {
             return;
         }
         
-        // Validate định dạng ngày đơn giản
+        // Validate định dạng ngày
         if (!isValidDateFormat(fromDate) || !isValidDateFormat(toDate)) {
             JOptionPane.showMessageDialog(this, 
                 "Định dạng ngày không hợp lệ!\n" +
@@ -252,35 +266,78 @@ public class NewUserReportPanel extends JPanel {
             return;
         }
         
-        // Load dữ liệu mẫu theo bộ lọc
-        loadFilteredData(fromDate, toDate, nameFilter, sortOption);
+        // Load dữ liệu từ database
+        try {
+            LocalDate startDate = LocalDate.parse(fromDate, inputFormatter);
+            LocalDate endDate = LocalDate.parse(toDate, inputFormatter);
+            
+            // Calculate days between dates
+            long daysBetween = java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate);
+            
+            // Get new users from last N days
+            List<Map<String, Object>> newUsersData = statisticsDAO.getNewUsers((int)daysBetween);
+            
+            // Convert to User objects and display
+            displayNewUsersFromMap(newUsersData);
+            updateStatistics();
+            
+            JOptionPane.showMessageDialog(this, 
+                "Đã tải " + newUsersData.size() + " người dùng mới\n" +
+                "Từ: " + fromDate + " đến: " + toDate,
+                "Thành công", JOptionPane.INFORMATION_MESSAGE);
+                
+        } catch (DateTimeParseException e) {
+            showError("Lỗi định dạng ngày: " + e.getMessage());
+        } catch (SQLException e) {
+            showError("Lỗi load dữ liệu: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+     * Hiển thị danh sách người dùng mới từ Map
+     */
+    private void displayNewUsersFromMap(List<Map<String, Object>> usersData) {
+        tableModel.setRowCount(0); // Clear table
         
-        JOptionPane.showMessageDialog(this, 
-            "Đã tải báo cáo người dùng đăng ký mới:\n\n" +
-            "Từ ngày: " + fromDate + "\n" +
-            "Đến ngày: " + toDate + "\n" +
-            "Lọc tên: " + (nameFilter.isEmpty() ? "Tất cả" : nameFilter) + "\n" +
-            "Sắp xếp: " + sortOption + "\n\n" +
-            "Chức năng sẽ được kết nối với database",
-            "Báo cáo", JOptionPane.INFORMATION_MESSAGE);
+        for (Map<String, Object> userData : usersData) {
+            Object[] row = {
+                userData.get("user_id"),
+                userData.get("username"),
+                userData.get("full_name"),
+                userData.get("email"),
+                userData.get("created_at"),
+                "active".equals(userData.get("status")) ? "Hoạt động" : "Bị khóa"
+            };
+            tableModel.addRow(row);
+        }
+    }
+    
+    /**
+     * Hiển thị danh sách người dùng mới
+     */
+    private void displayNewUsers(List<User> users) {
+        tableModel.setRowCount(0); // Clear table
+        
+        for (User user : users) {
+            Object[] row = {
+                user.getId(),
+                user.getUsername(),
+                user.getFullName(),
+                user.getEmail(),
+                user.getCreatedAt() != null ? user.getCreatedAt().format(dateFormatter) : "",
+                user.getStatus().equals("active") ? "Hoạt động" : "Bị khóa"
+            };
+            tableModel.addRow(row);
+        }
     }
 
     /**
      * Load dữ liệu theo bộ lọc
      */
     private void loadFilteredData(String fromDate, String toDate, String nameFilter, String sortOption) {
-        DefaultTableModel model = (DefaultTableModel) userTable.getModel();
-        model.setRowCount(0); // Xóa dữ liệu cũ
-        
-        // TODO: Trong thực tế, gọi database với các tham số này
-        // List<User> users = UserDAO.getNewUsers(fromDate, toDate, nameFilter, sortOption);
-        
-        // Dữ liệu mẫu (giả lập filter theo thời gian)
-        model.addRow(new Object[]{"1", "user1", "Nguyễn Văn A", "user1@email.com", "2024-01-02", "Hoạt động"});
-        model.addRow(new Object[]{"2", "user2", "Trần Thị B", "user2@email.com", "2024-01-03", "Chưa xác thực"});
-        model.addRow(new Object[]{"3", "user3", "Lê Văn C", "user3@email.com", "2024-01-04", "Hoạt động"});
-        model.addRow(new Object[]{"4", "user4", "Phạm Thị D", "user4@email.com", "2024-01-05", "Chưa xác thực"});
-        model.addRow(new Object[]{"5", "user5", "Hoàng Văn E", "user5@email.com", "2024-01-06", "Hoạt động"});
+        // Deprecated - replaced by handleFilterReport with database integration
+        handleFilterReport();
         
         updateStatistics();
     }
@@ -320,14 +377,19 @@ public class NewUserReportPanel extends JPanel {
         dateToField.setText("");
         searchNameField.setText("");
         sortCombo.setSelectedIndex(0);
-        
-        DefaultTableModel model = (DefaultTableModel) userTable.getModel();
-        model.setRowCount(0);
+        tableModel.setRowCount(0);
         updateStatistics();
         
         JOptionPane.showMessageDialog(this, 
             "Đã đặt lại tất cả bộ lọc!",
             "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+    }
+    
+    /**
+     * Hiển thị thông báo lỗi
+     */
+    private void showError(String message) {
+        JOptionPane.showMessageDialog(this, message, "Lỗi", JOptionPane.ERROR_MESSAGE);
     }
 
     /**

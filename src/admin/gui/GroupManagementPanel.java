@@ -1,9 +1,15 @@
 package admin.gui;
 
+import admin.dao.GroupDAO;
+import admin.model.ChatGroup;
+
 import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.table.*;
 import java.awt.*;
+import java.sql.SQLException;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 /**
  * Giao diện quản lý nhóm chat - ĐẦY ĐỦ CHỨC NĂNG
@@ -19,26 +25,32 @@ public class GroupManagementPanel extends JPanel {
 
     // Components
     private JTable groupTable;
+    private DefaultTableModel tableModel;
     private JTextField searchField;
     private JComboBox<String> sortCombo;
     private JComboBox<String> searchTypeCombo;
+    
+    // Backend
+    private GroupDAO groupDAO;
+    private DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     public GroupManagementPanel() {
+        this.groupDAO = new GroupDAO();
         initComponents();
         setupLayout();
-        loadSampleData();
+        loadGroupsFromDatabase();
         setupEventHandlers();
     }
 
     private void initComponents() {
         // Bảng nhóm với cột đầy đủ thông tin
-        String[] columns = {"ID", "Tên nhóm", "Admin chính", "Số thành viên", "Số admin", "Ngày tạo"};
-        DefaultTableModel model = new DefaultTableModel(columns, 0) {
+        String[] columns = {"ID", "Tên nhóm", "Admin chính", "Số thành viên", "Ngày tạo"};
+        tableModel = new DefaultTableModel(columns, 0) {
             @Override
             public boolean isCellEditable(int row, int column) { return false; }
         };
 
-        groupTable = new JTable(model);
+        groupTable = new JTable(tableModel);
         groupTable.setRowHeight(28);
         groupTable.setAutoCreateRowSorter(true);
         groupTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 13));
@@ -48,11 +60,10 @@ public class GroupManagementPanel extends JPanel {
         // Điều chỉnh độ rộng cột
         TableColumnModel columnModel = groupTable.getColumnModel();
         columnModel.getColumn(0).setPreferredWidth(50);   // ID
-        columnModel.getColumn(1).setPreferredWidth(200);  // Tên nhóm
+        columnModel.getColumn(1).setPreferredWidth(250);  // Tên nhóm
         columnModel.getColumn(2).setPreferredWidth(150);  // Admin chính
         columnModel.getColumn(3).setPreferredWidth(100);  // Số thành viên
-        columnModel.getColumn(4).setPreferredWidth(80);   // Số admin
-        columnModel.getColumn(5).setPreferredWidth(120);  // Ngày tạo
+        columnModel.getColumn(4).setPreferredWidth(120);  // Ngày tạo
 
         // Yêu cầu b: Tìm kiếm/lọc theo tên
         searchField = new JTextField(20);
@@ -68,6 +79,37 @@ public class GroupManagementPanel extends JPanel {
             "Sắp xếp theo ngày tạo (Mới nhất)",
             "Sắp xếp theo ngày tạo (Cũ nhất)",
         });
+    }
+    
+    /**
+     * Load danh sách nhóm từ database
+     */
+    private void loadGroupsFromDatabase() {
+        try {
+            List<ChatGroup> groups = groupDAO.getAllGroups();
+            displayGroups(groups);
+        } catch (SQLException e) {
+            showError("Lỗi load dữ liệu nhóm: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+     * Hiển thị danh sách nhóm lên table
+     */
+    private void displayGroups(List<ChatGroup> groups) {
+        tableModel.setRowCount(0); // Clear table
+        
+        for (ChatGroup group : groups) {
+            Object[] row = {
+                group.getId(),
+                group.getGroupName(),
+                group.getCreatorName(),
+                group.getMemberCount(),
+                group.getCreatedAt() != null ? group.getCreatedAt().format(dateFormatter) : ""
+            };
+            tableModel.addRow(row);
+        }
     }
 
     private void setupLayout() {
@@ -371,16 +413,6 @@ public class GroupManagementPanel extends JPanel {
         dialog.setVisible(true);
     }
 
-
-    private void loadSampleData() {
-        DefaultTableModel model = (DefaultTableModel) groupTable.getModel();
-        model.setRowCount(0);
-        
-        model.addRow(new Object[]{"1", "Nhóm Java Dev", "admin", 15, 2, "2024-01-01"});
-        model.addRow(new Object[]{"2", "Team Project", "user1", 8, 1, "2024-01-05"});
-        model.addRow(new Object[]{"3", "Lập trình viên", "user2", 25, 3, "2024-01-10"});
-    }
-
     private JButton createStyledButton(String text, Color color) {
         JButton button = new JButton(text);
         button.setFont(new Font("Arial", Font.BOLD, 12));
@@ -392,6 +424,13 @@ public class GroupManagementPanel extends JPanel {
         button.setMargin(new Insets(5, 12, 5, 12));
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
         return button;
+    }
+    
+    /**
+     * Hiển thị thông báo lỗi
+     */
+    private void showError(String message) {
+        JOptionPane.showMessageDialog(this, message, "Lỗi", JOptionPane.ERROR_MESSAGE);
     }
 
     private void addActionToButton(String buttonText, java.awt.event.ActionListener action) {
