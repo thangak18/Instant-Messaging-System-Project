@@ -241,7 +241,9 @@ public class ChatContentPanel extends JPanel {
     public void openChat(String userName) {
         this.currentChatUser = userName;
         chatUserLabel.setText(userName);
-        statusLabel.setText("● Đang hoạt động");
+        
+        // Check online status
+        updateUserOnlineStatus(userName);
         
         // Clear old messages
         messageListPanel.removeAll();
@@ -250,6 +252,34 @@ public class ChatContentPanel extends JPanel {
         
         // Load chat history từ database
         loadChatHistory(userName);
+    }
+    
+    /**
+     * Cập nhật trạng thái online của user
+     */
+    private void updateUserOnlineStatus(String userName) {
+        boolean isOnline = false;
+        if (mainFrame.getSocketClient() != null) {
+            java.util.List<String> onlineUsers = mainFrame.getSocketClient().getOnlineUsers();
+            isOnline = onlineUsers.contains(userName);
+        }
+        
+        if (isOnline) {
+            statusLabel.setText("● Đang hoạt động");
+            statusLabel.setForeground(new Color(67, 220, 96)); // Green
+        } else {
+            statusLabel.setText("○ Không hoạt động");
+            statusLabel.setForeground(new Color(120, 120, 120)); // Gray
+        }
+    }
+    
+    /**
+     * Refresh online status của current chat user
+     */
+    public void refreshOnlineStatus() {
+        if (currentChatUser != null && !currentChatUser.isEmpty()) {
+            updateUserOnlineStatus(currentChatUser);
+        }
     }
     
     /**
@@ -376,9 +406,8 @@ public class ChatContentPanel extends JPanel {
                 System.out.println("  💬 Nội dung: " + content);
                 System.out.println("  👤 Current chat user: " + currentChatUser);
                 
-                // Lưu vào database
-                boolean saved = userService.saveMessage(sender, mainFrame.getUsername(), content);
-                System.out.println(saved ? "  ✅ Đã lưu vào DB" : "  ❌ Lưu DB thất bại");
+                // KHÔNG LƯU VÀO DATABASE Ở ĐÂY - đã lưu ở người gửi rồi
+                // Chỉ hiển thị message trong GUI
                 
                 // Nếu đang chat với người gửi thì hiển thị message
                 if (currentChatUser != null && sender.equals(currentChatUser)) {

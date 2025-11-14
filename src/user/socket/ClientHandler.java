@@ -86,6 +86,19 @@ public class ClientHandler implements Runnable {
                 handleTyping(message);
                 break;
                 
+            // Friend Request notifications
+            case FRIEND_REQUEST_SENT:
+            case FRIEND_REQUEST_ACCEPTED:
+            case FRIEND_REQUEST_REJECTED:
+            case FRIEND_REQUEST_RECALLED:
+                handleFriendRequestNotification(message);
+                break;
+            
+            case UNFRIEND:
+            case BLOCK:
+                handleFriendManagementNotification(message);
+                break;
+                
             default:
                 System.err.println("⚠️  Unknown message type: " + message.getType());
         }
@@ -160,6 +173,40 @@ public class ClientHandler implements Runnable {
         } else {
             // Broadcast cho tất cả
             server.broadcast(message, username);
+        }
+    }
+    
+    /**
+     * Xử lý Friend Request notifications
+     */
+    private void handleFriendRequestNotification(Message message) {
+        message.setSender(username);
+        String receiver = message.getReceiver();
+        
+        if (receiver != null) {
+            boolean sent = server.sendToUser(receiver, message);
+            if (sent) {
+                System.out.println("✅ Sent " + message.getType() + " notification: " + username + " → " + receiver);
+            } else {
+                System.out.println("⚠️  User " + receiver + " is offline. Notification not sent.");
+            }
+        }
+    }
+    
+    /**
+     * Xử lý Unfriend/Block notifications
+     */
+    private void handleFriendManagementNotification(Message message) {
+        message.setSender(username);
+        String receiver = message.getReceiver();
+        
+        if (receiver != null) {
+            boolean sent = server.sendToUser(receiver, message);
+            if (sent) {
+                System.out.println("✅ Sent " + message.getType() + " notification: " + username + " → " + receiver);
+            } else {
+                System.out.println("⚠️  User " + receiver + " is offline. Notification not sent.");
+            }
         }
     }
     

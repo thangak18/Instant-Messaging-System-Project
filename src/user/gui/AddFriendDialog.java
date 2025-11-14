@@ -384,12 +384,8 @@ public class AddFriendDialog extends JDialog {
                 if (saved) {
                     System.out.println("✅ Đã lưu lời mời kết bạn vào database: " + currentUsername + " → " + targetUsername);
                     
-                    // TODO: Send real-time notification via socket
-                    if (mainFrame.getSocketClient() != null && mainFrame.getSocketClient().isConnected()) {
-                        System.out.println("📤 TODO: Gửi notification đến: " + targetUsername);
-                        // Message friendRequestMsg = new Message(Message.MessageType.FRIEND_REQUEST, ...);
-                        // mainFrame.getSocketClient().sendMessage(friendRequestMsg);
-                    }
+                    // Gửi notification qua Socket
+                    mainFrame.sendFriendRequestNotification(targetUsername);
                 }
                 
                 return saved;
@@ -407,10 +403,23 @@ public class AddFriendDialog extends JDialog {
                             new EmptyBorder(6, 20, 6, 20)
                         ));
                         
+                        // Refresh FriendRequestPanel của user A (người gửi)
+                        mainFrame.refreshFriendRequestPanel();
+                        
                         JOptionPane.showMessageDialog(AddFriendDialog.this,
                             "✅ Đã gửi lời mời kết bạn!",
                             "Thành công",
                             JOptionPane.INFORMATION_MESSAGE);
+                    } else {
+                        // Không thành công - có thể bị chặn hoặc lỗi khác
+                        button.setEnabled(true);
+                        button.setText("Kết bạn");
+                        
+                        JOptionPane.showMessageDialog(AddFriendDialog.this,
+                            "❌ Không thể gửi lời mời kết bạn!\n" +
+                            "Có thể bạn đã bị chặn hoặc đã có lời mời trước đó.",
+                            "Lỗi",
+                            JOptionPane.ERROR_MESSAGE);
                     }
                 } catch (Exception e) {
                     e.printStackTrace();

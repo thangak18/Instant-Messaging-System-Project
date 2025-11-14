@@ -763,17 +763,39 @@ public class UserService {
      * GỬI LỜI MỜI KẾT BẠN
      */
     public boolean sendFriendRequest(String senderUsername, String receiverUsername) {
-        String sql = "INSERT INTO friends (user_id, friend_id, status, created_at) " +
-                     "VALUES ((SELECT user_id FROM users WHERE username = ?), " +
-                     "        (SELECT user_id FROM users WHERE username = ?), " +
-                     "        'pending', CURRENT_TIMESTAMP)";
-        
         Connection conn = null;
         PreparedStatement pstmt = null;
         
         try {
             conn = dbConnection.getConnection();
             if (conn == null) return false;
+            
+            // ✅ CHECK: Kiểm tra xem có bị block không (cả 2 chiều)
+            String checkBlockSQL = "SELECT COUNT(*) FROM blocked_users " +
+                                   "WHERE (blocker_id = (SELECT user_id FROM users WHERE username = ?) " +
+                                   "       AND blocked_id = (SELECT user_id FROM users WHERE username = ?)) " +
+                                   "   OR (blocker_id = (SELECT user_id FROM users WHERE username = ?) " +
+                                   "       AND blocked_id = (SELECT user_id FROM users WHERE username = ?))";
+            
+            try (PreparedStatement checkStmt = conn.prepareStatement(checkBlockSQL)) {
+                checkStmt.setString(1, senderUsername);
+                checkStmt.setString(2, receiverUsername);
+                checkStmt.setString(3, receiverUsername);
+                checkStmt.setString(4, senderUsername);
+                
+                try (ResultSet rs = checkStmt.executeQuery()) {
+                    if (rs.next() && rs.getInt(1) > 0) {
+                        System.out.println("🚫 Không thể gửi lời mời: Có người đã bị chặn");
+                        return false;
+                    }
+                }
+            }
+            
+            // Tiếp tục insert friend request
+            String sql = "INSERT INTO friends (user_id, friend_id, status, created_at) " +
+                         "VALUES ((SELECT user_id FROM users WHERE username = ?), " +
+                         "        (SELECT user_id FROM users WHERE username = ?), " +
+                         "        'pending', CURRENT_TIMESTAMP)";
             
             pstmt = conn.prepareStatement(sql);
             pstmt.setString(1, senderUsername);
@@ -1241,6 +1263,152 @@ public class UserService {
         } finally {
             if (pstmt != null) try { pstmt.close(); } catch (SQLException e) { }
             if (conn != null) DatabaseConnection.closeConnection(conn);
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Huỷ kết bạn
+     */
+    public boolean unfriend(String username1, String username2) {
+        String sql = "DELETE FROM friends " +
+                     "WHERE status = 'accepted' " +
+                     "AND ( " +
+                     "  (user_id = (SELECT user_id FROM users WHERE username = ?) " +
+                     "   AND friend_id = (SELECT user_id FROM users WHERE username = ?)) " +
+                     "  OR " +
+                     "  (user_id = (SELECT user_id FROM users WHERE username = ?) " +
+                     "   AND friend_id = (SELECT user_id FROM users WHERE username = ?)) " +
+                     ")";
+        
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        
+        try {
+            conn = dbConnection.getConnection();
+            if (conn == null) return false;
+            
+            pstmt = conn.prepareStatement(sql);
+            pstmt.setString(1, username1);
+            pstmt.setString(2, username2);
+            pstmt.setString(3, username2);
+            pstmt.setString(4, username1);
+            
+            int rows = pstmt.executeUpdate();
+            
+            if (rows > 0) {
+                System.out.println("✅ Đã huỷ kết bạn: " + username1 + " <-> " + username2);
+                return true;
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi khi huỷ kết bạn: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            if (pstmt != null) try { pstmt.close(); } catch (SQLException e) { }
+            if (conn != null) DatabaseConnection.closeConnection(conn);
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Block user và huỷ kết bạn
+     */
+    public boolean blockUser(String blocker, String blocked) {
+        Connection conn = null;
+        
+        try {
+            conn = dbConnection.getConnection();
+            if (conn == null) return false;
+            
+            conn.setAutoCommit(false); // Start transaction
+            
+            // 1. Huỷ kết bạn (nếu có)
+            String deleteFriendSQL = "DELETE FROM friends " +
+                                     "WHERE status = 'accepted' " +
+                                     "AND ( " +
+                                     "  (user_id = (SELECT user_id FROM users WHERE username = ?) " +
+                                     "   AND friend_id = (SELECT user_id FROM users WHERE username = ?)) " +
+                                     "  OR " +
+                                     "  (user_id = (SELECT user_id FROM users WHERE username = ?) " +
+                                     "   AND friend_id = (SELECT user_id FROM users WHERE username = ?)) " +
+                                     ")";
+            
+            try (PreparedStatement pstmt = conn.prepareStatement(deleteFriendSQL)) {
+                pstmt.setString(1, blocker);
+                pstmt.setString(2, blocked);
+                pstmt.setString(3, blocked);
+                pstmt.setString(4, blocker);
+                pstmt.executeUpdate();
+            }
+            
+            // 2. Xoá các lời mời kết bạn pending
+            String deletePendingSQL = "DELETE FROM friend_requests " +
+                                      "WHERE status = 'pending' " +
+                                      "AND ( " +
+                                      "  (sender_id = (SELECT user_id FROM users WHERE username = ?) " +
+                                      "   AND receiver_id = (SELECT user_id FROM users WHERE username = ?)) " +
+                                      "  OR " +
+                                      "  (sender_id = (SELECT user_id FROM users WHERE username = ?) " +
+                                      "   AND receiver_id = (SELECT user_id FROM users WHERE username = ?)) " +
+                                      ")";
+            
+            try (PreparedStatement pstmt = conn.prepareStatement(deletePendingSQL)) {
+                pstmt.setString(1, blocker);
+                pstmt.setString(2, blocked);
+                pstmt.setString(3, blocked);
+                pstmt.setString(4, blocker);
+                pstmt.executeUpdate();
+            }
+            
+            // 3. Thêm vào bảng blocked_users
+            String blockSQL = "INSERT INTO blocked_users (blocker_id, blocked_id, blocked_at) " +
+                             "VALUES ( " +
+                             "  (SELECT user_id FROM users WHERE username = ?), " +
+                             "  (SELECT user_id FROM users WHERE username = ?), " +
+                             "  CURRENT_TIMESTAMP " +
+                             ") " +
+                             "ON CONFLICT (blocker_id, blocked_id) DO NOTHING";
+            
+            try (PreparedStatement pstmt = conn.prepareStatement(blockSQL)) {
+                pstmt.setString(1, blocker);
+                pstmt.setString(2, blocked);
+                int rows = pstmt.executeUpdate();
+                
+                if (rows > 0) {
+                    conn.commit();
+                    System.out.println("✅ Đã block user: " + blocker + " -> " + blocked);
+                    return true;
+                } else {
+                    // Already blocked
+                    conn.commit();
+                    return true;
+                }
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi khi block user: " + e.getMessage());
+            e.printStackTrace();
+            
+            if (conn != null) {
+                try {
+                    conn.rollback();
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                }
+            }
+            
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.setAutoCommit(true);
+                    DatabaseConnection.closeConnection(conn);
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
         }
         
         return false;

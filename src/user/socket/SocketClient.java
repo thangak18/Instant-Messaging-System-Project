@@ -5,6 +5,8 @@ import user.socket.Message.MessageType;
 
 import java.io.*;
 import java.net.*;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.function.Consumer;
 
 /**
@@ -22,6 +24,7 @@ public class SocketClient {
     
     private String username;
     private Consumer<Message> messageHandler;  // Callback xử lý message nhận được
+    private List<String> onlineUsers = new ArrayList<>(); // Danh sách users online
     
     private volatile boolean running = false;
     private Thread listenerThread;
@@ -75,6 +78,15 @@ public class SocketClient {
             while (running) {
                 Message message = (Message) in.readObject();
                 System.out.println("📨 Received from server: " + message.getType());
+                
+                // Update online users list
+                if (message.getType() == MessageType.ONLINE_USERS) {
+                    Object data = message.getData();
+                    if (data instanceof List<?>) {
+                        onlineUsers = new ArrayList<>((List<String>) data);
+                        System.out.println("👥 Online users updated: " + onlineUsers.size());
+                    }
+                }
                 
                 // Gọi callback handler
                 if (messageHandler != null) {
@@ -172,5 +184,12 @@ public class SocketClient {
     
     public String getUsername() {
         return username;
+    }
+    
+    /**
+     * Lấy danh sách users online
+     */
+    public List<String> getOnlineUsers() {
+        return new ArrayList<>(onlineUsers);
     }
 }
