@@ -88,11 +88,13 @@ public class FriendRequestPanel extends JPanel {
                     
                     if (requests == null || requests.isEmpty()) {
                         showEmptyMessage(receivedPanel, "Không có lời mời kết bạn");
+                        tabbedPane.setTitleAt(0, "Lời mời đã nhận (0)");
                     } else {
                         for (Map<String, Object> request : requests) {
                             ReceivedRequestPanel requestPanel = new ReceivedRequestPanel(request);
                             receivedPanel.add(requestPanel);
                         }
+                        tabbedPane.setTitleAt(0, "Lời mời đã nhận (" + requests.size() + ")");
                     }
                     
                     receivedPanel.revalidate();
@@ -124,11 +126,13 @@ public class FriendRequestPanel extends JPanel {
                     
                     if (requests == null || requests.isEmpty()) {
                         showEmptyMessage(sentPanel, "Bạn chưa gửi lời mời nào");
+                        tabbedPane.setTitleAt(1, "Lời mời đã gửi (0)");
                     } else {
                         for (Map<String, Object> request : requests) {
                             SentRequestPanel requestPanel = new SentRequestPanel(request);
                             sentPanel.add(requestPanel);
                         }
+                        tabbedPane.setTitleAt(1, "Lời mời đã gửi (" + requests.size() + ")");
                     }
                     
                     sentPanel.revalidate();
@@ -309,13 +313,20 @@ public class FriendRequestPanel extends JPanel {
                 try {
                     if (get()) {
                         System.out.println("✅ Đã chấp nhận lời mời từ: " + senderUsername);
+                        
+                        // Gửi notification qua Socket cho User B (người gửi lời mời)
+                        mainFrame.sendFriendRequestAcceptedNotification(senderUsername);
+                        
                         JOptionPane.showMessageDialog(FriendRequestPanel.this,
                             "✅ Đã chấp nhận lời mời kết bạn!",
                             "Thành công",
                             JOptionPane.INFORMATION_MESSAGE);
                         
-                        // Reload
+                        // Reload friend requests
                         loadReceivedRequests();
+                        
+                        // ✅ REFRESH CHAT LIST VÀ FRIEND LIST CỦA USER A (người chấp nhận)
+                        mainFrame.refreshChatAndFriendList();
                     } else {
                         JOptionPane.showMessageDialog(FriendRequestPanel.this,
                             "❌ Không thể chấp nhận lời mời!",
@@ -350,6 +361,10 @@ public class FriendRequestPanel extends JPanel {
                 try {
                     if (get()) {
                         System.out.println("❌ Đã từ chối lời mời từ: " + senderUsername);
+                        
+                        // Gửi notification qua Socket
+                        mainFrame.sendFriendRequestRejectedNotification(senderUsername);
+                        
                         JOptionPane.showMessageDialog(FriendRequestPanel.this,
                             "✅ Đã từ chối lời mời!",
                             "Thành công",
@@ -391,6 +406,10 @@ public class FriendRequestPanel extends JPanel {
                 try {
                     if (get()) {
                         System.out.println("🔙 Đã thu hồi lời mời gửi cho: " + receiverUsername);
+                        
+                        // Gửi notification qua Socket
+                        mainFrame.sendFriendRequestRecalledNotification(receiverUsername);
+                        
                         JOptionPane.showMessageDialog(FriendRequestPanel.this,
                             "✅ Đã thu hồi lời mời!",
                             "Thành công",
@@ -409,5 +428,16 @@ public class FriendRequestPanel extends JPanel {
                 }
             }
         }.execute();
+    }
+    
+    /**
+     * Refresh friend requests - Gọi khi nhận notification từ Socket
+     */
+    public void refreshFriendRequests() {
+        System.out.println("🔄 Refreshing friend requests...");
+        SwingUtilities.invokeLater(() -> {
+            loadReceivedRequests();
+            loadSentRequests();
+        });
     }
 }

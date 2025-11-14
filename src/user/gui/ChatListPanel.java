@@ -439,4 +439,12 @@ public class ChatListPanel extends JPanel {
             timeLabel.setText(time);
         }
     }
+    
+    /**
+     * Refresh chat list (khi có bạn mới hoặc accept friend request)
+     */
+    public void refreshChatList() {
+        System.out.println("🔄 Refreshing chat list...");
+        loadRecentChats();
+    }
 }
