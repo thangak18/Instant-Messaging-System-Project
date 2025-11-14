@@ -1,214 +1,483 @@
+package admin.gui;
+
 import javax.swing.*;
-import javax.swing.border.Border;
-import javax.swing.border.EmptyBorder;
-import javax.swing.border.TitledBorder;
-import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableColumnModel;
+import javax.swing.border.*;
+import javax.swing.table.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 
 /**
- * Giao diện quản lý Báo Cáo Spam - PHIÊN BẢN 1
- * (Đã gộp ô lọc thời gian)
+ * Giao diện quản lý báo cáo spam - ĐẦY ĐỦ CHỨC NĂNG
+ * Yêu cầu: a) Sắp xếp, b) Lọc theo thời gian, c) Lọc theo tên, d) Khóa tài khoản
  */
 public class SpamReportPanel extends JPanel {
-
-    // Định nghĩa màu sắc
+    private static final Color DANGER_RED = new Color(220, 53, 69);
     private static final Color ZALO_BLUE = new Color(0, 102, 255);
-    private static final Color DESTRUCTIVE_RED = new Color(220, 53, 69);
+    private static final Color SUCCESS_GREEN = new Color(40, 167, 69);
+    private static final Color WARNING_ORANGE = new Color(255, 193, 7);
     private static final Color NEUTRAL_GRAY = new Color(108, 117, 125);
-
+    
     private JTable spamTable;
-    private JTextField searchUserField; // Ô tìm theo tên
-    
-    // --- THAY ĐỔI 1: GỘP 2 Ô THÀNH 1 Ô ---
-    private JTextField dateFilterField; // Ô lọc thời gian (Gộp)
-    
+    private JComboBox<String> statusFilter;
+    private JComboBox<String> timeFilterCombo;
     private JComboBox<String> sortCombo;
-    private JButton searchButton, lockUserButton, markAsDoneButton, refreshButton;
+    private JTextField searchField;
+    private JComboBox<String> searchTypeCombo;
 
     public SpamReportPanel() {
-        initializeComponents();
+        initComponents();
         setupLayout();
         loadSampleData();
         setupEventHandlers();
     }
 
-    private void initializeComponents() {
-        // --- Bảng hiển thị báo cáo ---
-        String[] columns = {"ID", "Thời Gian", "Người Báo Cáo", "Người Bị Tố Cáo", "Nội dung", "Trạng thái"};
+    private void initComponents() {
+        // Bảng với cột đầy đủ thông tin
+        String[] columns = {"ID", "Người báo cáo", "Người bị báo cáo", "Lý do", "Trạng thái", "Ngày báo cáo"};
         DefaultTableModel model = new DefaultTableModel(columns, 0) {
-            @Override public boolean isCellEditable(int row, int column) { return false; }
+            @Override
+            public boolean isCellEditable(int row, int column) { return false; }
         };
+        
         spamTable = new JTable(model);
-        // ... (code thiết lập bảng giữ nguyên) ...
-        Color lightBlue = new Color(135, 206, 250);
-        spamTable.setRowHeight(25);
-        spamTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        spamTable.setRowHeight(28);
+        spamTable.setAutoCreateRowSorter(true);
         spamTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 13));
-        spamTable.getTableHeader().setBackground(lightBlue);
+        spamTable.getTableHeader().setBackground(DANGER_RED);
         spamTable.getTableHeader().setForeground(Color.WHITE);
+        
+        // Điều chỉnh độ rộng cột
         TableColumnModel columnModel = spamTable.getColumnModel();
-        columnModel.getColumn(0).setPreferredWidth(40);
-        columnModel.getColumn(1).setPreferredWidth(130);
-        columnModel.getColumn(2).setPreferredWidth(100);
-        columnModel.getColumn(3).setPreferredWidth(100);
-        columnModel.getColumn(4).setPreferredWidth(250);
-        columnModel.getColumn(5).setPreferredWidth(80);
-
-        // --- Các component Lọc và Sắp xếp ---
-        sortCombo = new JComboBox<>(new String[]{"Sắp xếp theo thời gian (mới nhất)", "Sắp xếp theo tên đăng nhập"});
+        columnModel.getColumn(0).setPreferredWidth(50);   // ID
+        columnModel.getColumn(1).setPreferredWidth(130);  // Người báo cáo
+        columnModel.getColumn(2).setPreferredWidth(150);  // Người bị báo cáo
+        columnModel.getColumn(3).setPreferredWidth(200);  // Lý do
+        columnModel.getColumn(4).setPreferredWidth(100);  // Trạng thái
+        columnModel.getColumn(5).setPreferredWidth(120);  // Ngày báo cáo
         
-        searchUserField = new JTextField(15); // Ô lọc tên
+        // Yêu cầu c: Lọc theo tên đăng nhập
+        searchField = new JTextField(20);
+        searchTypeCombo = new JComboBox<>(new String[]{
+            "Tìm người bị báo cáo",
+            "Tìm người báo cáo"
+        });
         
-        // --- THAY ĐỔI 2: KHỞI TẠO 1 Ô THỜI GIAN ---
-        dateFilterField = new JTextField(15); // Đặt kích thước 20
+        // Yêu cầu b: Lọc theo thời gian
+        timeFilterCombo = new JComboBox<>(new String[]{
+            "Tất cả thời gian",
+            "Hôm nay",
+            "7 ngày qua",
+            "30 ngày qua",
+            "Tháng này"
+        });
         
-        searchButton = new JButton("Lọc/Tìm");
-        stylePrimaryButton(searchButton);
-
-        // --- Các component Chức năng ---
-        lockUserButton = new JButton("Khóa tài khoản bị tố cáo");
-        stylePrimaryButton(lockUserButton); 
-        markAsDoneButton = new JButton("Đánh dấu 'Đã xử lý'");
-        stylePrimaryButton(markAsDoneButton);
-        refreshButton = new JButton("Làm mới");
-        stylePrimaryButton(refreshButton);
+        statusFilter = new JComboBox<>(new String[]{
+            "Tất cả trạng thái",
+            "Chờ xử lý",
+            "Đã xử lý",
+            "Từ chối"
+        });
+        
+        // Yêu cầu a: Sắp xếp theo thời gian/tên đăng nhập
+        sortCombo = new JComboBox<>(new String[]{
+            "Sắp xếp theo thời gian (Mới nhất)",
+            "Sắp xếp theo thời gian (Cũ nhất)",
+            "Sắp xếp theo người bị báo cáo (A-Z)",
+            "Sắp xếp theo người báo cáo (A-Z)"
+        });
     }
 
     private void setupLayout() {
         setLayout(new BorderLayout(10, 10));
-        setBorder(new EmptyBorder(10, 10, 10, 10));
+        setBorder(new EmptyBorder(15, 15, 15, 15));
+        setBackground(new Color(248, 249, 250));
 
-        // --- Panel 1: Lọc và Sắp xếp (NORTH) ---
-        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
-        searchPanel.setBorder(createTitledBorder("Bộ lọc và Sắp xếp"));
-        
-        // --- THAY ĐỔI 3: SỬA LẠI PANEL LỌC ---
-        
-        // Lọc theo tên (giữ nguyên)
-        searchPanel.add(new JLabel("Lọc theo tên:"));
-        searchPanel.add(searchUserField);
-        
-        // Lọc theo thời gian (đã gộp)
-        searchPanel.add(new JLabel("Lọc theo thời gian:"));
-        searchPanel.add(dateFilterField); // Thêm ô đã gộp
-        
-        // Sắp xếp (giữ nguyên)
-        searchPanel.add(new JLabel("Sắp xếp:"));
-        searchPanel.add(sortCombo);
-        
-        // Nút bấm (giữ nguyên)
-        searchPanel.add(searchButton);
-        
-        // --- HẾT THAY ĐỔI ---
+        // Search and Filter panel (Yêu cầu a, b, c)
+        JPanel filterPanel = createFilterPanel();
+        add(filterPanel, BorderLayout.NORTH);
 
-        // --- Panel 2: Danh sách Báo cáo (CENTER) ---
-        JPanel centerPanel = new JPanel(new BorderLayout());
-        centerPanel.setBorder(createTitledBorder("Danh sách báo cáo spam"));
-        centerPanel.add(new JScrollPane(spamTable), BorderLayout.CENTER);
+        // Table panel
+        JPanel tablePanel = createTablePanel();
+        add(tablePanel, BorderLayout.CENTER);
 
-        // --- Panel 3: Chức năng (SOUTH) ---
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
-        buttonPanel.setBorder(createTitledBorder("Hành động"));
-        buttonPanel.add(lockUserButton);
-        buttonPanel.add(markAsDoneButton);
-        buttonPanel.add(refreshButton);
-
-        // Thêm vào layout chính
-        add(searchPanel, BorderLayout.NORTH);
-        add(centerPanel, BorderLayout.CENTER);
+        // Button panel (Yêu cầu d)
+        JPanel buttonPanel = createButtonPanel();
         add(buttonPanel, BorderLayout.SOUTH);
     }
 
-    private void loadSampleData() {
-        // ... (Giữ nguyên không đổi) ...
-        DefaultTableModel model = (DefaultTableModel) spamTable.getModel();
-        model.addRow(new Object[]{"S1", "2024-05-10 09:15:00", "user1", "spam_user_A", "Gửi link quảng cáo", "Mới"});
-        model.addRow(new Object[]{"S2", "2024-05-10 08:30:00", "user2", "spam_user_B", "Nội dung 18+", "Mới"});
-        model.addRow(new Object[]{"S3", "2024-05-09 14:00:00", "user3", "spam_user_A", "Spam link liên tục", "Đã xử lý"});
-        model.addRow(new Object[]{"S4", "2024-05-09 11:00:00", "user4", "spam_user_C", "Lừa đảo", "Mới"});
+    private JPanel createFilterPanel() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(Color.LIGHT_GRAY),
+            new EmptyBorder(15, 15, 15, 15)
+        ));
+
+        JLabel titleLabel = new JLabel("🔍 Tìm kiếm & Lọc báo cáo spam");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        titleLabel.setForeground(DANGER_RED);
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(titleLabel);
+        panel.add(Box.createVerticalStrut(10));
+
+        // Row 1: Tìm kiếm (Yêu cầu c)
+        JPanel searchRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
+        searchRow.setOpaque(false);
+        searchRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        
+        searchRow.add(new JLabel("Loại tìm kiếm:"));
+        searchTypeCombo.setPreferredSize(new Dimension(170, 30));
+        searchRow.add(searchTypeCombo);
+        
+        searchRow.add(new JLabel("Từ khóa:"));
+        searchField.setPreferredSize(new Dimension(200, 30));
+        searchRow.add(searchField);
+        
+        JButton searchBtn = createStyledButton("🔍 Tìm kiếm", ZALO_BLUE);
+        searchRow.add(searchBtn);
+        
+        panel.add(searchRow);
+        panel.add(Box.createVerticalStrut(5));
+
+        // Row 2: Lọc (Yêu cầu b)
+        JPanel filterRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
+        filterRow.setOpaque(false);
+        filterRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        
+        filterRow.add(new JLabel("Thời gian:"));
+        timeFilterCombo.setPreferredSize(new Dimension(140, 30));
+        filterRow.add(timeFilterCombo);
+        
+        filterRow.add(Box.createHorizontalStrut(10));
+        filterRow.add(new JLabel("Trạng thái:"));
+        statusFilter.setPreferredSize(new Dimension(130, 30));
+        filterRow.add(statusFilter);
+        
+        filterRow.add(Box.createHorizontalStrut(10));
+        filterRow.add(new JLabel("Sắp xếp:"));
+        sortCombo.setPreferredSize(new Dimension(240, 30));
+        filterRow.add(sortCombo);
+        
+        panel.add(filterRow);
+        panel.add(Box.createVerticalStrut(5));
+
+        // Row 3: Action buttons
+        JPanel actionRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
+        actionRow.setOpaque(false);
+        actionRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        
+        JButton applyBtn = createStyledButton("🔄 Áp dụng", SUCCESS_GREEN);
+        actionRow.add(applyBtn);
+        
+        JButton resetBtn = createStyledButton("↺ Đặt lại", NEUTRAL_GRAY);
+        actionRow.add(resetBtn);
+        
+        panel.add(actionRow);
+
+        return panel;
+    }
+
+    private JPanel createTablePanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(Color.LIGHT_GRAY),
+            new EmptyBorder(10, 10, 10, 10)
+        ));
+        
+        // Header with statistics
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setOpaque(false);
+        
+        JLabel titleLabel = new JLabel("🔔 Danh sách báo cáo spam");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        titleLabel.setForeground(DANGER_RED);
+        
+        JPanel statsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 0));
+        statsPanel.setOpaque(false);
+        
+        JLabel totalLabel = new JLabel("📊 Tổng: 5");
+        totalLabel.setFont(new Font("Arial", Font.BOLD, 12));
+        
+        JLabel pendingLabel = new JLabel("⏳ Chờ xử lý: 3");
+        pendingLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        pendingLabel.setForeground(WARNING_ORANGE);
+        
+        JLabel processedLabel = new JLabel("✅ Đã xử lý: 2");
+        processedLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        processedLabel.setForeground(SUCCESS_GREEN);
+        
+        statsPanel.add(totalLabel);
+        statsPanel.add(pendingLabel);
+        statsPanel.add(processedLabel);
+        
+        headerPanel.add(titleLabel, BorderLayout.WEST);
+        headerPanel.add(statsPanel, BorderLayout.EAST);
+        headerPanel.setBorder(new EmptyBorder(0, 0, 10, 0));
+        
+        panel.add(headerPanel, BorderLayout.NORTH);
+        panel.add(new JScrollPane(spamTable), BorderLayout.CENTER);
+        
+        return panel;
+    }
+
+    private JPanel createButtonPanel() {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 10));
+        panel.setOpaque(false);
+        
+        JButton processBtn = createStyledButton("✅ Xử lý báo cáo", SUCCESS_GREEN);
+        
+        // Yêu cầu d: Khóa tài khoản người dùng
+        JButton lockAccountBtn = createStyledButton("🔒 Khóa tài khoản", DANGER_RED);
+        
+    
+        
+        panel.add(processBtn);
+        panel.add(lockAccountBtn);
+        
+        
+        return panel;
     }
 
     private void setupEventHandlers() {
-        // ... (Giữ nguyên không đổi) ...
-        lockUserButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                handleLockUser();
-            }
-        });
+        // Yêu cầu c: Tìm kiếm theo tên
+        addActionToButton("🔍 Tìm kiếm", e -> handleSearch());
+        
+        // Yêu cầu a, b: Áp dụng sắp xếp và lọc
+        addActionToButton("🔄 Áp dụng", e -> handleApplyFilter());
+        
+        // Đặt lại
+        addActionToButton("↺ Đặt lại", e -> handleReset());
+        
+        // Xử lý báo cáo
+        addActionToButton("✅ Xử lý báo cáo", e -> processReport());
+        
+        // Yêu cầu d: Khóa tài khoản
+        addActionToButton("🔒 Khóa tài khoản", e -> lockUserAccount());
+        
+        
     }
 
-    private void handleLockUser() {
-        // ... (GiV
-        int selectedRow = spamTable.getSelectedRow();
-
-        if (selectedRow == -1) {
+    // ==================== EVENT HANDLERS ====================
+    
+    // Yêu cầu c: Tìm kiếm theo tên đăng nhập
+    private void handleSearch() {
+        String keyword = searchField.getText().trim();
+        String searchType = (String) searchTypeCombo.getSelectedItem();
+        
+        if (keyword.isEmpty()) {
             JOptionPane.showMessageDialog(this, 
-                "Vui lòng chọn một báo cáo trong bảng trước.", 
-                "Chưa chọn báo cáo", 
-                JOptionPane.WARNING_MESSAGE);
+                "Vui lòng nhập từ khóa tìm kiếm!",
+                "Cảnh báo", JOptionPane.WARNING_MESSAGE);
             return;
         }
-
-        String userToLock = (String) spamTable.getValueAt(selectedRow, 3);
         
-        int confirm = JOptionPane.showConfirmDialog(this,
-            "Bạn có chắc chắn muốn KHÓA tài khoản \"" + userToLock + "\" không?\n" +
-            "Hành động này không thể hoàn tác dễ dàng.",
-            "Xác nhận Khóa tài khoản",
-            JOptionPane.YES_NO_OPTION,
-            JOptionPane.ERROR_MESSAGE);
+        JOptionPane.showMessageDialog(this, 
+            "Tìm kiếm: " + keyword + "\n" +
+            "Loại: " + searchType + "\n\n" +
+            "Chức năng sẽ được kết nối với database",
+            "Tìm kiếm", JOptionPane.INFORMATION_MESSAGE);
+    }
 
-        if (confirm == JOptionPane.YES_OPTION) {
-            System.out.println("Đã gửi yêu cầu khóa tài khoản: " + userToLock);
+    // Yêu cầu a, b: Áp dụng sắp xếp và lọc
+    private void handleApplyFilter() {
+        String timeFilter = (String) timeFilterCombo.getSelectedItem();
+        String status = (String) statusFilter.getSelectedItem();
+        String sortOption = (String) sortCombo.getSelectedItem();
+        
+        JOptionPane.showMessageDialog(this, 
+            "Áp dụng lọc:\n" +
+            "Thời gian: " + timeFilter + "\n" +
+            "Trạng thái: " + status + "\n" +
+            "Sắp xếp: " + sortOption + "\n\n" +
+            "Chức năng sẽ được kết nối với database",
+            "Lọc dữ liệu", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private void handleReset() {
+        searchField.setText("");
+        searchTypeCombo.setSelectedIndex(0);
+        timeFilterCombo.setSelectedIndex(0);
+        statusFilter.setSelectedIndex(0);
+        sortCombo.setSelectedIndex(0);
+        
+        JOptionPane.showMessageDialog(this, 
+            "Đã đặt lại tất cả bộ lọc!",
+            "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private void processReport() {
+        int selectedRow = spamTable.getSelectedRow();
+        if (selectedRow == -1) {
             JOptionPane.showMessageDialog(this, 
-                "Đã khóa tài khoản \"" + userToLock + "\" thành công.",
-                "Thành công",
-                JOptionPane.INFORMATION_MESSAGE);
-            spamTable.setValueAt("Đã xử lý", selectedRow, 5);
+                "Vui lòng chọn báo cáo cần xử lý!",
+                "Cảnh báo", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        String reported = spamTable.getValueAt(selectedRow, 2).toString();
+        
+        int confirm = JOptionPane.showConfirmDialog(this, 
+            "Xác nhận xử lý báo cáo spam cho người dùng: " + reported + "?",
+            "Xác nhận xử lý", JOptionPane.YES_NO_OPTION);
+        
+        if (confirm == JOptionPane.YES_OPTION) {
+            spamTable.setValueAt("Đã xử lý", selectedRow, 4);
+            JOptionPane.showMessageDialog(this, 
+                "Đã xử lý báo cáo thành công!",
+                "Thành công", JOptionPane.INFORMATION_MESSAGE);
         }
     }
 
-    // --- Các hàm hỗ trợ tạo kiểu (Giữ nguyên không đổi) ---
-
-    private Border createTitledBorder(String title) { //Tạo viền có tiêu đề
-        Border emptyInside = new EmptyBorder(5, 5, 5, 5);
-        TitledBorder titledBorder = BorderFactory.createTitledBorder(title);
-        titledBorder.setTitleColor(ZALO_BLUE);
-        titledBorder.setTitleFont(new Font("Arial", Font.BOLD, 14));
-        return BorderFactory.createCompoundBorder(titledBorder, emptyInside);
+    // Yêu cầu d: Khóa tài khoản người dùng bị báo cáo spam
+    private void lockUserAccount() {
+        int selectedRow = spamTable.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, 
+                "Vui lòng chọn báo cáo!",
+                "Cảnh báo", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        String reportedUser = spamTable.getValueAt(selectedRow, 2).toString();
+        String reason = spamTable.getValueAt(selectedRow, 3).toString();
+        
+        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), 
+                                    "Khóa tài khoản - " + reportedUser, true);
+        dialog.setLayout(new BorderLayout(10, 10));
+        dialog.setSize(450, 300);
+        dialog.setLocationRelativeTo(this);
+        
+        JPanel contentPanel = new JPanel(new BorderLayout(10, 10));
+        contentPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
+        
+        // Thông tin
+        JPanel infoPanel = new JPanel(new GridLayout(3, 1, 5, 10));
+        infoPanel.setOpaque(false);
+        
+        JLabel userLabel = new JLabel("👤 Người dùng: " + reportedUser);
+        userLabel.setFont(new Font("Arial", Font.BOLD, 13));
+        
+        JLabel reasonLabel = new JLabel("📝 Lý do báo cáo: " + reason);
+        reasonLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        
+        JLabel warningLabel = new JLabel("⚠️ Cảnh báo: Hành động này sẽ khóa tài khoản người dùng!");
+        warningLabel.setFont(new Font("Arial", Font.BOLD, 12));
+        warningLabel.setForeground(DANGER_RED);
+        
+        infoPanel.add(userLabel);
+        infoPanel.add(reasonLabel);
+        infoPanel.add(warningLabel);
+        
+        // Ghi chú
+        JPanel notePanel = new JPanel(new BorderLayout(5, 5));
+        notePanel.setOpaque(false);
+        
+        JLabel noteLabel = new JLabel("Ghi chú lý do khóa:");
+        noteLabel.setFont(new Font("Arial", Font.BOLD, 12));
+        
+        JTextArea noteArea = new JTextArea(3, 30);
+        noteArea.setLineWrap(true);
+        noteArea.setWrapStyleWord(true);
+        noteArea.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
+        
+        notePanel.add(noteLabel, BorderLayout.NORTH);
+        notePanel.add(new JScrollPane(noteArea), BorderLayout.CENTER);
+        
+        contentPanel.add(infoPanel, BorderLayout.NORTH);
+        contentPanel.add(notePanel, BorderLayout.CENTER);
+        
+        // Buttons
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
+        
+        JButton lockBtn = createStyledButton("🔒 Khóa tài khoản", DANGER_RED);
+        JButton cancelBtn = createStyledButton("❌ Hủy", NEUTRAL_GRAY);
+        
+        lockBtn.addActionListener(e -> {
+            String note = noteArea.getText().trim();
+            if (note.isEmpty()) {
+                JOptionPane.showMessageDialog(dialog, 
+                    "Vui lòng nhập ghi chú lý do khóa!",
+                    "Cảnh báo", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            
+            int confirm = JOptionPane.showConfirmDialog(dialog, 
+                "Bạn có chắc chắn muốn khóa tài khoản " + reportedUser + "?",
+                "Xác nhận khóa tài khoản", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+            
+            if (confirm == JOptionPane.YES_OPTION) {
+                // TODO: Cập nhật database - khóa tài khoản và cập nhật trạng thái báo cáo
+                spamTable.setValueAt("Đã xử lý", selectedRow, 4);
+                JOptionPane.showMessageDialog(dialog, 
+                    "Đã khóa tài khoản " + reportedUser + " thành công!\n" +
+                    "Ghi chú: " + note,
+                    "Thành công", JOptionPane.INFORMATION_MESSAGE);
+                dialog.dispose();
+            }
+        });
+        
+        cancelBtn.addActionListener(e -> dialog.dispose());
+        
+        buttonPanel.add(lockBtn);
+        buttonPanel.add(cancelBtn);
+        
+        dialog.add(contentPanel, BorderLayout.CENTER);
+        dialog.add(buttonPanel, BorderLayout.SOUTH);
+        dialog.setVisible(true);
     }
 
-    private void stylePrimaryButton(JButton button) { //màu xanh
-        button.setBackground(ZALO_BLUE);
-        button.setForeground(Color.WHITE);
-        button.setFont(new Font("Arial", Font.BOLD, 12));
-        button.setOpaque(true);
-        button.setBorderPainted(false);
-        button.setFocusPainted(false);
-        button.setMargin(new Insets(5, 12, 5, 12));
-    }
     
-    private void styleDestructiveButton(JButton button) { //màu đỏ
-        button.setBackground(DESTRUCTIVE_RED);
-        button.setForeground(Color.WHITE);
-        button.setFont(new Font("Arial", Font.BOLD, 12));
-        button.setOpaque(true);
-        button.setBorderPainted(false);
-        button.setFocusPainted(false);
-        button.setMargin(new Insets(5, 12, 5, 12));
+
+    private void loadSampleData() {
+        DefaultTableModel model = (DefaultTableModel) spamTable.getModel();
+        model.setRowCount(0);
+        
+        model.addRow(new Object[]{"1", "user1", "user456", "Spam quảng cáo", "Chờ xử lý", "2024-01-15"});
+        model.addRow(new Object[]{"2", "user2", "user789", "Ngôn từ thô tục", "Đã xử lý", "2024-01-14"});
+        model.addRow(new Object[]{"3", "user3", "user123", "Lừa đảo", "Chờ xử lý", "2024-01-13"});
+        model.addRow(new Object[]{"4", "user4", "user999", "Spam tin nhắn", "Chờ xử lý", "2024-01-12"});
+        model.addRow(new Object[]{"5", "user5", "user888", "Quấy rối", "Đã xử lý", "2024-01-11"});
     }
 
-    private void styleNeutralButton(JButton button) { //màu xám
-        button.setBackground(NEUTRAL_GRAY);
-        button.setForeground(Color.WHITE);
+    private JButton createStyledButton(String text, Color color) {
+        JButton button = new JButton(text);
         button.setFont(new Font("Arial", Font.BOLD, 12));
+        button.setBackground(color);
+        button.setForeground(Color.WHITE);
         button.setOpaque(true);
         button.setBorderPainted(false);
         button.setFocusPainted(false);
         button.setMargin(new Insets(5, 12, 5, 12));
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        return button;
+    }
+
+    private void addActionToButton(String buttonText, java.awt.event.ActionListener action) {
+        Component[] components = getAllComponents(this);
+        for (Component comp : components) {
+            if (comp instanceof JButton) {
+                JButton btn = (JButton) comp;
+                if (btn.getText().equals(buttonText)) {
+                    btn.addActionListener(action);
+                    break;
+                }
+            }
+        }
+    }
+
+    private Component[] getAllComponents(Container container) {
+        java.util.ArrayList<Component> list = new java.util.ArrayList<>();
+        Component[] components = container.getComponents();
+        for (Component component : components) {
+            list.add(component);
+            if (component instanceof Container) {
+                Component[] subComponents = getAllComponents((Container) component);
+                for (Component subComponent : subComponents) {
+                    list.add(subComponent);
+                }
+            }
+        }
+        return list.toArray(new Component[0]);
     }
 }

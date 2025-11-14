@@ -1,47 +1,35 @@
-// Đổi tên file thành LoginHistoryPanel.java
-// package admin.gui;
+package admin.gui;
 
 import javax.swing.*;
-import javax.swing.border.Border;
-import javax.swing.border.EmptyBorder;
-import javax.swing.border.TitledBorder;
+import javax.swing.border.*;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumnModel;
 import java.awt.*;
 
 /**
- * Giao diện xem lịch sử đăng nhập - ĐÃ SỬA THÀNH PANEL
- * Đã áp dụng màu sắc đồng bộ
+ * Giao diện xem lịch sử đăng nhập - Phiên bản đơn giản
+ * Chỉ hiển thị bảng lịch sử, không có tìm kiếm/lọc
  */
-// THAY ĐỔI 1: Kế thừa từ JPanel
 public class LoginHistoryPanel extends JPanel {
 
     // Định nghĩa các màu chủ đạo
     private static final Color ZALO_BLUE = new Color(0, 102, 255);
-    private static final Color NEUTRAL_GRAY = new Color(108, 117, 125);
+    private static final Color SUCCESS_GREEN = new Color(40, 167, 69);
+    private static final Color DANGER_RED = new Color(220, 53, 69);
 
     private JTable historyTable;
-    private JTextField searchField;
-    private JComboBox<String> sortCombo;
-    private JButton refreshButton, exportButton, filterButton, searchButton;
+    private JButton refreshButton, exportButton;
 
-    // THAY ĐỔI 2: Đổi tên hàm khởi tạo
     public LoginHistoryPanel() {
         initializeComponents();
         setupLayout();
         loadSampleData();
+        setupEventHandlers();
     }
 
     private void initializeComponents() {
-        // THAY ĐỔI 3: Xóa các dòng code của JInternalFrame
-        // setTitle("Lịch sử đăng nhập");
-        // setSize(1000, 600);
-        // setClosable(true);
-        // setMaximizable(true);
-        // setResizable(true);
-
-        // Bảng hiển thị lịch sử đăng nhập
-        String[] columns = {"Thời gian", "Tên đăng nhập", "Họ tên"};
+        // Bảng hiển thị lịch sử đăng nhập - chỉ 4 cột cơ bản
+        String[] columns = {"ID", "Thời gian", "Tên đăng nhập", "Họ tên"};
         DefaultTableModel model = new DefaultTableModel(columns, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -49,68 +37,108 @@ public class LoginHistoryPanel extends JPanel {
             }
         };
         historyTable = new JTable(model);
-        historyTable.setRowHeight(25);
+        historyTable.setRowHeight(28);
         historyTable.setAutoCreateRowSorter(true);
         historyTable.setFillsViewportHeight(true);
 
-        // --- ÁP DỤNG MÀU SẮC CHO BẢNG ---
-        Color lightBlue = new Color(135, 206, 250);
+        // Áp dụng màu sắc cho bảng
         historyTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 13));
-        historyTable.getTableHeader().setBackground(lightBlue);
+        historyTable.getTableHeader().setBackground(ZALO_BLUE);
         historyTable.getTableHeader().setForeground(Color.WHITE);
 
         // Thiết lập độ rộng cột
         TableColumnModel columnModel = historyTable.getColumnModel();
-        columnModel.getColumn(0).setPreferredWidth(200);
-        columnModel.getColumn(1).setPreferredWidth(150);
-        columnModel.getColumn(2).setPreferredWidth(150);
+        columnModel.getColumn(0).setPreferredWidth(80);   // ID
+        columnModel.getColumn(1).setPreferredWidth(200);  // Thời gian
+        columnModel.getColumn(2).setPreferredWidth(150);  // Tên đăng nhập
+        columnModel.getColumn(3).setPreferredWidth(200);  // Họ tên
 
-        // Các trường tìm kiếm và sắp xếp
-        searchField = new JTextField(20);
-        sortCombo = new JComboBox<>(new String[]{"Sắp xếp theo thời gian (mới nhất)", "Sắp xếp theo tên đăng nhập"});
-
-        // --- ÁP DỤNG MÀU SẮC CHO NÚT BẤM ---
-        filterButton = new JButton("Lọc");
-        searchButton = new JButton("Tìm kiếm");
-        stylePrimaryButton(filterButton);
-        stylePrimaryButton(searchButton);
-
-        refreshButton = new JButton("Làm mới");
-        exportButton = new JButton("Xuất Excel");
+        // Các nút chức năng
+        refreshButton = new JButton("🔄 Làm mới");
+        exportButton = new JButton("📊 Xuất Excel");
+        
         stylePrimaryButton(refreshButton);
         stylePrimaryButton(exportButton);
     }
 
     private void setupLayout() {
-        // --- ÁP DỤNG BORDER VÀ PADDING ---
         setLayout(new BorderLayout(10, 10));
-        setBorder(new EmptyBorder(10, 10, 10, 10));
+        setBorder(new EmptyBorder(15, 15, 15, 15));
+        setBackground(new Color(248, 249, 250));
 
-        // Panel Bảng
-        JPanel centerPanel = new JPanel(new BorderLayout());
-        centerPanel.setBorder(createTitledBorder("Lịch sử đăng nhập"));
-        JScrollPane scrollPane = new JScrollPane(historyTable);
-        centerPanel.add(scrollPane, BorderLayout.CENTER);
+        // Panel Bảng với thống kê
+        JPanel centerPanel = createTablePanel();
+        add(centerPanel, BorderLayout.CENTER);
 
         // Panel nút chức năng
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
-        buttonPanel.setBorder(createTitledBorder("Chức năng"));
-        buttonPanel.add(refreshButton);
-        buttonPanel.add(exportButton);
-
-        // Chỉ thêm bảng và nút chức năng vào panel chính
-        add(centerPanel, BorderLayout.CENTER);
+        JPanel buttonPanel = createButtonPanel();
         add(buttonPanel, BorderLayout.SOUTH);
     }
 
-    // --- CÁC HÀM HỖ TRỢ TẠO KIỂU (HELPER METHODS) ---
+    private JPanel createTablePanel() {
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(Color.LIGHT_GRAY),
+            new EmptyBorder(10, 10, 10, 10)
+        ));
+        
+        // Tiêu đề bảng với thống kê
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setOpaque(false);
+        
+        JLabel tableTitle = new JLabel("📋 Lịch sử đăng nhập");
+        tableTitle.setFont(new Font("Arial", Font.BOLD, 16));
+        tableTitle.setForeground(ZALO_BLUE);
+        
+        JPanel statsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 0));
+        statsPanel.setOpaque(false);
+        
+        JLabel totalLabel = new JLabel("📊 Tổng số lượt: 7");
+        totalLabel.setFont(new Font("Arial", Font.BOLD, 12));
+        
+        statsPanel.add(totalLabel);
+        
+        headerPanel.add(tableTitle, BorderLayout.WEST);
+        headerPanel.add(statsPanel, BorderLayout.EAST);
+        headerPanel.setBorder(new EmptyBorder(0, 0, 10, 0));
+        
+        JScrollPane scrollPane = new JScrollPane(historyTable);
+        scrollPane.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
+        
+        panel.add(headerPanel, BorderLayout.NORTH);
+        panel.add(scrollPane, BorderLayout.CENTER);
 
-    private Border createTitledBorder(String title) {
-        Border emptyInside = new EmptyBorder(5, 5, 5, 5);
-        TitledBorder titledBorder = BorderFactory.createTitledBorder(title);
-        titledBorder.setTitleColor(ZALO_BLUE);
-        titledBorder.setTitleFont(new Font("Arial", Font.BOLD, 14));
-        return BorderFactory.createCompoundBorder(titledBorder, emptyInside);
+        return panel;
+    }
+
+    private JPanel createButtonPanel() {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
+        panel.setOpaque(false);
+        panel.add(refreshButton);
+        panel.add(exportButton);
+        return panel;
+    }
+
+    private void setupEventHandlers() {
+        // Xử lý làm mới
+        refreshButton.addActionListener(e -> handleRefresh());
+        
+        // Xử lý xuất Excel
+        exportButton.addActionListener(e -> handleExport());
+    }
+
+    private void handleRefresh() {
+        loadSampleData();
+        JOptionPane.showMessageDialog(this, 
+            "Đã làm mới dữ liệu!",
+            "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private void handleExport() {
+        JOptionPane.showMessageDialog(this, 
+            "Chức năng xuất Excel sẽ được triển khai!",
+            "Xuất Excel", JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void stylePrimaryButton(JButton button) {
@@ -121,28 +149,20 @@ public class LoginHistoryPanel extends JPanel {
         button.setBorderPainted(false);
         button.setFocusPainted(false);
         button.setMargin(new Insets(5, 12, 5, 12));
-    }
-
-    private void styleNeutralButton(JButton button) {
-        button.setBackground(NEUTRAL_GRAY);
-        button.setForeground(Color.WHITE);
-        button.setFont(new Font("Arial", Font.BOLD, 12));
-        button.setOpaque(true);
-        button.setBorderPainted(false);
-        button.setFocusPainted(false);
-        button.setMargin(new Insets(5, 12, 5, 12));
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
     }
     
-    // (Phần loadSampleData không thay đổi)
     private void loadSampleData() {
-        // Dữ liệu mẫu (đã sắp xếp mới nhất lên đầu)
         DefaultTableModel model = (DefaultTableModel) historyTable.getModel();
-        model.addRow(new Object[]{"2024-01-02 14:00:00", "user4", "Phạm Thị D"});
-        model.addRow(new Object[]{"2024-01-02 11:00:00", "user3", "Lê Văn C"});
-        model.addRow(new Object[]{"2024-01-02 09:15:00", "user1", "Nguyễn Văn A"});
-        model.addRow(new Object[]{"2024-01-02 08:30:00", "admin", "Quản trị viên"});
-        model.addRow(new Object[]{"2024-01-01 10:00:00", "user2", "Trần Thị B"});
-        model.addRow(new Object[]{"2024-01-01 09:00:00", "user1", "Nguyễn Văn A"});
-        model.addRow(new Object[]{"2024-01-01 08:00:00", "admin", "Quản trị viên"});
+        model.setRowCount(0); // Xóa dữ liệu cũ
+        
+        // Dữ liệu mẫu - chỉ 4 cột
+        model.addRow(new Object[]{"1", "2024-01-02 14:00:00", "user4", "Phạm Thị D"});
+        model.addRow(new Object[]{"2", "2024-01-02 11:00:00", "user3", "Lê Văn C"});
+        model.addRow(new Object[]{"3", "2024-01-02 09:15:00", "user1", "Nguyễn Văn A"});
+        model.addRow(new Object[]{"4", "2024-01-02 08:30:00", "admin", "Quản trị viên"});
+        model.addRow(new Object[]{"5", "2024-01-01 10:00:00", "user2", "Trần Thị B"});
+        model.addRow(new Object[]{"6", "2024-01-01 09:00:00", "user1", "Nguyễn Văn A"});
+        model.addRow(new Object[]{"7", "2024-01-01 08:00:00", "admin", "Quản trị viên"});
     }
 }
