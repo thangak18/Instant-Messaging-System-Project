@@ -1094,20 +1094,29 @@ public class UserService {
         // Query lấy bạn bè và tin nhắn cuối cùng
         String sql = "WITH user_friends AS ( " +
                      "  SELECT " +
-                     "    CASE WHEN f.user_id = u_me.user_id THEN f.friend_id ELSE f.user_id END as friend_user_id " +
+                     "    CASE WHEN f.user_id = (SELECT user_id FROM users WHERE username = ?) THEN f.friend_id ELSE f.user_id END as friend_user_id " +
                      "  FROM friends f " +
-                     "  CROSS JOIN users u_me " +
-                     "  WHERE u_me.username = ? " +
-                     "  AND f.status = 'accepted' " +
-                     "  AND (f.user_id = u_me.user_id OR f.friend_id = u_me.user_id) " +
+                     "  WHERE f.status = 'accepted' " +
+                     "  AND (f.user_id = (SELECT user_id FROM users WHERE username = ?) " +
+                     "       OR f.friend_id = (SELECT user_id FROM users WHERE username = ?)) " +
                      ") " +
                      "SELECT DISTINCT " +
                      "  uf.friend_user_id, " +
                      "  u.username as friend_username, " +
-                     "  u.full_name as friend_name " +
+                     "  u.full_name as friend_name, " +
+                     "  m.last_message, " +
+                     "  m.sent_at " +
                      "FROM user_friends uf " +
                      "JOIN users u ON uf.friend_user_id = u.user_id " +
-                     "ORDER BY u.full_name";
+                     "LEFT JOIN LATERAL ( " +
+                     "  SELECT content as last_message, created_at as sent_at " +
+                     "  FROM messages " +
+                     "  WHERE (sender_id = (SELECT user_id FROM users WHERE username = ?) AND receiver_id = uf.friend_user_id) " +
+                     "     OR (sender_id = uf.friend_user_id AND receiver_id = (SELECT user_id FROM users WHERE username = ?)) " +
+                     "  ORDER BY created_at DESC " +
+                     "  LIMIT 1 " +
+                     ") m ON true " +
+                     "ORDER BY m.sent_at DESC NULLS LAST, u.full_name";
         
         Connection conn = null;
         PreparedStatement pstmt = null;
@@ -1124,6 +1133,10 @@ public class UserService {
             
             pstmt = conn.prepareStatement(sql);
             pstmt.setString(1, username);
+            pstmt.setString(2, username);
+            pstmt.setString(3, username);
+            pstmt.setString(4, username);
+            pstmt.setString(5, username);
             
             System.out.println("🔄 Đang execute query...");
             rs = pstmt.executeQuery();
@@ -1134,14 +1147,16 @@ public class UserService {
                 Map<String, Object> chat = new HashMap<>();
                 String friendUsername = rs.getString("friend_username");
                 String friendName = rs.getString("friend_name");
+                String lastMessage = rs.getString("last_message");
+                java.sql.Timestamp sentAt = rs.getTimestamp("sent_at");
                 
                 System.out.println("  📌 Tìm thấy bạn: " + friendUsername + " (" + friendName + ")");
                 
                 chat.put("friend_user_id", rs.getInt("friend_user_id"));
                 chat.put("friend_username", friendUsername);
                 chat.put("friend_name", friendName);
-                chat.put("last_message", "Bắt đầu trò chuyện");
-                chat.put("sent_at", null);
+                chat.put("last_message", lastMessage != null ? lastMessage : "Bắt đầu trò chuyện");
+                chat.put("sent_at", sentAt);
                 chat.put("unread_count", 0);
                 
                 results.add(chat);
@@ -1269,6 +1284,84 @@ public class UserService {
     }
     
     /**
+     * TÌM KIẾM BẠN BÈ THEO USERNAME HOẶC HỌ TÊN
+     */
+    public java.util.List<Map<String, Object>> searchFriends(String currentUsername, String searchQuery) {
+        java.util.List<Map<String, Object>> results = new java.util.ArrayList<>();
+        
+        String sql = "SELECT DISTINCT " +
+                     "  CASE " +
+                     "    WHEN f.user_id = (SELECT user_id FROM users WHERE username = ?) THEN u2.user_id " +
+                     "    ELSE u1.user_id " +
+                     "  END as user_id, " +
+                     "  CASE " +
+                     "    WHEN f.user_id = (SELECT user_id FROM users WHERE username = ?) THEN u2.username " +
+                     "    ELSE u1.username " +
+                     "  END as username, " +
+                     "  CASE " +
+                     "    WHEN f.user_id = (SELECT user_id FROM users WHERE username = ?) THEN u2.full_name " +
+                     "    ELSE u1.full_name " +
+                     "  END as full_name " +
+                     "FROM friends f " +
+                     "JOIN users u1 ON f.user_id = u1.user_id " +
+                     "JOIN users u2 ON f.friend_id = u2.user_id " +
+                     "WHERE f.status = 'accepted' " +
+                     "AND (u1.username = ? OR u2.username = ?) " +
+                     "AND ( " +
+                     "  (f.user_id = (SELECT user_id FROM users WHERE username = ?) AND (LOWER(u2.username) LIKE LOWER(?) OR LOWER(u2.full_name) LIKE LOWER(?))) " +
+                     "  OR " +
+                     "  (f.friend_id = (SELECT user_id FROM users WHERE username = ?) AND (LOWER(u1.username) LIKE LOWER(?) OR LOWER(u1.full_name) LIKE LOWER(?))) " +
+                     ") " +
+                     "ORDER BY full_name ASC, username ASC";
+        
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        
+        try {
+            conn = dbConnection.getConnection();
+            if (conn == null) return results;
+            
+            pstmt = conn.prepareStatement(sql);
+            String searchPattern = "%" + searchQuery + "%";
+            
+            pstmt.setString(1, currentUsername);
+            pstmt.setString(2, currentUsername);
+            pstmt.setString(3, currentUsername);
+            pstmt.setString(4, currentUsername);
+            pstmt.setString(5, currentUsername);
+            pstmt.setString(6, currentUsername);
+            pstmt.setString(7, searchPattern);
+            pstmt.setString(8, searchPattern);
+            pstmt.setString(9, currentUsername);
+            pstmt.setString(10, searchPattern);
+            pstmt.setString(11, searchPattern);
+            
+            rs = pstmt.executeQuery();
+            
+            while (rs.next()) {
+                Map<String, Object> friend = new HashMap<>();
+                friend.put("user_id", rs.getInt("user_id"));
+                friend.put("username", rs.getString("username"));
+                friend.put("full_name", rs.getString("full_name"));
+                results.add(friend);
+            }
+            
+            System.out.println("✅ Tìm thấy " + results.size() + " bạn bè khớp với: " + searchQuery);
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi khi tìm kiếm bạn bè: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            if (rs != null) try { rs.close(); } catch (SQLException e) { }
+            if (pstmt != null) try { pstmt.close(); } catch (SQLException e) { }
+            if (conn != null) DatabaseConnection.closeConnection(conn);
+        }
+        
+        return results;
+    }
+    
+    /**
      * Huỷ kết bạn
      */
     public boolean unfriend(String username1, String username2) {
@@ -1344,15 +1437,15 @@ public class UserService {
                 pstmt.executeUpdate();
             }
             
-            // 2. Xoá các lời mời kết bạn pending
-            String deletePendingSQL = "DELETE FROM friend_requests " +
+            // 2. Xoá các lời mời kết bạn pending (dùng bảng friends, không phải friend_requests)
+            String deletePendingSQL = "DELETE FROM friends " +
                                       "WHERE status = 'pending' " +
                                       "AND ( " +
-                                      "  (sender_id = (SELECT user_id FROM users WHERE username = ?) " +
-                                      "   AND receiver_id = (SELECT user_id FROM users WHERE username = ?)) " +
+                                      "  (user_id = (SELECT user_id FROM users WHERE username = ?) " +
+                                      "   AND friend_id = (SELECT user_id FROM users WHERE username = ?)) " +
                                       "  OR " +
-                                      "  (sender_id = (SELECT user_id FROM users WHERE username = ?) " +
-                                      "   AND receiver_id = (SELECT user_id FROM users WHERE username = ?)) " +
+                                      "  (user_id = (SELECT user_id FROM users WHERE username = ?) " +
+                                      "   AND friend_id = (SELECT user_id FROM users WHERE username = ?)) " +
                                       ")";
             
             try (PreparedStatement pstmt = conn.prepareStatement(deletePendingSQL)) {

@@ -336,6 +336,9 @@ public class ChatContentPanel extends JPanel {
             // Hiển thị trong GUI
             addMessageBubble(content, true, LocalDateTime.now());
             
+            // ✅ REFRESH CHAT LIST để hiển thị tin nhắn mới nhất
+            mainFrame.refreshChatList();
+            
             // Clear input
             messageInput.setText("");
             
@@ -353,21 +356,25 @@ public class ChatContentPanel extends JPanel {
     
     private void addMessageBubble(String content, boolean isSent, LocalDateTime time) {
         JPanel bubbleContainer = new JPanel();
+        // Mỗi tin nhắn chỉ chiếm đúng chiều cao nội dung, không giãn full dọc
         bubbleContainer.setLayout(new BoxLayout(bubbleContainer, BoxLayout.X_AXIS));
         bubbleContainer.setOpaque(false);
         bubbleContainer.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
+        bubbleContainer.setAlignmentX(Component.LEFT_ALIGNMENT);
         
         if (isSent) {
             bubbleContainer.add(Box.createHorizontalGlue());
         }
         
-        // Bubble panel
+        // Bubble panel (giới hạn chiều rộng, không cho full màn hình)
         JPanel bubble = new JPanel(new BorderLayout());
         bubble.setBackground(isSent ? SENT_BUBBLE_COLOR : RECEIVED_BUBBLE_COLOR);
         bubble.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
+        // Giới hạn kích thước bubble theo nội dung, không cho cao vô hạn
         bubble.setMaximumSize(new Dimension(400, Integer.MAX_VALUE));
         
-        JLabel messageLabel = new JLabel("<html><div style='width: 200px;'>" + content + "</div></html>");
+        // Nội dung tin nhắn wrap trong khung ~260px
+        JLabel messageLabel = new JLabel("<html><div style='width: 260px;'>" + content + "</div></html>");
         messageLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         messageLabel.setForeground(isSent ? Color.WHITE : new Color(51, 51, 51));
         
@@ -389,6 +396,7 @@ public class ChatContentPanel extends JPanel {
             bubbleContainer.add(Box.createHorizontalGlue());
         }
         
+        // Thêm bubble vào cuối danh sách, mỗi bubble chỉ chiếm đúng chiều cao của nó
         messageListPanel.add(bubbleContainer);
         messageListPanel.revalidate();
         messageListPanel.repaint();

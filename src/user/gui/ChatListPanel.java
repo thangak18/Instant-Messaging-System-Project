@@ -18,6 +18,7 @@ public class ChatListPanel extends JPanel {
     private static final Color BG_COLOR = new Color(250, 250, 250);
     private static final Color SEARCH_BG = Color.WHITE;
     private static final Color ITEM_HOVER = new Color(240, 240, 240);
+    private static final Color PRIMARY_COLOR = new Color(0, 132, 255);
     private static final int PANEL_WIDTH = 350;
     
     private ZaloMainFrame mainFrame;
@@ -25,12 +26,15 @@ public class ChatListPanel extends JPanel {
     private JTextField searchField;
     private JPanel chatListContainer;
     private Map<String, ChatItemPanel> chatItems = new HashMap<>();
+    private javax.swing.Timer refreshTimer;
+    private java.util.List<String> onlineUsers = new java.util.ArrayList<>();
     
     public ChatListPanel(ZaloMainFrame mainFrame) {
         this.mainFrame = mainFrame;
         this.userService = new UserService();
         initializeUI();
         loadRecentChats(); // Load data thật từ database
+        startAutoRefresh(); // Auto refresh mỗi 1 phút
     }
     
     private void initializeUI() {
@@ -46,12 +50,11 @@ public class ChatListPanel extends JPanel {
         // Search bar with icon
         JPanel searchBarPanel = createSearchBar();
         
-        // Action buttons panel (Add Friend + Create Group)
+        // Action buttons panel (Add Friend only)
         JPanel actionButtonsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
         actionButtonsPanel.setOpaque(false);
         
         JButton addFriendButton = createIconButton("icons/add-friend.png", "Thêm bạn", 24);
-        JButton createGroupButton = createIconButton("icons/create-group.png", "Tạo nhóm", 24);
         
         // Click handler for Add Friend
         addFriendButton.addActionListener(e -> {
@@ -60,7 +63,6 @@ public class ChatListPanel extends JPanel {
         });
         
         actionButtonsPanel.add(addFriendButton);
-        actionButtonsPanel.add(createGroupButton);
         
         headerPanel.add(searchBarPanel, BorderLayout.CENTER);
         headerPanel.add(actionButtonsPanel, BorderLayout.EAST);
@@ -71,10 +73,45 @@ public class ChatListPanel extends JPanel {
         tabsPanel.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(230, 230, 230)));
         
         JLabel allTab = createTab("Tất cả", true);
-        JLabel unreadTab = createTab("Chưa đọc", false);
+        JLabel onlineTab = createTab("Online", false);
+        
+        // Click handlers for tabs
+        allTab.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                // Update tab styles
+                allTab.setFont(new Font("Segoe UI", Font.BOLD, 14));
+                allTab.setForeground(new Color(0, 132, 255));
+                allTab.setBorder(BorderFactory.createMatteBorder(0, 0, 2, 0, new Color(0, 132, 255)));
+                
+                onlineTab.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+                onlineTab.setForeground(new Color(100, 100, 100));
+                onlineTab.setBorder(null);
+                
+                // Show all chats
+                loadRecentChats();
+            }
+        });
+        
+        onlineTab.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                // Update tab styles
+                onlineTab.setFont(new Font("Segoe UI", Font.BOLD, 14));
+                onlineTab.setForeground(new Color(0, 132, 255));
+                onlineTab.setBorder(BorderFactory.createMatteBorder(0, 0, 2, 0, new Color(0, 132, 255)));
+                
+                allTab.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+                allTab.setForeground(new Color(100, 100, 100));
+                allTab.setBorder(null);
+                
+                // Show only online friends
+                loadOnlineFriends();
+            }
+        });
         
         tabsPanel.add(allTab);
-        tabsPanel.add(unreadTab);
+        tabsPanel.add(onlineTab);
         
         // Chat list container
         chatListContainer = new JPanel();
@@ -111,9 +148,28 @@ public class ChatListPanel extends JPanel {
         ));
         searchField.setBackground(new Color(245, 245, 245));
         
-        // Icon panel overlay
+        // Thêm event listener: chỉ search khi nhấn Enter
+        searchField.addKeyListener(new java.awt.event.KeyAdapter() {
+            @Override
+            public void keyPressed(java.awt.event.KeyEvent e) {
+                if (e.getKeyCode() == java.awt.event.KeyEvent.VK_ENTER) {
+                    performSearch();
+                }
+            }
+        });
+        
+        // Icon panel overlay - có thể click
         JPanel iconPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 8));
         iconPanel.setOpaque(false);
+        iconPanel.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        
+        // Thêm click listener cho icon panel
+        iconPanel.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                performSearch();
+            }
+        });
         
         try {
             ImageIcon searchIcon = new ImageIcon("icons/search.png");
@@ -140,6 +196,20 @@ public class ChatListPanel extends JPanel {
         container.add(layeredPane, BorderLayout.CENTER);
         
         return container;
+    }
+    
+    /**
+     * THỰC HIỆN TÌM KIẾM - chỉ gọi khi bấm icon hoặc Enter
+     */
+    private void performSearch() {
+        String searchText = searchField.getText().trim();
+        if (searchText.isEmpty()) {
+            // Nếu rỗng, load lại danh sách đầy đủ
+            loadRecentChats();
+        } else {
+            // Thực hiện tìm kiếm
+            filterChatList(searchText);
+        }
     }
     
     /**
@@ -229,8 +299,23 @@ public class ChatListPanel extends JPanel {
                             // Format time
                             String timeStr = formatTime(sentAt);
                             
-                            // Add chat item
-                            addChatItem(friendUsername, displayName, lastMessage, timeStr, false, unreadCount);
+                            // Check online status
+                            boolean isOnline = false;
+                            if (mainFrame.getSocketClient() != null && mainFrame.getSocketClient().isConnected()) {
+                                onlineUsers = mainFrame.getSocketClient().getOnlineUsers();
+                                isOnline = onlineUsers.contains(friendUsername);
+                            }
+                            
+                            // Add chat item with online status
+                            ChatItemPanel item = new ChatItemPanel(friendUsername, displayName, lastMessage, timeStr, isOnline, unreadCount, sentAt);
+                            item.addMouseListener(new java.awt.event.MouseAdapter() {
+                                @Override
+                                public void mouseClicked(java.awt.event.MouseEvent e) {
+                                    mainFrame.openChat(friendUsername);
+                                }
+                            });
+                            chatListContainer.add(item);
+                            chatItems.put(friendUsername, item);
                         }
                     }
                     
@@ -288,7 +373,13 @@ public class ChatListPanel extends JPanel {
     
     
     private void addChatItem(String username, String displayName, String lastMessage, String time, boolean online, int unreadCount) {
-        ChatItemPanel item = new ChatItemPanel(username, displayName, lastMessage, time, online, unreadCount);
+        // Kiểm tra online status từ mainFrame
+        if (mainFrame.getSocketClient() != null && mainFrame.getSocketClient().isConnected()) {
+            onlineUsers = mainFrame.getSocketClient().getOnlineUsers();
+            online = onlineUsers.contains(username);
+        }
+        
+        ChatItemPanel item = new ChatItemPanel(username, displayName, lastMessage, time, online, unreadCount, null);
         item.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseClicked(java.awt.event.MouseEvent e) {
@@ -320,17 +411,31 @@ public class ChatListPanel extends JPanel {
         }
         
         SwingUtilities.invokeLater(() -> {
+            java.sql.Timestamp now = new java.sql.Timestamp(System.currentTimeMillis());
+            boolean isOnline = onlineUsers.contains(sender);
+            
             if (!chatItems.containsKey(sender)) {
                 // Thêm chat item mới
-                addChatItem(sender, sender, content, "Vừa xong", true, 1);
+                ChatItemPanel item = new ChatItemPanel(sender, sender, content, "Vừa xong", isOnline, 1, now);
+                item.addMouseListener(new java.awt.event.MouseAdapter() {
+                    @Override
+                    public void mouseClicked(java.awt.event.MouseEvent e) {
+                        mainFrame.openChat(sender);
+                    }
+                });
+                chatListContainer.add(item, 0);
+                chatItems.put(sender, item);
             } else {
                 // Cập nhật chat item có sẵn
-                ChatItemPanel item = chatItems.get(sender);
-                item.updateLastMessage(content, "Vừa xong");
-                
-                // Move to top
-                chatListContainer.remove(item);
-                chatListContainer.add(item, 0);
+                JPanel panel = chatItems.get(sender);
+                if (panel instanceof ChatItemPanel) {
+                    ChatItemPanel item = (ChatItemPanel) panel;
+                    item.updateLastMessage(content, now);
+                    
+                    // Move to top
+                    chatListContainer.remove(item);
+                    chatListContainer.add(item, 0);
+                }
             }
             
             chatListContainer.revalidate();
@@ -347,9 +452,12 @@ public class ChatListPanel extends JPanel {
         private JLabel messageLabel;
         private JLabel timeLabel;
         private JLabel badgeLabel;
+        private JLabel onlineDot;
+        private java.sql.Timestamp sentAt; // Lưu timestamp để refresh
         
-        public ChatItemPanel(String username, String displayName, String lastMessage, String time, boolean online, int unreadCount) {
+        public ChatItemPanel(String username, String displayName, String lastMessage, String time, boolean online, int unreadCount, java.sql.Timestamp sentAt) {
             this.username = username;
+            this.sentAt = sentAt;
             setLayout(new BorderLayout(10, 5));
             setBackground(Color.WHITE);
             setBorder(new EmptyBorder(12, 15, 12, 15));
@@ -366,14 +474,13 @@ public class ChatListPanel extends JPanel {
             avatar.setBounds(0, 0, 50, 50);
             avatarPanel.add(avatar);
             
-            // Online indicator
-            if (online) {
-                JLabel onlineDot = new JLabel("●");
-                onlineDot.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-                onlineDot.setForeground(new Color(67, 220, 96));
-                onlineDot.setBounds(35, 35, 15, 15);
-                avatarPanel.add(onlineDot);
-            }
+            // Online indicator (chấm xanh)
+            onlineDot = new JLabel("●");
+            onlineDot.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+            onlineDot.setForeground(new Color(67, 220, 96));
+            onlineDot.setBounds(35, 35, 15, 15);
+            onlineDot.setVisible(online); // Chỉ hiện khi online
+            avatarPanel.add(onlineDot);
             
             // Info panel
             JPanel infoPanel = new JPanel(new BorderLayout());
@@ -438,6 +545,24 @@ public class ChatListPanel extends JPanel {
             messageLabel.setText(message);
             timeLabel.setText(time);
         }
+        
+        public void updateLastMessage(String message, java.sql.Timestamp timestamp) {
+            this.sentAt = timestamp;
+            messageLabel.setText(message);
+            timeLabel.setText(formatTime(timestamp));
+        }
+        
+        public void refreshTimeLabel() {
+            if (sentAt != null) {
+                timeLabel.setText(formatTime(sentAt));
+            }
+        }
+        
+        public void setOnlineStatus(boolean online) {
+            if (onlineDot != null) {
+                onlineDot.setVisible(online);
+            }
+        }
     }
     
     /**
@@ -446,5 +571,189 @@ public class ChatListPanel extends JPanel {
     public void refreshChatList() {
         System.out.println("🔄 Refreshing chat list...");
         loadRecentChats();
+    }
+    
+    /**
+     * LOAD DANH SÁCH NHÓM CỦA USER VÀ THÊM VÀO CHAT LIST
+     */
+    /**
+     * BẮT ĐẦU AUTO-REFRESH MỖI 1 PHÚT
+     */
+    private void startAutoRefresh() {
+        // Refresh mỗi 60 giây (1 phút) để cập nhật thời gian
+        refreshTimer = new javax.swing.Timer(60000, e -> {
+            System.out.println("⏰ Auto-refresh chat list (1 phút)");
+            refreshTimeLabels();
+        });
+        refreshTimer.start();
+    }
+    
+    /**
+     * CHỈ CẬP NHẬT THỜI GIAN CHO CÁC CHAT ITEMS (KHÔNG RELOAD TỪ DB)
+     */
+    private void refreshTimeLabels() {
+        for (ChatItemPanel panel : chatItems.values()) {
+            panel.refreshTimeLabel();
+        }
+    }
+    
+    /**
+     * CẬP NHẬT ONLINE USERS LIST
+     */
+    public void updateOnlineUsers(java.util.List<String> users) {
+        this.onlineUsers = new java.util.ArrayList<>(users);
+        // Refresh để hiển thị chấm xanh
+        for (Map.Entry<String, ChatItemPanel> entry : chatItems.entrySet()) {
+            String username = entry.getKey();
+            ChatItemPanel item = entry.getValue();
+            boolean isOnline = onlineUsers.contains(username);
+            item.setOnlineStatus(isOnline);
+        }
+    }
+    
+    /**
+     * LỌC DANH SÁCH CHAT THEO TỪ KHÓA TÌM KIẾM
+     */
+    private void filterChatList(String searchText) {
+        if (searchText == null || searchText.isEmpty()) {
+            // Nếu search rỗng, load lại toàn bộ danh sách
+            loadRecentChats();
+            return;
+        }
+        
+        chatListContainer.removeAll();
+        chatItems.clear();
+        
+        SwingWorker<java.util.List<Map<String, Object>>, Void> worker = new SwingWorker<>() {
+            @Override
+            protected java.util.List<Map<String, Object>> doInBackground() {
+                return userService.searchFriends(mainFrame.getUsername(), searchText);
+            }
+            
+            @Override
+            protected void done() {
+                try {
+                    java.util.List<Map<String, Object>> friends = get();
+                    
+                    if (friends == null || friends.isEmpty()) {
+                        JLabel label = new JLabel("<html><center>🔍<br><br>Không tìm thấy kết quả<br>cho '" + searchText + "'</center></html>");
+                        label.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+                        label.setForeground(new Color(150, 150, 150));
+                        label.setAlignmentX(Component.CENTER_ALIGNMENT);
+                        label.setBorder(new EmptyBorder(80, 20, 80, 20));
+                        chatListContainer.add(label);
+                    } else {
+                        for (Map<String, Object> friend : friends) {
+                            String friendUsername = (String) friend.get("username");
+                            String friendName = (String) friend.get("full_name");
+                            String displayName = (friendName != null && !friendName.isEmpty()) ? 
+                                                 friendName : friendUsername;
+                            
+                            boolean isOnline = onlineUsers.contains(friendUsername);
+                            
+                            // Add chat item (sẽ hiện "Bắt đầu trò chuyện" nếu chưa có tin nhắn)
+                            ChatItemPanel item = new ChatItemPanel(friendUsername, displayName, "Bắt đầu trò chuyện", "", isOnline, 0, null);
+                            item.addMouseListener(new java.awt.event.MouseAdapter() {
+                                @Override
+                                public void mouseClicked(java.awt.event.MouseEvent e) {
+                                    mainFrame.openChat(friendUsername);
+                                }
+                            });
+                            chatListContainer.add(item);
+                            chatItems.put(friendUsername, item);
+                        }
+                    }
+                    
+                    chatListContainer.revalidate();
+                    chatListContainer.repaint();
+                    
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+        
+        worker.execute();
+    }
+    
+    /**
+     * LOAD DANH SÁCH BẠN BÈ ĐANG ONLINE
+     */
+    private void loadOnlineFriends() {
+        chatListContainer.removeAll();
+        chatItems.clear();
+        
+        SwingWorker<java.util.List<Map<String, Object>>, Void> worker = new SwingWorker<>() {
+            @Override
+            protected java.util.List<Map<String, Object>> doInBackground() {
+                java.util.List<Map<String, Object>> allChats = userService.getRecentChats(mainFrame.getUsername());
+                java.util.List<Map<String, Object>> onlineChats = new java.util.ArrayList<>();
+                
+                // Lấy danh sách online users từ socket client
+                java.util.List<String> onlineUsers = new java.util.ArrayList<>();
+                if (mainFrame.getSocketClient() != null && mainFrame.getSocketClient().isConnected()) {
+                    onlineUsers = mainFrame.getSocketClient().getOnlineUsers();
+                }
+                
+                // Filter chỉ lấy những người đang online
+                for (Map<String, Object> chat : allChats) {
+                    String friendUsername = (String) chat.get("friend_username");
+                    if (onlineUsers.contains(friendUsername)) {
+                        onlineChats.add(chat);
+                    }
+                }
+                
+                return onlineChats;
+            }
+            
+            @Override
+            protected void done() {
+                try {
+                    java.util.List<Map<String, Object>> chats = get();
+                    
+                    if (chats == null || chats.isEmpty()) {
+                        JLabel label = new JLabel("<html><center>💤<br><br>Không có bạn bè nào đang online<br>Hãy quay lại sau!</center></html>");
+                        label.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+                        label.setForeground(new Color(150, 150, 150));
+                        label.setAlignmentX(Component.CENTER_ALIGNMENT);
+                        label.setBorder(new EmptyBorder(80, 20, 80, 20));
+                        chatListContainer.add(label);
+                    } else {
+                        for (Map<String, Object> chat : chats) {
+                            String friendUsername = (String) chat.get("friend_username");
+                            String friendName = (String) chat.get("friend_name");
+                            String displayName = (friendName != null && !friendName.isEmpty()) ? 
+                                                 friendName : friendUsername;
+                            
+                            String lastMessage = (String) chat.get("last_message");
+                            java.sql.Timestamp sentAt = (java.sql.Timestamp) chat.get("sent_at");
+                            int unreadCount = (int) chat.get("unread_count");
+                            
+                            // Format time
+                            String timeStr = formatTime(sentAt);
+                            
+                            // Add chat item with online status (luôn online vì đang ở tab Online)
+                            ChatItemPanel item = new ChatItemPanel(friendUsername, displayName, lastMessage, timeStr, true, unreadCount, sentAt);
+                            item.addMouseListener(new java.awt.event.MouseAdapter() {
+                                @Override
+                                public void mouseClicked(java.awt.event.MouseEvent e) {
+                                    mainFrame.openChat(friendUsername);
+                                }
+                            });
+                            chatListContainer.add(item);
+                            chatItems.put(friendUsername, item);
+                        }
+                    }
+                    
+                    chatListContainer.revalidate();
+                    chatListContainer.repaint();
+                    
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+        
+        worker.execute();
     }
 }

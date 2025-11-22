@@ -25,6 +25,7 @@ public class ZaloMainFrame extends JFrame {
     private ChatContentPanel chatContentPanel;
     private FriendRequestPanel friendRequestPanel; // Lưu reference để refresh
     private FriendListPanel friendListPanel; // Lưu reference để refresh online status
+    private GroupListPanel groupListPanel; // Lưu reference để refresh groups
     
     // Panel switching
     private JPanel leftPanel; // CardLayout container for chatList and contactPanel
@@ -72,7 +73,9 @@ public class ZaloMainFrame extends JFrame {
         friendListPanel = new FriendListPanel(this);
         rightPanel.add(friendListPanel, "FRIENDS");
         
-        rightPanel.add(createPlaceholderPanel("Danh sách nhóm"), "GROUPS");
+        // Tạo và lưu reference GroupListPanel
+        groupListPanel = new GroupListPanel(this);
+        rightPanel.add(groupListPanel, "GROUPS");
         
         // Tạo và lưu reference FriendRequestPanel
         friendRequestPanel = new FriendRequestPanel(this);
@@ -129,6 +132,10 @@ public class ZaloMainFrame extends JFrame {
                 // Refresh FriendListPanel
                 if (friendListPanel != null) {
                     friendListPanel.refreshOnlineStatus();
+                }
+                // ✅ CẬP NHẬT ONLINE STATUS TRONG CHAT LIST
+                if (chatListPanel != null && socketClient != null) {
+                    chatListPanel.updateOnlineUsers(socketClient.getOnlineUsers());
                 }
             }
             
@@ -300,6 +307,15 @@ public class ZaloMainFrame extends JFrame {
         }
     }
     
+    /**
+     * Refresh chat list (gọi khi gửi tin nhắn)
+     */
+    public void refreshChatList() {
+        if (chatListPanel != null) {
+            chatListPanel.refreshChatList();
+        }
+    }
+    
     public void sendMessage(String content, String receiver) {
         if (socketClient != null && socketClient.isConnected()) {
             System.out.println("📤 Gửi tin nhắn đến " + receiver + ": " + content);
@@ -321,6 +337,24 @@ public class ZaloMainFrame extends JFrame {
     
     public void openChat(String contactName) {
         chatContentPanel.openChat(contactName);
+    }
+    
+    public void openGroupChat(int groupId, String groupName, boolean isAdmin) {
+        // Tạo GroupChatPanel mới và hiển thị
+        GroupChatPanel groupChatPanel = new GroupChatPanel(this, groupId, groupName, isAdmin);
+        
+        // Remove old GROUP_CHAT if exists
+        try {
+            rightPanel.remove(rightPanel.getComponentCount() - 1); // Remove last if it's GROUP_CHAT
+        } catch (Exception e) {
+            // Ignore
+        }
+        
+        // Add new group chat panel
+        rightPanel.add(groupChatPanel, "GROUP_CHAT");
+        
+        // Giữ nguyên ở ContactPanel, chỉ switch panel bên phải
+        rightCardLayout.show(rightPanel, "GROUP_CHAT");
     }
     
     public String getUsername() {
