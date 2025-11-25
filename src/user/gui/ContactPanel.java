@@ -43,16 +43,29 @@ public class ContactPanel extends JPanel {
         JLabel titleLabel = new JLabel("Danh bạ");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
         
-        // Search icon
-        JButton searchButton = new JButton("🔍");
-        searchButton.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 18));
-        searchButton.setBorderPainted(false);
-        searchButton.setContentAreaFilled(false);
-        searchButton.setFocusPainted(false);
-        searchButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        // Right panel with create group button
+        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        rightPanel.setOpaque(false);
+        
+        // Create Group button
+        JButton createGroupButton = new JButton("Tạo Nhóm");
+        createGroupButton.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        createGroupButton.setForeground(Color.WHITE);
+        createGroupButton.setBackground(PRIMARY_COLOR);
+        createGroupButton.setBorderPainted(false);
+        createGroupButton.setFocusPainted(false);
+        createGroupButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        createGroupButton.setBorder(BorderFactory.createEmptyBorder(6, 15, 6, 15));
+        
+        createGroupButton.addActionListener(e -> {
+            CreateGroupDialog dialog = new CreateGroupDialog(mainFrame);
+            dialog.setVisible(true);
+        });
+        
+        rightPanel.add(createGroupButton);
         
         panel.add(titleLabel, BorderLayout.WEST);
-        panel.add(searchButton, BorderLayout.EAST);
+        panel.add(rightPanel, BorderLayout.EAST);
         
         return panel;
     }

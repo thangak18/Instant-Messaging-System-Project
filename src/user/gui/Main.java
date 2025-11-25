@@ -1,30 +1,24 @@
 package user.gui;
 
-import javax.swing.*;
+import user.socket.ChatServer;
 
 /**
- * Main Entry Point của ứng dụng InstantChat
- * Đây là class duy nhất có main() - khởi động từ LoginFrame
+ * Main Entry Point - Chỉ khởi động ChatServer
+ * Để login, chạy LoginFrame.java
  */
 public class Main {
     public static void main(String[] args) {
-        // Set Look and Feel cho đẹp hơn
+        System.out.println("=================================");
+        System.out.println("  INSTANT CHAT SERVER");
+        System.out.println("=================================");
+        System.out.println("🚀 Starting ChatServer...");
+        
         try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            ChatServer server = new ChatServer();
+            server.start(); // Block ở đây để server chạy
         } catch (Exception e) {
+            System.err.println("❌ Could not start ChatServer: " + e.getMessage());
             e.printStackTrace();
         }
-        
-        // Chạy trên Event Dispatch Thread (chuẩn Swing)
-        SwingUtilities.invokeLater(() -> {
-            System.out.println("=================================");
-            System.out.println("  INSTANT CHAT APPLICATION");
-            System.out.println("  Starting from Login Screen...");
-            System.out.println("=================================");
-            
-            // Khởi động app từ LoginFrame
-            LoginFrame loginFrame = new LoginFrame();
-            loginFrame.setVisible(true);
-        });
     }
 }

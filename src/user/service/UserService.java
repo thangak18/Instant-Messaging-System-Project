@@ -763,17 +763,39 @@ public class UserService {
      * GỬI LỜI MỜI KẾT BẠN
      */
     public boolean sendFriendRequest(String senderUsername, String receiverUsername) {
-        String sql = "INSERT INTO friends (user_id, friend_id, status, created_at) " +
-                     "VALUES ((SELECT user_id FROM users WHERE username = ?), " +
-                     "        (SELECT user_id FROM users WHERE username = ?), " +
-                     "        'pending', CURRENT_TIMESTAMP)";
-        
         Connection conn = null;
         PreparedStatement pstmt = null;
         
         try {
             conn = dbConnection.getConnection();
             if (conn == null) return false;
+            
+            // ✅ CHECK: Kiểm tra xem có bị block không (cả 2 chiều)
+            String checkBlockSQL = "SELECT COUNT(*) FROM blocked_users " +
+                                   "WHERE (blocker_id = (SELECT user_id FROM users WHERE username = ?) " +
+                                   "       AND blocked_id = (SELECT user_id FROM users WHERE username = ?)) " +
+                                   "   OR (blocker_id = (SELECT user_id FROM users WHERE username = ?) " +
+                                   "       AND blocked_id = (SELECT user_id FROM users WHERE username = ?))";
+            
+            try (PreparedStatement checkStmt = conn.prepareStatement(checkBlockSQL)) {
+                checkStmt.setString(1, senderUsername);
+                checkStmt.setString(2, receiverUsername);
+                checkStmt.setString(3, receiverUsername);
+                checkStmt.setString(4, senderUsername);
+                
+                try (ResultSet rs = checkStmt.executeQuery()) {
+                    if (rs.next() && rs.getInt(1) > 0) {
+                        System.out.println("🚫 Không thể gửi lời mời: Có người đã bị chặn");
+                        return false;
+                    }
+                }
+            }
+            
+            // Tiếp tục insert friend request
+            String sql = "INSERT INTO friends (user_id, friend_id, status, created_at) " +
+                         "VALUES ((SELECT user_id FROM users WHERE username = ?), " +
+                         "        (SELECT user_id FROM users WHERE username = ?), " +
+                         "        'pending', CURRENT_TIMESTAMP)";
             
             pstmt = conn.prepareStatement(sql);
             pstmt.setString(1, senderUsername);
@@ -1072,20 +1094,29 @@ public class UserService {
         // Query lấy bạn bè và tin nhắn cuối cùng
         String sql = "WITH user_friends AS ( " +
                      "  SELECT " +
-                     "    CASE WHEN f.user_id = u_me.user_id THEN f.friend_id ELSE f.user_id END as friend_user_id " +
+                     "    CASE WHEN f.user_id = (SELECT user_id FROM users WHERE username = ?) THEN f.friend_id ELSE f.user_id END as friend_user_id " +
                      "  FROM friends f " +
-                     "  CROSS JOIN users u_me " +
-                     "  WHERE u_me.username = ? " +
-                     "  AND f.status = 'accepted' " +
-                     "  AND (f.user_id = u_me.user_id OR f.friend_id = u_me.user_id) " +
+                     "  WHERE f.status = 'accepted' " +
+                     "  AND (f.user_id = (SELECT user_id FROM users WHERE username = ?) " +
+                     "       OR f.friend_id = (SELECT user_id FROM users WHERE username = ?)) " +
                      ") " +
                      "SELECT DISTINCT " +
                      "  uf.friend_user_id, " +
                      "  u.username as friend_username, " +
-                     "  u.full_name as friend_name " +
+                     "  u.full_name as friend_name, " +
+                     "  m.last_message, " +
+                     "  m.sent_at " +
                      "FROM user_friends uf " +
                      "JOIN users u ON uf.friend_user_id = u.user_id " +
-                     "ORDER BY u.full_name";
+                     "LEFT JOIN LATERAL ( " +
+                     "  SELECT content as last_message, created_at as sent_at " +
+                     "  FROM messages " +
+                     "  WHERE (sender_id = (SELECT user_id FROM users WHERE username = ?) AND receiver_id = uf.friend_user_id) " +
+                     "     OR (sender_id = uf.friend_user_id AND receiver_id = (SELECT user_id FROM users WHERE username = ?)) " +
+                     "  ORDER BY created_at DESC " +
+                     "  LIMIT 1 " +
+                     ") m ON true " +
+                     "ORDER BY m.sent_at DESC NULLS LAST, u.full_name";
         
         Connection conn = null;
         PreparedStatement pstmt = null;
@@ -1102,6 +1133,10 @@ public class UserService {
             
             pstmt = conn.prepareStatement(sql);
             pstmt.setString(1, username);
+            pstmt.setString(2, username);
+            pstmt.setString(3, username);
+            pstmt.setString(4, username);
+            pstmt.setString(5, username);
             
             System.out.println("🔄 Đang execute query...");
             rs = pstmt.executeQuery();
@@ -1112,14 +1147,16 @@ public class UserService {
                 Map<String, Object> chat = new HashMap<>();
                 String friendUsername = rs.getString("friend_username");
                 String friendName = rs.getString("friend_name");
+                String lastMessage = rs.getString("last_message");
+                java.sql.Timestamp sentAt = rs.getTimestamp("sent_at");
                 
                 System.out.println("  📌 Tìm thấy bạn: " + friendUsername + " (" + friendName + ")");
                 
                 chat.put("friend_user_id", rs.getInt("friend_user_id"));
                 chat.put("friend_username", friendUsername);
                 chat.put("friend_name", friendName);
-                chat.put("last_message", "Bắt đầu trò chuyện");
-                chat.put("sent_at", null);
+                chat.put("last_message", lastMessage != null ? lastMessage : "Bắt đầu trò chuyện");
+                chat.put("sent_at", sentAt);
                 chat.put("unread_count", 0);
                 
                 results.add(chat);
@@ -1161,6 +1198,12 @@ public class UserService {
                      "  (m.sender_id = (SELECT user_id FROM users WHERE username = ?) " +
                      "   AND m.receiver_id = (SELECT user_id FROM users WHERE username = ?)) " +
                      ") " +
+                     // Loại bỏ tin nhắn đã xóa bởi user hiện tại (username1)
+                     "AND NOT EXISTS ( " +
+                     "  SELECT 1 FROM deleted_messages dm " +
+                     "  WHERE dm.message_id = m.message_id " +
+                     "  AND dm.user_id = (SELECT user_id FROM users WHERE username = ?) " +
+                     ") " +
                      "ORDER BY m.created_at ASC";
         
         Connection conn = null;
@@ -1176,6 +1219,7 @@ public class UserService {
             pstmt.setString(2, username2);
             pstmt.setString(3, username2);
             pstmt.setString(4, username1);
+            pstmt.setString(5, username1); // Loại bỏ tin nhắn đã xóa
             
             rs = pstmt.executeQuery();
             
@@ -1207,13 +1251,138 @@ public class UserService {
     /**
      * LƯU TIN NHẮN VÀO DATABASE
      */
-    public boolean saveMessage(String senderUsername, String receiverUsername, String content) {
+    public int saveMessage(String senderUsername, String receiverUsername, String content) {
         String sql = "INSERT INTO messages (sender_id, receiver_id, content, created_at) " +
                      "VALUES ( " +
                      "  (SELECT user_id FROM users WHERE username = ?), " +
                      "  (SELECT user_id FROM users WHERE username = ?), " +
                      "  ?, " +
                      "  CURRENT_TIMESTAMP " +
+                     ") RETURNING message_id";
+        
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        
+        try {
+            conn = dbConnection.getConnection();
+            if (conn == null) return -1;
+            
+            pstmt = conn.prepareStatement(sql);
+            pstmt.setString(1, senderUsername);
+            pstmt.setString(2, receiverUsername);
+            pstmt.setString(3, content);
+            
+            rs = pstmt.executeQuery();
+            
+            if (rs.next()) {
+                int messageId = rs.getInt("message_id");
+                System.out.println("✅ Đã lưu tin nhắn #" + messageId + ": " + senderUsername + " → " + receiverUsername);
+                return messageId;
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi khi lưu message: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            if (rs != null) try { rs.close(); } catch (SQLException e) { }
+            if (pstmt != null) try { pstmt.close(); } catch (SQLException e) { }
+            if (conn != null) DatabaseConnection.closeConnection(conn);
+        }
+        
+        return -1;
+    }
+    
+    /**
+     * TÌM KIẾM BẠN BÈ THEO USERNAME HOẶC HỌ TÊN
+     */
+    public java.util.List<Map<String, Object>> searchFriends(String currentUsername, String searchQuery) {
+        java.util.List<Map<String, Object>> results = new java.util.ArrayList<>();
+        
+        String sql = "SELECT DISTINCT " +
+                     "  CASE " +
+                     "    WHEN f.user_id = (SELECT user_id FROM users WHERE username = ?) THEN u2.user_id " +
+                     "    ELSE u1.user_id " +
+                     "  END as user_id, " +
+                     "  CASE " +
+                     "    WHEN f.user_id = (SELECT user_id FROM users WHERE username = ?) THEN u2.username " +
+                     "    ELSE u1.username " +
+                     "  END as username, " +
+                     "  CASE " +
+                     "    WHEN f.user_id = (SELECT user_id FROM users WHERE username = ?) THEN u2.full_name " +
+                     "    ELSE u1.full_name " +
+                     "  END as full_name " +
+                     "FROM friends f " +
+                     "JOIN users u1 ON f.user_id = u1.user_id " +
+                     "JOIN users u2 ON f.friend_id = u2.user_id " +
+                     "WHERE f.status = 'accepted' " +
+                     "AND (u1.username = ? OR u2.username = ?) " +
+                     "AND ( " +
+                     "  (f.user_id = (SELECT user_id FROM users WHERE username = ?) AND (LOWER(u2.username) LIKE LOWER(?) OR LOWER(u2.full_name) LIKE LOWER(?))) " +
+                     "  OR " +
+                     "  (f.friend_id = (SELECT user_id FROM users WHERE username = ?) AND (LOWER(u1.username) LIKE LOWER(?) OR LOWER(u1.full_name) LIKE LOWER(?))) " +
+                     ") " +
+                     "ORDER BY full_name ASC, username ASC";
+        
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        
+        try {
+            conn = dbConnection.getConnection();
+            if (conn == null) return results;
+            
+            pstmt = conn.prepareStatement(sql);
+            String searchPattern = "%" + searchQuery + "%";
+            
+            pstmt.setString(1, currentUsername);
+            pstmt.setString(2, currentUsername);
+            pstmt.setString(3, currentUsername);
+            pstmt.setString(4, currentUsername);
+            pstmt.setString(5, currentUsername);
+            pstmt.setString(6, currentUsername);
+            pstmt.setString(7, searchPattern);
+            pstmt.setString(8, searchPattern);
+            pstmt.setString(9, currentUsername);
+            pstmt.setString(10, searchPattern);
+            pstmt.setString(11, searchPattern);
+            
+            rs = pstmt.executeQuery();
+            
+            while (rs.next()) {
+                Map<String, Object> friend = new HashMap<>();
+                friend.put("user_id", rs.getInt("user_id"));
+                friend.put("username", rs.getString("username"));
+                friend.put("full_name", rs.getString("full_name"));
+                results.add(friend);
+            }
+            
+            System.out.println("✅ Tìm thấy " + results.size() + " bạn bè khớp với: " + searchQuery);
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi khi tìm kiếm bạn bè: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            if (rs != null) try { rs.close(); } catch (SQLException e) { }
+            if (pstmt != null) try { pstmt.close(); } catch (SQLException e) { }
+            if (conn != null) DatabaseConnection.closeConnection(conn);
+        }
+        
+        return results;
+    }
+    
+    /**
+     * Huỷ kết bạn
+     */
+    public boolean unfriend(String username1, String username2) {
+        String sql = "DELETE FROM friends " +
+                     "WHERE status = 'accepted' " +
+                     "AND ( " +
+                     "  (user_id = (SELECT user_id FROM users WHERE username = ?) " +
+                     "   AND friend_id = (SELECT user_id FROM users WHERE username = ?)) " +
+                     "  OR " +
+                     "  (user_id = (SELECT user_id FROM users WHERE username = ?) " +
+                     "   AND friend_id = (SELECT user_id FROM users WHERE username = ?)) " +
                      ")";
         
         Connection conn = null;
@@ -1224,19 +1393,20 @@ public class UserService {
             if (conn == null) return false;
             
             pstmt = conn.prepareStatement(sql);
-            pstmt.setString(1, senderUsername);
-            pstmt.setString(2, receiverUsername);
-            pstmt.setString(3, content);
+            pstmt.setString(1, username1);
+            pstmt.setString(2, username2);
+            pstmt.setString(3, username2);
+            pstmt.setString(4, username1);
             
             int rows = pstmt.executeUpdate();
             
             if (rows > 0) {
-                System.out.println("✅ Đã lưu tin nhắn: " + senderUsername + " → " + receiverUsername);
+                System.out.println("✅ Đã huỷ kết bạn: " + username1 + " <-> " + username2);
                 return true;
             }
             
         } catch (SQLException e) {
-            System.err.println("❌ Lỗi khi lưu message: " + e.getMessage());
+            System.err.println("❌ Lỗi khi huỷ kết bạn: " + e.getMessage());
             e.printStackTrace();
         } finally {
             if (pstmt != null) try { pstmt.close(); } catch (SQLException e) { }
@@ -1245,4 +1415,561 @@ public class UserService {
         
         return false;
     }
+    
+    /**
+     * Block user và huỷ kết bạn
+     */
+    public boolean blockUser(String blocker, String blocked) {
+        Connection conn = null;
+        
+        try {
+            conn = dbConnection.getConnection();
+            if (conn == null) return false;
+            
+            conn.setAutoCommit(false); // Start transaction
+            
+            // 1. Huỷ kết bạn (nếu có)
+            String deleteFriendSQL = "DELETE FROM friends " +
+                                     "WHERE status = 'accepted' " +
+                                     "AND ( " +
+                                     "  (user_id = (SELECT user_id FROM users WHERE username = ?) " +
+                                     "   AND friend_id = (SELECT user_id FROM users WHERE username = ?)) " +
+                                     "  OR " +
+                                     "  (user_id = (SELECT user_id FROM users WHERE username = ?) " +
+                                     "   AND friend_id = (SELECT user_id FROM users WHERE username = ?)) " +
+                                     ")";
+            
+            try (PreparedStatement pstmt = conn.prepareStatement(deleteFriendSQL)) {
+                pstmt.setString(1, blocker);
+                pstmt.setString(2, blocked);
+                pstmt.setString(3, blocked);
+                pstmt.setString(4, blocker);
+                pstmt.executeUpdate();
+            }
+            
+            // 2. Xoá các lời mời kết bạn pending (dùng bảng friends, không phải friend_requests)
+            String deletePendingSQL = "DELETE FROM friends " +
+                                      "WHERE status = 'pending' " +
+                                      "AND ( " +
+                                      "  (user_id = (SELECT user_id FROM users WHERE username = ?) " +
+                                      "   AND friend_id = (SELECT user_id FROM users WHERE username = ?)) " +
+                                      "  OR " +
+                                      "  (user_id = (SELECT user_id FROM users WHERE username = ?) " +
+                                      "   AND friend_id = (SELECT user_id FROM users WHERE username = ?)) " +
+                                      ")";
+            
+            try (PreparedStatement pstmt = conn.prepareStatement(deletePendingSQL)) {
+                pstmt.setString(1, blocker);
+                pstmt.setString(2, blocked);
+                pstmt.setString(3, blocked);
+                pstmt.setString(4, blocker);
+                pstmt.executeUpdate();
+            }
+            
+            // 3. Thêm vào bảng blocked_users
+            String blockSQL = "INSERT INTO blocked_users (blocker_id, blocked_id, blocked_at) " +
+                             "VALUES ( " +
+                             "  (SELECT user_id FROM users WHERE username = ?), " +
+                             "  (SELECT user_id FROM users WHERE username = ?), " +
+                             "  CURRENT_TIMESTAMP " +
+                             ") " +
+                             "ON CONFLICT (blocker_id, blocked_id) DO NOTHING";
+            
+            try (PreparedStatement pstmt = conn.prepareStatement(blockSQL)) {
+                pstmt.setString(1, blocker);
+                pstmt.setString(2, blocked);
+                int rows = pstmt.executeUpdate();
+                
+                if (rows > 0) {
+                    conn.commit();
+                    System.out.println("✅ Đã block user: " + blocker + " -> " + blocked);
+                    return true;
+                } else {
+                    // Already blocked
+                    conn.commit();
+                    return true;
+                }
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi khi block user: " + e.getMessage());
+            e.printStackTrace();
+            
+            if (conn != null) {
+                try {
+                    conn.rollback();
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                }
+            }
+            
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.setAutoCommit(true);
+                    DatabaseConnection.closeConnection(conn);
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Lấy thông tin chi tiết user
+     */
+    public Map<String, Object> getUserInfo(String username) {
+        String sql = "SELECT username, full_name, email, address, dob, gender, created_at " +
+                    "FROM users WHERE username = ?";
+        
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setString(1, username);
+            ResultSet rs = pstmt.executeQuery();
+            
+            if (rs.next()) {
+                Map<String, Object> userInfo = new java.util.HashMap<>();
+                userInfo.put("username", rs.getString("username"));
+                userInfo.put("full_name", rs.getString("full_name"));
+                userInfo.put("email", rs.getString("email"));
+                userInfo.put("address", rs.getString("address"));
+                userInfo.put("dob", rs.getDate("dob"));
+                userInfo.put("gender", rs.getString("gender"));
+                userInfo.put("created_at", rs.getTimestamp("created_at"));
+                return userInfo;
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi khi lấy thông tin user: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Cập nhật thông tin user (full profile)
+     */
+    public boolean updateUserProfile(String username, String fullName, String email, 
+                                     String address, java.sql.Date dob, String gender) {
+        String sql = "UPDATE users SET full_name = ?, email = ?, address = ?, dob = ?, gender = ? " +
+                    "WHERE username = ?";
+        
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setString(1, fullName);
+            pstmt.setString(2, email);
+            pstmt.setString(3, address);
+            pstmt.setDate(4, dob);
+            pstmt.setString(5, gender);
+            pstmt.setString(6, username);
+            
+            int rows = pstmt.executeUpdate();
+            return rows > 0;
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi khi cập nhật profile: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Bỏ chặn user
+     */
+    public boolean unblockUser(String blocker, String blocked) {
+        String sql = "DELETE FROM blocked_users " +
+                    "WHERE blocker_id = (SELECT user_id FROM users WHERE username = ?) " +
+                    "AND blocked_id = (SELECT user_id FROM users WHERE username = ?)";
+        
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setString(1, blocker);
+            pstmt.setString(2, blocked);
+            
+            int rows = pstmt.executeUpdate();
+            return rows > 0;
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi khi unblock user: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Lấy danh sách người đã chặn
+     */
+    public java.util.List<Map<String, Object>> getBlockedUsers(String username) {
+        java.util.List<Map<String, Object>> blockedUsers = new java.util.ArrayList<>();
+        
+        String sql = "SELECT u.username, u.full_name, bu.blocked_at " +
+                    "FROM blocked_users bu " +
+                    "JOIN users u ON bu.blocked_id = u.user_id " +
+                    "WHERE bu.blocker_id = (SELECT user_id FROM users WHERE username = ?) " +
+                    "ORDER BY bu.blocked_at DESC";
+        
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setString(1, username);
+            ResultSet rs = pstmt.executeQuery();
+            
+            while (rs.next()) {
+                Map<String, Object> user = new java.util.HashMap<>();
+                user.put("username", rs.getString("username"));
+                user.put("full_name", rs.getString("full_name"));
+                user.put("blocked_at", rs.getTimestamp("blocked_at"));
+                blockedUsers.add(user);
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi khi lấy danh sách blocked users: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return blockedUsers;
+    }
+    
+    /**
+     * Cập nhật tên hiển thị
+     */
+    public boolean updateFullName(String username, String fullName) {
+        String sql = "UPDATE users SET full_name = ? WHERE username = ?";
+        
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setString(1, fullName);
+            pstmt.setString(2, username);
+            
+            int rows = pstmt.executeUpdate();
+            return rows > 0;
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi khi cập nhật full name: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return false;
+    }
+    
+    /**
+     * BÁO CÁO SPAM
+     * Thêm báo cáo spam vào database
+     * 
+     * @param reporterUsername username của người báo cáo
+     * @param reportedUsername username của người bị báo cáo
+     * @param reason lý do báo cáo
+     * @return true nếu báo cáo thành công
+     */
+    public boolean reportSpam(String reporterUsername, String reportedUsername, String reason) {
+        String sql = "INSERT INTO spam_reports (reporter_id, reported_user_id, reason, status) " +
+                     "SELECT u1.id, u2.id, ?, 'pending' " +
+                     "FROM users u1, users u2 " +
+                     "WHERE u1.username = ? AND u2.username = ?";
+        
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        
+        try {
+            conn = dbConnection.getConnection();
+            if (conn == null) {
+                System.err.println("❌ Không thể kết nối database");
+                return false;
+            }
+            
+            pstmt = conn.prepareStatement(sql);
+            pstmt.setString(1, reason);
+            pstmt.setString(2, reporterUsername);
+            pstmt.setString(3, reportedUsername);
+            
+            int rowsAffected = pstmt.executeUpdate();
+            
+            if (rowsAffected > 0) {
+                System.out.println("✅ Báo cáo spam thành công: " + reporterUsername + " -> " + reportedUsername);
+                return true;
+            } else {
+                System.err.println("❌ Không thể tạo báo cáo spam");
+                return false;
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi khi báo cáo spam: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        } finally {
+            try {
+                if (pstmt != null) pstmt.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
+    /**
+     * Cập nhật mật khẩu
+     */
+    public boolean updatePassword(String username, String newPassword) {
+        String sql = "UPDATE users SET password = ? WHERE username = ?";
+        
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setString(1, newPassword);
+            pstmt.setString(2, username);
+            
+            int rows = pstmt.executeUpdate();
+            return rows > 0;
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi khi cập nhật password: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return false;
+    }
+    
+    // ==================== CHAT HISTORY MANAGEMENT ====================
+    
+    /**
+     * LẤY LỊCH SỬ CHAT VỚI 1 NGƯỜI (CÓ ID ĐỂ XÓA)
+     */
+    public java.util.List<Map<String, Object>> getChatHistoryWithUser(String username, String friendUsername) {
+        String sql = "SELECT id, sender, receiver, content, sent_at " +
+                     "FROM messages " +
+                     "WHERE (sender = ? AND receiver = ?) OR (sender = ? AND receiver = ?) " +
+                     "ORDER BY sent_at ASC";
+        
+        java.util.List<Map<String, Object>> messages = new java.util.ArrayList<>();
+        
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setString(1, username);
+            pstmt.setString(2, friendUsername);
+            pstmt.setString(3, friendUsername);
+            pstmt.setString(4, username);
+            
+            ResultSet rs = pstmt.executeQuery();
+            
+            while (rs.next()) {
+                Map<String, Object> message = new HashMap<>();
+                message.put("id", rs.getInt("id"));
+                message.put("sender", rs.getString("sender"));
+                message.put("receiver", rs.getString("receiver"));
+                message.put("content", rs.getString("content"));
+                message.put("sent_at", rs.getTimestamp("sent_at"));
+                messages.add(message);
+            }
+            
+            System.out.println("📜 Lấy " + messages.size() + " tin nhắn với " + friendUsername);
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi khi lấy lịch sử: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return messages;
+    }
+    
+    /**
+     * XÓA NHIỀU TIN NHẮN THEO ID
+     */
+    public boolean deleteMessages(java.util.List<Integer> messageIds) {
+        if (messageIds == null || messageIds.isEmpty()) {
+            return false;
+        }
+        
+        StringBuilder sql = new StringBuilder("DELETE FROM messages WHERE id IN (");
+        for (int i = 0; i < messageIds.size(); i++) {
+            sql.append("?");
+            if (i < messageIds.size() - 1) sql.append(",");
+        }
+        sql.append(")");
+        
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql.toString())) {
+            
+            for (int i = 0; i < messageIds.size(); i++) {
+                pstmt.setInt(i + 1, messageIds.get(i));
+            }
+            
+            int rows = pstmt.executeUpdate();
+            System.out.println("✅ Đã xóa " + rows + " tin nhắn");
+            return rows > 0;
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi khi xóa tin nhắn: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return false;
+    }
+    
+    /**
+     * XÓA TOÀN BỘ LỊCH SỬ CHAT VỚI 1 NGƯỜI
+     */
+    public boolean deleteChatHistory(String username, String friendUsername) {
+        String sql = "DELETE FROM messages WHERE " +
+                     "(sender = ? AND receiver = ?) OR (sender = ? AND receiver = ?)";
+        
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setString(1, username);
+            pstmt.setString(2, friendUsername);
+            pstmt.setString(3, friendUsername);
+            pstmt.setString(4, username);
+            
+            int rows = pstmt.executeUpdate();
+            System.out.println("✅ Đã xóa " + rows + " tin nhắn với " + friendUsername);
+            return true;
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi khi xóa lịch sử: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return false;
+    }
+    
+    /**
+     * TÌM KIẾM TRONG LỊCH SỬ CHAT VỚI 1 NGƯỜI
+     */
+    public java.util.List<Map<String, Object>> searchInChatHistory(String username, String friendUsername, String keyword) {
+        String sql = "SELECT sender, receiver, content, sent_at " +
+                     "FROM messages " +
+                     "WHERE ((sender = ? AND receiver = ?) OR (sender = ? AND receiver = ?)) " +
+                     "AND LOWER(content) LIKE LOWER(?) " +
+                     "ORDER BY sent_at DESC " +
+                     "LIMIT 100";
+        
+        java.util.List<Map<String, Object>> results = new java.util.ArrayList<>();
+        
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setString(1, username);
+            pstmt.setString(2, friendUsername);
+            pstmt.setString(3, friendUsername);
+            pstmt.setString(4, username);
+            pstmt.setString(5, "%" + keyword + "%");
+            
+            ResultSet rs = pstmt.executeQuery();
+            
+            while (rs.next()) {
+                Map<String, Object> message = new HashMap<>();
+                message.put("sender", rs.getString("sender"));
+                message.put("receiver", rs.getString("receiver"));
+                message.put("content", rs.getString("content"));
+                message.put("sent_at", rs.getTimestamp("sent_at"));
+                results.add(message);
+            }
+            
+            System.out.println("🔍 Tìm thấy " + results.size() + " kết quả");
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi khi tìm kiếm: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return results;
+    }
+    
+    // ==================== XÓA TIN NHẮN RIÊNG LẺ ====================
+    
+    /**
+     * XÓA TIN NHẮN CHỈ MÌNH TÔI (Soft Delete)
+     * Thêm user_id vào bảng deleted_messages
+     */
+    public boolean deleteMessageForMe(int messageId, String username) {
+        // Kiểm tra bảng deleted_messages có tồn tại chưa, nếu chưa thì tạo
+        String createTableSql = "CREATE TABLE IF NOT EXISTS deleted_messages (" +
+                                "message_id INTEGER NOT NULL, " +
+                                "user_id INTEGER NOT NULL, " +
+                                "deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
+                                "PRIMARY KEY (message_id, user_id))";
+        
+        String insertSql = "INSERT INTO deleted_messages (message_id, user_id) " +
+                          "SELECT ?, user_id FROM users WHERE username = ? " +
+                          "ON CONFLICT (message_id, user_id) DO NOTHING";
+        
+        try (Connection conn = dbConnection.getConnection()) {
+            if (conn == null) return false;
+            
+            // Tạo bảng nếu chưa có
+            try (PreparedStatement createStmt = conn.prepareStatement(createTableSql)) {
+                createStmt.execute();
+            }
+            
+            // Insert vào deleted_messages
+            try (PreparedStatement pstmt = conn.prepareStatement(insertSql)) {
+                pstmt.setInt(1, messageId);
+                pstmt.setString(2, username);
+                
+                int rows = pstmt.executeUpdate();
+                System.out.println("✅ Đã ẩn tin nhắn " + messageId + " cho " + username);
+                return rows > 0;
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi khi xóa tin nhắn cho mình: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return false;
+    }
+    
+    /**
+     * THU HỒI TIN NHẮN (Hard Delete)
+     * Xóa hoàn toàn khỏi database
+     */
+    public boolean recallMessage(int messageId, String username) {
+        // Kiểm tra tin nhắn có phải của user này gửi không
+        String checkSql = "SELECT sender_id FROM messages m " +
+                         "JOIN users u ON m.sender_id = u.user_id " +
+                         "WHERE m.message_id = ? AND u.username = ?";
+        
+        String deleteSql = "DELETE FROM messages WHERE message_id = ?";
+        
+        try (Connection conn = dbConnection.getConnection()) {
+            if (conn == null) return false;
+            
+            // Kiểm tra quyền
+            try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
+                checkStmt.setInt(1, messageId);
+                checkStmt.setString(2, username);
+                
+                ResultSet rs = checkStmt.executeQuery();
+                if (!rs.next()) {
+                    System.err.println("❌ Không thể thu hồi tin nhắn của người khác!");
+                    return false;
+                }
+            }
+            
+            // Xóa tin nhắn
+            try (PreparedStatement deleteStmt = conn.prepareStatement(deleteSql)) {
+                deleteStmt.setInt(1, messageId);
+                
+                int rows = deleteStmt.executeUpdate();
+                System.out.println("✅ Đã thu hồi tin nhắn " + messageId);
+                return rows > 0;
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi khi thu hồi tin nhắn: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return false;
+    }
 }
+

@@ -23,6 +23,9 @@ public class ZaloMainFrame extends JFrame {
     private ChatListPanel chatListPanel;
     private ContactPanel contactPanel;
     private ChatContentPanel chatContentPanel;
+    private FriendRequestPanel friendRequestPanel; // Lưu reference để refresh
+    private FriendListPanel friendListPanel; // Lưu reference để refresh online status
+    private GroupListPanel groupListPanel; // Lưu reference để refresh groups
     
     // Panel switching
     private JPanel leftPanel; // CardLayout container for chatList and contactPanel
@@ -65,9 +68,19 @@ public class ZaloMainFrame extends JFrame {
         rightCardLayout = new CardLayout();
         rightPanel = new JPanel(rightCardLayout);
         rightPanel.add(chatContentPanel, "CHAT_CONTENT");
-        rightPanel.add(new FriendListPanel(this), "FRIENDS");
-        rightPanel.add(createPlaceholderPanel("Danh sách nhóm"), "GROUPS");
-        rightPanel.add(new FriendRequestPanel(this), "FRIEND_REQUESTS");
+        
+        // Tạo và lưu reference FriendListPanel
+        friendListPanel = new FriendListPanel(this);
+        rightPanel.add(friendListPanel, "FRIENDS");
+        
+        // Tạo và lưu reference GroupListPanel
+        groupListPanel = new GroupListPanel(this);
+        rightPanel.add(groupListPanel, "GROUPS");
+        
+        // Tạo và lưu reference FriendRequestPanel
+        friendRequestPanel = new FriendRequestPanel(this);
+        rightPanel.add(friendRequestPanel, "FRIEND_REQUESTS");
+        
         rightPanel.add(createPlaceholderPanel("Lời mời vào nhóm"), "GROUP_INVITES");
     }
     
@@ -103,9 +116,204 @@ public class ZaloMainFrame extends JFrame {
     
     private void handleIncomingMessage(Message message) {
         SwingUtilities.invokeLater(() -> {
-            chatContentPanel.handleMessage(message);
-            chatListPanel.updateChatList(message);
+            // Handle chat messages
+            if (message.getType() == Message.MessageType.PRIVATE_MESSAGE ||
+                message.getType() == Message.MessageType.BROADCAST) {
+                chatContentPanel.handleMessage(message);
+                chatListPanel.updateChatList(message);
+            }
+            
+            // Handle user online/offline status
+            else if (message.getType() == Message.MessageType.USER_JOINED ||
+                     message.getType() == Message.MessageType.USER_LEFT ||
+                     message.getType() == Message.MessageType.ONLINE_USERS) {
+                // Refresh online status in ChatContentPanel
+                chatContentPanel.refreshOnlineStatus();
+                // Refresh FriendListPanel
+                if (friendListPanel != null) {
+                    friendListPanel.refreshOnlineStatus();
+                }
+                // ✅ CẬP NHẬT ONLINE STATUS TRONG CHAT LIST
+                if (chatListPanel != null && socketClient != null) {
+                    chatListPanel.updateOnlineUsers(socketClient.getOnlineUsers());
+                }
+            }
+            
+            // Handle friend request notifications
+            else if (message.getType() == Message.MessageType.FRIEND_REQUEST_SENT) {
+                System.out.println("🔔 Nhận thông báo lời mời kết bạn từ: " + message.getSender());
+                // Reload friend requests panel
+                if (friendRequestPanel != null) {
+                    friendRequestPanel.refreshFriendRequests();
+                }
+            }
+            else if (message.getType() == Message.MessageType.FRIEND_REQUEST_ACCEPTED) {
+                System.out.println("✅ Lời mời kết bạn được chấp nhận: " + message.getContent());
+                if (friendRequestPanel != null) {
+                    friendRequestPanel.refreshFriendRequests();
+                }
+                // Refresh chat list và friend list ngay lập tức
+                if (chatListPanel != null) {
+                    chatListPanel.refreshChatList();
+                }
+                if (friendListPanel != null) {
+                    friendListPanel.refreshFriendList();
+                }
+            }
+            else if (message.getType() == Message.MessageType.FRIEND_REQUEST_REJECTED) {
+                System.out.println("❌ Lời mời kết bạn bị từ chối: " + message.getContent());
+                if (friendRequestPanel != null) {
+                    friendRequestPanel.refreshFriendRequests();
+                }
+            }
+            else if (message.getType() == Message.MessageType.FRIEND_REQUEST_RECALLED) {
+                System.out.println("↩️ Lời mời kết bạn bị thu hồi: " + message.getContent());
+                if (friendRequestPanel != null) {
+                    friendRequestPanel.refreshFriendRequests();
+                }
+            }
+            
+            // Handle unfriend notification
+            else if (message.getType() == Message.MessageType.UNFRIEND) {
+                System.out.println("💔 Bị hủy kết bạn: " + message.getContent());
+                // Refresh chat list và friend list
+                if (chatListPanel != null) {
+                    chatListPanel.refreshChatList();
+                }
+                if (friendListPanel != null) {
+                    friendListPanel.refreshFriendList();
+                }
+                // Show notification
+                SwingUtilities.invokeLater(() -> {
+                    JOptionPane.showMessageDialog(this,
+                        message.getSender() + " đã hủy kết bạn với bạn",
+                        "Thông báo",
+                        JOptionPane.INFORMATION_MESSAGE);
+                });
+            }
+            
+            // Handle block notification
+            else if (message.getType() == Message.MessageType.BLOCK) {
+                System.out.println("🚫 Bị chặn: " + message.getContent());
+                // Refresh chat list và friend list
+                if (chatListPanel != null) {
+                    chatListPanel.refreshChatList();
+                }
+                if (friendListPanel != null) {
+                    friendListPanel.refreshFriendList();
+                }
+                // Show notification
+                SwingUtilities.invokeLater(() -> {
+                    JOptionPane.showMessageDialog(this,
+                        message.getSender() + " đã chặn bạn",
+                        "Thông báo",
+                        JOptionPane.WARNING_MESSAGE);
+                });
+            }
         });
+    }
+    
+    /**
+     * Gửi notification lời mời kết bạn
+     */
+    public void sendFriendRequestNotification(String receiver) {
+        if (socketClient != null && socketClient.isConnected()) {
+            Message msg = new Message(Message.MessageType.FRIEND_REQUEST_SENT, username, receiver, 
+                username + " đã gửi lời mời kết bạn");
+            socketClient.sendMessage(msg);
+            System.out.println("📤 Gửi notification lời mời kết bạn đến: " + receiver);
+        }
+    }
+    
+    /**
+     * Gửi notification chấp nhận lời mời
+     */
+    public void sendFriendRequestAcceptedNotification(String receiver) {
+        if (socketClient != null && socketClient.isConnected()) {
+            Message msg = new Message(Message.MessageType.FRIEND_REQUEST_ACCEPTED, username, receiver,
+                username + " đã chấp nhận lời mời kết bạn");
+            socketClient.sendMessage(msg);
+            System.out.println("📤 Gửi notification chấp nhận lời mời đến: " + receiver);
+        }
+    }
+    
+    /**
+     * Gửi notification từ chối lời mời
+     */
+    public void sendFriendRequestRejectedNotification(String receiver) {
+        if (socketClient != null && socketClient.isConnected()) {
+            Message msg = new Message(Message.MessageType.FRIEND_REQUEST_REJECTED, username, receiver,
+                username + " đã từ chối lời mời kết bạn");
+            socketClient.sendMessage(msg);
+            System.out.println("📤 Gửi notification từ chối lời mời đến: " + receiver);
+        }
+    }
+    
+    /**
+     * Gửi notification thu hồi lời mời
+     */
+    public void sendFriendRequestRecalledNotification(String receiver) {
+        if (socketClient != null && socketClient.isConnected()) {
+            Message msg = new Message(Message.MessageType.FRIEND_REQUEST_RECALLED, username, receiver,
+                username + " đã thu hồi lời mời kết bạn");
+            socketClient.sendMessage(msg);
+            System.out.println("📤 Gửi notification thu hồi lời mời đến: " + receiver);
+        }
+    }
+    
+    /**
+     * Gửi notification hủy kết bạn
+     */
+    public void sendUnfriendNotification(String receiver) {
+        if (socketClient != null && socketClient.isConnected()) {
+            Message msg = new Message(Message.MessageType.UNFRIEND, username, receiver,
+                username + " đã hủy kết bạn với bạn");
+            socketClient.sendMessage(msg);
+            System.out.println("📤 Gửi notification hủy kết bạn đến: " + receiver);
+        }
+    }
+    
+    /**
+     * Gửi notification chặn user
+     */
+    public void sendBlockNotification(String receiver) {
+        if (socketClient != null && socketClient.isConnected()) {
+            Message msg = new Message(Message.MessageType.BLOCK, username, receiver,
+                username + " đã chặn bạn");
+            socketClient.sendMessage(msg);
+            System.out.println("📤 Gửi notification chặn user đến: " + receiver);
+        }
+    }
+    
+    /**
+     * Refresh FriendRequestPanel
+     */
+    public void refreshFriendRequestPanel() {
+        if (friendRequestPanel != null) {
+            friendRequestPanel.refreshFriendRequests();
+        }
+    }
+    
+    /**
+     * Refresh chat list và friend list (gọi khi User A chấp nhận lời mời)
+     */
+    public void refreshChatAndFriendList() {
+        System.out.println("🔄 Refreshing chat list and friend list for current user...");
+        if (chatListPanel != null) {
+            chatListPanel.refreshChatList();
+        }
+        if (friendListPanel != null) {
+            friendListPanel.refreshFriendList();
+        }
+    }
+    
+    /**
+     * Refresh chat list (gọi khi gửi tin nhắn)
+     */
+    public void refreshChatList() {
+        if (chatListPanel != null) {
+            chatListPanel.refreshChatList();
+        }
     }
     
     public void sendMessage(String content, String receiver) {
@@ -129,6 +337,24 @@ public class ZaloMainFrame extends JFrame {
     
     public void openChat(String contactName) {
         chatContentPanel.openChat(contactName);
+    }
+    
+    public void openGroupChat(int groupId, String groupName, boolean isAdmin) {
+        // Tạo GroupChatPanel mới và hiển thị
+        GroupChatPanel groupChatPanel = new GroupChatPanel(this, groupId, groupName, isAdmin);
+        
+        // Remove old GROUP_CHAT if exists
+        try {
+            rightPanel.remove(rightPanel.getComponentCount() - 1); // Remove last if it's GROUP_CHAT
+        } catch (Exception e) {
+            // Ignore
+        }
+        
+        // Add new group chat panel
+        rightPanel.add(groupChatPanel, "GROUP_CHAT");
+        
+        // Giữ nguyên ở ContactPanel, chỉ switch panel bên phải
+        rightCardLayout.show(rightPanel, "GROUP_CHAT");
     }
     
     public String getUsername() {
@@ -161,6 +387,17 @@ public class ZaloMainFrame extends JFrame {
      */
     public void showContactContent(String contentKey) {
         rightCardLayout.show(rightPanel, contentKey);
+    }
+    
+    /**
+     * SWITCH ĐẾN TAB (chat hoặc contact)
+     */
+    public void switchToTab(String tab) {
+        if ("chat".equalsIgnoreCase(tab)) {
+            showChatPanel();
+        } else if ("contact".equalsIgnoreCase(tab)) {
+            showContactPanel();
+        }
     }
     
     /**

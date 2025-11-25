@@ -21,6 +21,16 @@ public class Message implements Serializable {
         BROADCAST,          // Server gửi: broadcast tin nhắn đến tất cả
         PRIVATE_MESSAGE,    // Client gửi: tin nhắn riêng
         
+        // Friend Requests
+        FRIEND_REQUEST_SENT,     // Server gửi: thông báo có lời mời kết bạn mới
+        FRIEND_REQUEST_ACCEPTED, // Server gửi: lời mời được chấp nhận
+        FRIEND_REQUEST_REJECTED, // Server gửi: lời mời bị từ chối
+        FRIEND_REQUEST_RECALLED, // Server gửi: lời mời bị thu hồi
+        
+        // Friend Management
+        UNFRIEND,           // Server gửi: thông báo bị hủy kết bạn
+        BLOCK,              // Server gửi: thông báo bị chặn
+        
         // Status
         USER_JOINED,        // Server gửi: có user mới online
         USER_LEFT,          // Server gửi: có user offline

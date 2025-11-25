@@ -32,6 +32,10 @@ public class SidebarPanel extends JPanel {
         
         // User avatar button
         JButton avatarButton = createIconButton("icons/user.png", "Tài khoản", 36);
+        avatarButton.addActionListener(e -> {
+            ViewProfileDialog dialog = new ViewProfileDialog(mainFrame);
+            dialog.setVisible(true);
+        });
         topPanel.add(avatarButton);
         topPanel.add(Box.createRigidArea(new Dimension(0, 25)));
         
@@ -58,6 +62,10 @@ public class SidebarPanel extends JPanel {
         bottomPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 15, 0));
         
         JButton settingsButton = createIconButton("icons/settings.png", "Cài đặt", 28);
+        settingsButton.addActionListener(e -> {
+            SettingsDialog dialog = new SettingsDialog(mainFrame);
+            dialog.setVisible(true);
+        });
         bottomPanel.add(settingsButton);
         
         // Add all sections
