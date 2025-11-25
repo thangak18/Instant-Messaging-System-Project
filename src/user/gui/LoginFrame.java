@@ -20,7 +20,7 @@ public class LoginFrame extends JFrame {
     private JTextField usernameField;
     private JPasswordField passwordField;
     private JButton loginButton, registerButton, forgotPasswordButton;
-    private JLabel titleLabel, logoLabel, welcomeLabel;
+    private JLabel titleLabel, welcomeLabel;
     
     public LoginFrame() {
         System.out.println("=== LoginFrame Constructor Started ===");
@@ -38,10 +38,7 @@ public class LoginFrame extends JFrame {
         setResizable(false);
         getContentPane().setBackground(BACKGROUND_COLOR);
         
-        // Logo và tiêu đề
-        logoLabel = new JLabel("💬", JLabel.CENTER);
-        logoLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 80));
-        
+        // Tiêu đề
         titleLabel = new JLabel("InstantChat", JLabel.CENTER);
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 32));
         titleLabel.setForeground(PRIMARY_COLOR);
@@ -81,33 +78,28 @@ public class LoginFrame extends JFrame {
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.insets = new Insets(10, 40, 10, 40);
         
-        // Logo
+        // Title
         gbc.gridx = 0; gbc.gridy = 0;
         gbc.gridwidth = 2;
-        gbc.insets = new Insets(40, 40, 10, 40);
-        add(logoLabel, gbc);
-        
-        // Title
-        gbc.gridy = 1;
-        gbc.insets = new Insets(0, 40, 5, 40);
+        gbc.insets = new Insets(50, 40, 5, 40);
         add(titleLabel, gbc);
         
         // Welcome text
-        gbc.gridy = 2;
+        gbc.gridy = 1;
         gbc.insets = new Insets(0, 40, 30, 40);
         add(welcomeLabel, gbc);
         
         // Username field
-        gbc.gridy = 3;
+        gbc.gridy = 2;
         gbc.insets = new Insets(10, 40, 10, 40);
         add(usernameField, gbc);
         
         // Password field
-        gbc.gridy = 4;
+        gbc.gridy = 3;
         add(passwordField, gbc);
         
         // Forgot password (right aligned)
-        gbc.gridy = 5;
+        gbc.gridy = 4;
         gbc.insets = new Insets(5, 40, 15, 40);
         JPanel forgotPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         forgotPanel.setOpaque(false);
@@ -115,17 +107,17 @@ public class LoginFrame extends JFrame {
         add(forgotPanel, gbc);
         
         // Login button
-        gbc.gridy = 6;
+        gbc.gridy = 5;
         gbc.insets = new Insets(10, 40, 15, 40);
         add(loginButton, gbc);
         
         // Divider with "hoặc"
-        gbc.gridy = 7;
+        gbc.gridy = 6;
         gbc.insets = new Insets(10, 40, 10, 40);
         add(createDividerPanel(), gbc);
         
         // Register button
-        gbc.gridy = 8;
+        gbc.gridy = 7;
         gbc.insets = new Insets(10, 40, 40, 40);
         add(registerButton, gbc);
     }
@@ -473,5 +465,37 @@ public class LoginFrame extends JFrame {
             // Show loading dialog (will be closed when worker is done)
             loadingDialog.setVisible(true);
         }
+    }
+    
+    /**
+     * Main method - Dùng để chạy LoginFrame trực tiếp (cho client thứ 2, 3, 4...)
+     * KHÔNG start ChatServer (server đã chạy ở Main.java)
+     * 
+     * Usage:
+     *   - Client 1: Run Main.java (start server + login)
+     *   - Client 2, 3, 4...: Run LoginFrame.java (chỉ login, connect vào server có sẵn)
+     */
+    public static void main(String[] args) {
+        System.out.println("=================================");
+        System.out.println("  INSTANT CHAT - CLIENT ONLY");
+        System.out.println("=================================");
+        System.out.println("⚠️  Lưu ý: ChatServer phải đã chạy ở Main.java");
+        System.out.println("=================================");
+        
+        // Set Look and Feel
+        try {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        
+        // Start GUI trên Event Dispatch Thread
+        SwingUtilities.invokeLater(() -> {
+            LoginFrame loginFrame = new LoginFrame();
+            loginFrame.setVisible(true);
+            
+            System.out.println("✅ LoginFrame started (client mode)");
+            System.out.println("=================================");
+        });
     }
 }
