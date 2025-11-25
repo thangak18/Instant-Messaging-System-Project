@@ -1,7 +1,11 @@
 package admin.gui;
 
-import admin.dao.UserDAO;
-import admin.model.User;
+import admin.service.LoginHistoryDAO;
+import admin.service.StatisticsDAO;
+import admin.service.UserDAO;
+import admin.service.UserDAO.SearchType;
+import admin.socket.LoginHistory;
+import admin.socket.User;
 
 import javax.swing.*;
 import javax.swing.border.*;
@@ -9,7 +13,13 @@ import javax.swing.table.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -33,14 +43,21 @@ public class UserManagementPanel extends JPanel {
     
     // Backend DAO
     private UserDAO userDAO;
+    private LoginHistoryDAO loginHistoryDAO;
+    private StatisticsDAO statisticsDAO;
+    private List<User> currentUsers = new ArrayList<>();
+    private String lastSortOption;
     private DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     public UserManagementPanel() {
         try {
             this.userDAO = new UserDAO();
+            this.loginHistoryDAO = new LoginHistoryDAO();
+            this.statisticsDAO = new StatisticsDAO();
             initComponents();
             setupLayout();
+            lastSortOption = (String) sortCombo.getSelectedItem();
             loadUsersFromDatabase(); // Load từ database thay vì sample data
             setupEventHandlers();
         } catch (Exception e) {
@@ -62,8 +79,8 @@ public class UserManagementPanel extends JPanel {
         userTable.setRowHeight(25);
         userTable.setAutoCreateRowSorter(true);
         userTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 13));
-        userTable.getTableHeader().setBackground(ZALO_BLUE);
-        userTable.getTableHeader().setForeground(Color.WHITE);
+        userTable.getTableHeader().setBackground(Color.WHITE);
+        userTable.getTableHeader().setForeground(Color.BLACK);
         
         // Yêu cầu a: Lọc theo tên/tên đăng nhập/trạng thái
         searchField = new JTextField(20);
@@ -93,7 +110,9 @@ public class UserManagementPanel extends JPanel {
     private void loadUsersFromDatabase() {
         try {
             List<User> users = userDAO.getAllUsers();
-            displayUsers(users);
+            sortUsers(users, lastSortOption);
+            currentUsers = users;
+            displayUsers(currentUsers);
         } catch (SQLException e) {
             showError("Lỗi load dữ liệu: " + e.getMessage());
             e.printStackTrace();
@@ -104,9 +123,10 @@ public class UserManagementPanel extends JPanel {
      * Hiển thị danh sách users lên table
      */
     private void displayUsers(List<User> users) {
-        tableModel.setRowCount(0); // Clear table
-        
-        for (User user : users) {
+        currentUsers = new ArrayList<>(users);
+        tableModel.setRowCount(0);
+
+        for (User user : currentUsers) {
             Object[] row = {
                 user.getId(),
                 user.getUsername(),
@@ -115,7 +135,7 @@ public class UserManagementPanel extends JPanel {
                 user.getBirthDate() != null ? user.getBirthDate().format(dateFormatter) : "",
                 user.getGender() != null ? user.getGender() : "",
                 user.getEmail(),
-                user.getStatus().equals("active") ? "Hoạt động" : "Bị khóa",
+                formatStatus(user.getStatus()),
                 user.getCreatedAt() != null ? user.getCreatedAt().format(dateTimeFormatter) : ""
             };
             tableModel.addRow(row);
@@ -181,7 +201,7 @@ public class UserManagementPanel extends JPanel {
         row2.add(statusFilter);
         row2.add(new JLabel("Sắp xếp:"));
         row2.add(sortCombo);
-        row2.add(createStyledButton("🔄 Áp dụng", SUCCESS_GREEN));
+        row2.add(createStyledButton("🔄 Áp dụng", ZALO_BLUE));
 
         JPanel formPanel = new JPanel(new BorderLayout(5, 5));
         formPanel.setOpaque(false);
@@ -207,11 +227,11 @@ public class UserManagementPanel extends JPanel {
         JPanel row1 = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 5));
         row1.setOpaque(false);
         
-        JButton addBtn = createStyledButton("➕ Thêm người dùng", SUCCESS_GREEN);
-        JButton editBtn = createStyledButton("✏️ Sửa thông tin", ZALO_BLUE);
-        JButton deleteBtn = createStyledButton("🗑️ Xóa người dùng", DANGER_RED);
-        JButton lockBtn = createStyledButton("🔒 Khóa tài khoản", WARNING_ORANGE);
-        JButton unlockBtn = createStyledButton("🔓 Mở khóa", SUCCESS_GREEN);
+        JButton addBtn = createStyledButton("➕ Thêm người dùng", INFO_CYAN);
+        JButton editBtn = createStyledButton("✏️ Sửa thông tin", INFO_CYAN);
+        JButton deleteBtn = createStyledButton("🗑️ Xóa người dùng", INFO_CYAN);
+        JButton lockBtn = createStyledButton("🔒 Khóa tài khoản", INFO_CYAN);
+        JButton unlockBtn = createStyledButton("🔓 Mở khóa", INFO_CYAN);
         
         row1.add(addBtn);
         row1.add(editBtn);
@@ -224,8 +244,8 @@ public class UserManagementPanel extends JPanel {
         row2.setOpaque(false);
         
         JButton passwordBtn = createStyledButton("🔑 Đổi mật khẩu", INFO_CYAN);
-        JButton historyBtn = createStyledButton("📜 Lịch sử đăng nhập", new Color(108, 117, 125));
-        JButton friendsBtn = createStyledButton("👥 Danh sách bạn bè", new Color(255, 99, 132));
+        JButton historyBtn = createStyledButton("📜 Lịch sử đăng nhập", INFO_CYAN);
+        JButton friendsBtn = createStyledButton("👥 Danh sách bạn bè", INFO_CYAN);
         
         row2.add(passwordBtn);
         row2.add(historyBtn);
@@ -258,9 +278,8 @@ public class UserManagementPanel extends JPanel {
         // Yêu cầu d: Cập nhật mật khẩu
         addActionToButton("🔑 Đổi mật khẩu", e -> showChangePasswordDialog());
         
-        // TODO: Implement these features later
-        // addActionToButton("📜 Lịch sử đăng nhập", e -> showLoginHistoryDialog());
-        // addActionToButton("👥 Danh sách bạn bè", e -> showFriendsListDialog());
+    addActionToButton("📜 Lịch sử đăng nhập", e -> showLoginHistoryDialog());
+    addActionToButton("👥 Danh sách bạn bè", e -> showFriendsListDialog());
         
         // Yêu cầu a: Tìm kiếm
         addActionToButton("🔍 Tìm kiếm", e -> handleSearch());
@@ -355,7 +374,16 @@ public class UserManagementPanel extends JPanel {
         }
         
         try {
-            List<User> users = userDAO.searchUsers(keyword);
+            SearchType searchType = resolveSearchType((String) searchTypeCombo.getSelectedItem());
+            List<User> users = userDAO.searchUsers(keyword, searchType);
+
+            String statusSelection = (String) statusFilter.getSelectedItem();
+            if (!"Tất cả".equals(statusSelection)) {
+                users.removeIf(user -> !matchesStatus(user, statusSelection));
+            }
+
+            lastSortOption = (String) sortCombo.getSelectedItem();
+            sortUsers(users, lastSortOption);
             displayUsers(users);
             showSuccess("Tìm thấy " + users.size() + " kết quả");
         } catch (SQLException e) {
@@ -377,6 +405,14 @@ public class UserManagementPanel extends JPanel {
                 users = userDAO.getUsersByStatus(status);
             }
             
+            String keyword = searchField.getText().trim();
+            if (!keyword.isEmpty()) {
+                SearchType searchType = resolveSearchType((String) searchTypeCombo.getSelectedItem());
+                users.removeIf(user -> !matchesKeyword(user, keyword, searchType));
+            }
+
+            lastSortOption = (String) sortCombo.getSelectedItem();
+            sortUsers(users, lastSortOption);
             displayUsers(users);
             showSuccess("Đã lọc " + users.size() + " người dùng");
         } catch (SQLException e) {
@@ -405,7 +441,7 @@ public class UserManagementPanel extends JPanel {
                 boolean success = userDAO.deleteUser(userId);
                 if (success) {
                     showSuccess("Xóa người dùng thành công!");
-                    loadUsersFromDatabase(); // Reload table
+                    loadUsersFromDatabase();
                 } else {
                     showError("Không thể xóa người dùng");
                 }
@@ -541,6 +577,120 @@ public class UserManagementPanel extends JPanel {
         JOptionPane.showMessageDialog(this, message, "Lỗi", 
             JOptionPane.ERROR_MESSAGE);
     }
+
+    private void showLoginHistoryDialog() {
+        int selectedRow = userTable.getSelectedRow();
+        if (selectedRow == -1) {
+            showWarning("Vui lòng chọn người dùng!");
+            return;
+        }
+
+        int userId = (int) userTable.getValueAt(selectedRow, 0);
+        String username = userTable.getValueAt(selectedRow, 1).toString();
+
+        try {
+            List<LoginHistory> historyList = loginHistoryDAO.getLoginHistoryByUserId(userId);
+            if (historyList.isEmpty()) {
+                showWarning("Người dùng chưa có lịch sử đăng nhập");
+                return;
+            }
+
+            JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this),
+                    "Lịch sử đăng nhập - " + username, true);
+            dialog.setSize(600, 400);
+            dialog.setLocationRelativeTo(this);
+
+            String[] columns = {"Thời gian", "Địa chỉ IP", "Thiết bị"};
+            DefaultTableModel model = new DefaultTableModel(columns, 0) {
+                @Override
+                public boolean isCellEditable(int row, int column) {
+                    return false;
+                }
+            };
+
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
+            for (LoginHistory history : historyList) {
+                model.addRow(new Object[]{
+                        history.getLoginTime() != null ? history.getLoginTime().format(formatter) : "",
+                        history.getIpAddress() != null ? history.getIpAddress() : "N/A",
+                        history.getUserAgent() != null ? history.getUserAgent() : ""
+                });
+            }
+
+            JTable table = new JTable(model);
+            table.setRowHeight(24);
+            table.getTableHeader().setFont(new Font("Arial", Font.BOLD, 12));
+
+            dialog.add(new JScrollPane(table), BorderLayout.CENTER);
+
+            JButton closeBtn = createStyledButton("Đóng", new Color(108, 117, 125));
+            closeBtn.addActionListener(e -> dialog.dispose());
+            JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+            buttonPanel.add(closeBtn);
+            dialog.add(buttonPanel, BorderLayout.SOUTH);
+
+            dialog.setVisible(true);
+        } catch (SQLException e) {
+            showError("Lỗi lấy lịch sử đăng nhập: " + e.getMessage());
+        }
+    }
+
+    private void showFriendsListDialog() {
+        int selectedRow = userTable.getSelectedRow();
+        if (selectedRow == -1) {
+            showWarning("Vui lòng chọn người dùng!");
+            return;
+        }
+
+        int userId = (int) userTable.getValueAt(selectedRow, 0);
+        String username = userTable.getValueAt(selectedRow, 1).toString();
+
+        try {
+            List<User> friends = statisticsDAO.getFriendsOfUser(userId);
+            if (friends.isEmpty()) {
+                showWarning("Người dùng chưa có bạn bè");
+                return;
+            }
+
+            JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this),
+                    "Danh sách bạn bè - " + username, true);
+            dialog.setSize(600, 400);
+            dialog.setLocationRelativeTo(this);
+
+            String[] columns = {"Tên đăng nhập", "Họ tên", "Email", "Trạng thái"};
+            DefaultTableModel model = new DefaultTableModel(columns, 0) {
+                @Override
+                public boolean isCellEditable(int row, int column) {
+                    return false;
+                }
+            };
+
+            for (User friend : friends) {
+                model.addRow(new Object[]{
+                        friend.getUsername(),
+                        friend.getFullName(),
+                        friend.getEmail(),
+                        formatStatus(friend.getStatus())
+                });
+            }
+
+            JTable table = new JTable(model);
+            table.setRowHeight(24);
+            table.getTableHeader().setFont(new Font("Arial", Font.BOLD, 12));
+
+            dialog.add(new JScrollPane(table), BorderLayout.CENTER);
+
+            JButton closeBtn = createStyledButton("Đóng", new Color(108, 117, 125));
+            closeBtn.addActionListener(e -> dialog.dispose());
+            JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+            buttonPanel.add(closeBtn);
+            dialog.add(buttonPanel, BorderLayout.SOUTH);
+
+            dialog.setVisible(true);
+        } catch (SQLException e) {
+            showError("Lỗi lấy danh sách bạn bè: " + e.getMessage());
+        }
+    }
     
     private void showWarning(String message) {
         JOptionPane.showMessageDialog(this, message, "Cảnh báo", 
@@ -570,6 +720,89 @@ public class UserManagementPanel extends JPanel {
                     break;
                 }
             }
+        }
+    }
+
+    private void sortUsers(List<User> users, String sortOption) {
+        if (users == null || sortOption == null) {
+            return;
+        }
+
+        Comparator<User> comparator;
+        switch (sortOption) {
+            case "Sắp xếp theo tên":
+            case "Sắp xếp theo tên (A-Z)":
+                comparator = Comparator.comparing(user ->
+                    user.getFullName() != null ? user.getFullName().toLowerCase() : "");
+                break;
+            case "Sắp xếp theo tên (Z-A)":
+                comparator = Comparator.comparing((User user) ->
+                    user.getFullName() != null ? user.getFullName().toLowerCase() : "").reversed();
+                break;
+            case "Sắp xếp theo ngày tạo (Cũ nhất)":
+                comparator = Comparator.comparing(User::getCreatedAt, Comparator.nullsLast(LocalDateTime::compareTo));
+                break;
+            case "Sắp xếp theo ngày tạo (Mới nhất)":
+            default:
+                comparator = Comparator.comparing(User::getCreatedAt,
+                    Comparator.nullsLast(LocalDateTime::compareTo)).reversed();
+                break;
+        }
+
+        users.sort(comparator);
+    }
+
+    private String formatStatus(String status) {
+        if (status == null) {
+            return "";
+        }
+        return "locked".equalsIgnoreCase(status) ? "Bị khóa" : "Hoạt động";
+    }
+
+    private String resolveStatusFromDisplay(String displayStatus) {
+        if (displayStatus == null) {
+            return "active";
+        }
+        return displayStatus.toLowerCase().contains("khóa") ? "locked" : "active";
+    }
+
+    private SearchType resolveSearchType(String selected) {
+        if (selected == null) {
+            return SearchType.ALL;
+        }
+        if (selected.contains("đăng nhập")) {
+            return SearchType.USERNAME;
+        }
+        if (selected.contains("email")) {
+            return SearchType.EMAIL;
+        }
+        if (selected.contains("tên")) {
+            return SearchType.FULL_NAME;
+        }
+        return SearchType.ALL;
+    }
+
+    private boolean matchesStatus(User user, String statusSelection) {
+        if ("Tất cả".equals(statusSelection)) {
+            return true;
+        }
+        String status = formatStatus(user.getStatus());
+        return status.equalsIgnoreCase(statusSelection);
+    }
+
+    private boolean matchesKeyword(User user, String keyword, SearchType searchType) {
+        String lowerKeyword = keyword.toLowerCase();
+        switch (searchType) {
+            case USERNAME:
+                return user.getUsername() != null && user.getUsername().toLowerCase().contains(lowerKeyword);
+            case FULL_NAME:
+                return user.getFullName() != null && user.getFullName().toLowerCase().contains(lowerKeyword);
+            case EMAIL:
+                return user.getEmail() != null && user.getEmail().toLowerCase().contains(lowerKeyword);
+            default:
+                return (user.getUsername() != null && user.getUsername().toLowerCase().contains(lowerKeyword)) ||
+                       (user.getFullName() != null && user.getFullName().toLowerCase().contains(lowerKeyword)) ||
+                       (user.getEmail() != null && user.getEmail().toLowerCase().contains(lowerKeyword));
         }
     }
     

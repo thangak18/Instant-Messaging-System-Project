@@ -1,11 +1,11 @@
 package admin.test;
 
-import admin.dao.UserDAO;
-import admin.dao.LoginHistoryDAO;
-import admin.dao.GroupDAO;
-import admin.dao.SpamReportDAO;
-import admin.dao.StatisticsDAO;
-import admin.model.User;
+import admin.service.UserDAO;
+import admin.service.LoginHistoryDAO;
+import admin.service.GroupDAO;
+import admin.service.SpamReportDAO;
+import admin.service.StatisticsDAO;
+import admin.socket.User;
 import admin.service.DatabaseConnection;
 
 import java.sql.Connection;

@@ -115,9 +115,9 @@ public class AdminMainFrame extends JFrame {
         panel.setPreferredSize(new Dimension(1160, 140)); // Fix height
 
         panel.add(createStatCard("Người dùng", "1,234", ZALO_BLUE, "👥"));
-        panel.add(createStatCard("Đang online", "87", SUCCESS_GREEN, "🟢"));
-        panel.add(createStatCard("Nhóm chat", "45", WARNING_ORANGE, "💬"));
-        panel.add(createStatCard("Tin nhắn", "2,156", DANGER_RED, "📨"));
+        panel.add(createStatCard("Đang online", "87", ZALO_BLUE, "🟢"));
+        panel.add(createStatCard("Nhóm chat", "45", ZALO_BLUE, "💬"));
+        panel.add(createStatCard("Tin nhắn", "2,156", ZALO_BLUE, "📨"));
 
         return panel;
     }
@@ -176,23 +176,23 @@ public class AdminMainFrame extends JFrame {
         gridPanel.setOpaque(false);
 
         gridPanel.add(createActionCard("👤 Quản lý người dùng", 
-            "Quản lý thông tin người dùng", ZALO_BLUE, e -> openUserManagement()));
+            "Quản lý danh sách người dùng", ZALO_BLUE, e -> openUserManagement()));
         gridPanel.add(createActionCard("📜 Lịch sử đăng nhập", 
-            "Xem lịch sử truy cập", SUCCESS_GREEN, e -> openLoginHistory()));
+            "Xem danh sách đăng nhập theo thứ tự thời gian", ZALO_BLUE, e -> openLoginHistory()));
         gridPanel.add(createActionCard("👥 Danh sách nhóm", 
-            "Quản lý nhóm chat", WARNING_ORANGE, e -> openGroupManagement()));
+            "Xem danh sách các nhóm chat", ZALO_BLUE, e -> openGroupManagement()));
         gridPanel.add(createActionCard("🔔 Báo cáo spam", 
-            "Xem các báo cáo spam", DANGER_RED, e -> openSpamReport()));
+            "Xem danh sách báo cáo spam", ZALO_BLUE, e -> openSpamReport()));
         gridPanel.add(createActionCard("🆕 Người dùng mới", 
-            "Danh sách người đăng ký", INFO_CYAN, e -> openNewUserReport()));
+            "Xem danh sách người dùng đăng ký mới", ZALO_BLUE, e -> openNewUserReport()));
         gridPanel.add(createActionCard("📊 Thống kê", 
-            "Thống kê hệ thống", new Color(111, 66, 193), e -> openStatistics()));
+            "Biểu đồ số lượng người đăng ký mới theo năm", ZALO_BLUE, e -> openStatistics()));
         gridPanel.add(createActionCard("💝 Bạn bè", 
-            "Thống kê mối quan hệ", new Color(255, 99, 132), e -> openFriendStats()));
+            "Xem danh sách người dùng và số lượng bạn bè", ZALO_BLUE, e -> openFriendStats()));
         gridPanel.add(createActionCard("📈 Người hoạt động", 
-            "Báo cáo hoạt động", new Color(54, 162, 235), e -> openActiveUserReport()));
+            "Xem danh sách người dùng hoạt động", ZALO_BLUE, e -> openActiveUserReport()));
         gridPanel.add(createActionCard("📉 Biểu đồ", 
-            "Xem biểu đồ chi tiết", new Color(75, 192, 192), e -> openActiveUserChart()));
+            "Biểu đồ số lượng người hoạt động theo năm", ZALO_BLUE, e -> openActiveUserChart()));
 
         panel.add(titleLabel, BorderLayout.NORTH);
         panel.add(gridPanel, BorderLayout.CENTER);

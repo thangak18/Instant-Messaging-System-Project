@@ -1,4 +1,4 @@
-package admin.model;
+package admin.socket;
 
 import java.time.LocalDateTime;
 

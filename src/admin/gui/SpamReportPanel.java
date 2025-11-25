@@ -1,7 +1,7 @@
 package admin.gui;
 
-import admin.dao.SpamReportDAO;
-import admin.model.SpamReport;
+import admin.service.SpamReportDAO;
+import admin.socket.SpamReport;
 
 import javax.swing.*;
 import javax.swing.border.*;
@@ -22,6 +22,7 @@ public class SpamReportPanel extends JPanel {
     private static final Color SUCCESS_GREEN = new Color(40, 167, 69);
     private static final Color WARNING_ORANGE = new Color(255, 193, 7);
     private static final Color NEUTRAL_GRAY = new Color(108, 117, 125);
+    private static final Color INFO_CYAN = new Color(23, 162, 184);
     
     private JTable spamTable;
     private DefaultTableModel tableModel;
@@ -55,8 +56,8 @@ public class SpamReportPanel extends JPanel {
         spamTable.setRowHeight(28);
         spamTable.setAutoCreateRowSorter(true);
         spamTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 13));
-        spamTable.getTableHeader().setBackground(DANGER_RED);
-        spamTable.getTableHeader().setForeground(Color.WHITE);
+        spamTable.getTableHeader().setBackground(Color.WHITE);
+        spamTable.getTableHeader().setForeground(Color.BLACK);
         
         // Điều chỉnh độ rộng cột
         TableColumnModel columnModel = spamTable.getColumnModel();
@@ -160,7 +161,7 @@ public class SpamReportPanel extends JPanel {
 
         JLabel titleLabel = new JLabel("🔍 Tìm kiếm & Lọc báo cáo spam");
         titleLabel.setFont(new Font("Arial", Font.BOLD, 14));
-        titleLabel.setForeground(DANGER_RED);
+        titleLabel.setForeground(Color.BLUE);
         titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(titleLabel);
         panel.add(Box.createVerticalStrut(10));
@@ -211,10 +212,10 @@ public class SpamReportPanel extends JPanel {
         actionRow.setOpaque(false);
         actionRow.setAlignmentX(Component.LEFT_ALIGNMENT);
         
-        JButton applyBtn = createStyledButton("🔄 Áp dụng", SUCCESS_GREEN);
+        JButton applyBtn = createStyledButton("🔄 Áp dụng", ZALO_BLUE);
         actionRow.add(applyBtn);
         
-        JButton resetBtn = createStyledButton("↺ Đặt lại", NEUTRAL_GRAY);
+        JButton resetBtn = createStyledButton("↺ Đặt lại", ZALO_BLUE);
         actionRow.add(resetBtn);
         
         panel.add(actionRow);
@@ -236,7 +237,7 @@ public class SpamReportPanel extends JPanel {
         
         JLabel titleLabel = new JLabel("🔔 Danh sách báo cáo spam");
         titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
-        titleLabel.setForeground(DANGER_RED);
+        titleLabel.setForeground(ZALO_BLUE);
         
         JPanel statsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 0));
         statsPanel.setOpaque(false);
@@ -270,10 +271,10 @@ public class SpamReportPanel extends JPanel {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 10));
         panel.setOpaque(false);
         
-        JButton processBtn = createStyledButton("✅ Xử lý báo cáo", SUCCESS_GREEN);
+        JButton processBtn = createStyledButton("✅ Xử lý báo cáo", INFO_CYAN);
         
         // Yêu cầu d: Khóa tài khoản người dùng
-        JButton lockAccountBtn = createStyledButton("🔒 Khóa tài khoản", DANGER_RED);
+        JButton lockAccountBtn = createStyledButton("🔒 Khóa tài khoản", INFO_CYAN);
         
     
         
@@ -478,10 +479,8 @@ public class SpamReportPanel extends JPanel {
         button.setBackground(color);
         button.setForeground(Color.WHITE);
         button.setOpaque(true);
-        button.setBorderPainted(false);
-        button.setFocusPainted(false);
-        button.setMargin(new Insets(5, 12, 5, 12));
-        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        button.setBorderPainted(false); // Loại bỏ viền để màu sắc hiển thị đúng
+        button.setContentAreaFilled(true); // Đảm bảo vùng nội dung được tô màu
         return button;
     }
     

@@ -1,4 +1,4 @@
-package admin.model;
+package admin.socket;
 
 /**
  * Model đại diện cho thống kê bạn bè của người dùng

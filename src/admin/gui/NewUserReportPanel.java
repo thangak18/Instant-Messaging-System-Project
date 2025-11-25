@@ -1,7 +1,7 @@
 package admin.gui;
 
-import admin.dao.StatisticsDAO;
-import admin.model.User;
+import admin.service.StatisticsDAO;
+import admin.socket.User;
 
 import javax.swing.*;
 import javax.swing.border.*;
@@ -54,8 +54,8 @@ public class NewUserReportPanel extends JPanel {
         userTable.setRowHeight(28);
         userTable.setAutoCreateRowSorter(true);
         userTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 13));
-        userTable.getTableHeader().setBackground(INFO_CYAN);
-        userTable.getTableHeader().setForeground(Color.WHITE);
+        userTable.getTableHeader().setBackground(Color.WHITE);
+        userTable.getTableHeader().setForeground(Color.BLACK);
         
         // Điều chỉnh độ rộng cột
         TableColumnModel columnModel = userTable.getColumnModel();
@@ -89,7 +89,7 @@ public class NewUserReportPanel extends JPanel {
         exportButton = new JButton("📥 Xuất Excel");
         
         stylePrimaryButton(filterButton);
-        styleNeutralButton(resetButton);
+        stylePrimaryButton(resetButton);
         stylePrimaryButton(refreshButton);
         stylePrimaryButton(exportButton);
     }
@@ -123,7 +123,7 @@ public class NewUserReportPanel extends JPanel {
 
         JLabel titleLabel = new JLabel("📅 Tùy chọn báo cáo người dùng mới");
         titleLabel.setFont(new Font("Arial", Font.BOLD, 14));
-        titleLabel.setForeground(INFO_CYAN);
+        titleLabel.setForeground(ZALO_BLUE);
         titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(titleLabel);
         panel.add(Box.createVerticalStrut(10));
@@ -194,7 +194,7 @@ public class NewUserReportPanel extends JPanel {
         
         JLabel titleLabel = new JLabel("📋 Danh sách người dùng đăng ký mới");
         titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
-        titleLabel.setForeground(INFO_CYAN);
+        titleLabel.setForeground(ZALO_BLUE);
         
         JPanel statsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 0));
         statsPanel.setOpaque(false);

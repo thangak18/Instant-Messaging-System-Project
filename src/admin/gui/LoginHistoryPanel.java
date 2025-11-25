@@ -1,7 +1,7 @@
 package admin.gui;
 
-import admin.dao.LoginHistoryDAO;
-import admin.model.LoginHistory;
+import admin.service.LoginHistoryDAO;
+import admin.socket.LoginHistory;
 
 import javax.swing.*;
 import javax.swing.border.*;
@@ -46,7 +46,7 @@ public class LoginHistoryPanel extends JPanel {
 
     private void initializeComponents() {
         // Bảng hiển thị lịch sử đăng nhập
-        String[] columns = {"ID", "Thời gian", "Tên đăng nhập", "Họ tên", "IP Address"};
+        String[] columns = {"ID", "Thời gian", "Tên đăng nhập", "Họ tên"};
         tableModel = new DefaultTableModel(columns, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -60,8 +60,8 @@ public class LoginHistoryPanel extends JPanel {
 
         // Áp dụng màu sắc cho bảng
         historyTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 13));
-        historyTable.getTableHeader().setBackground(ZALO_BLUE);
-        historyTable.getTableHeader().setForeground(Color.WHITE);
+        historyTable.getTableHeader().setBackground(Color.WHITE);
+        historyTable.getTableHeader().setForeground(Color.BLACK);
 
         // Thiết lập độ rộng cột
         TableColumnModel columnModel = historyTable.getColumnModel();
@@ -69,8 +69,7 @@ public class LoginHistoryPanel extends JPanel {
         columnModel.getColumn(1).setPreferredWidth(180);  // Thời gian
         columnModel.getColumn(2).setPreferredWidth(150);  // Tên đăng nhập
         columnModel.getColumn(3).setPreferredWidth(200);  // Họ tên
-        columnModel.getColumn(4).setPreferredWidth(150);  // IP Address
-
+        
         // Các nút chức năng
         refreshButton = new JButton("🔄 Làm mới");
         exportButton = new JButton("📊 Xuất Excel");

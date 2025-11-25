@@ -1,7 +1,7 @@
 package admin.gui;
 
-import admin.dao.GroupDAO;
-import admin.model.ChatGroup;
+import admin.service.GroupDAO;
+import admin.socket.ChatGroup;
 
 import javax.swing.*;
 import javax.swing.border.*;
@@ -54,8 +54,8 @@ public class GroupManagementPanel extends JPanel {
         groupTable.setRowHeight(28);
         groupTable.setAutoCreateRowSorter(true);
         groupTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 13));
-        groupTable.getTableHeader().setBackground(WARNING_ORANGE);
-        groupTable.getTableHeader().setForeground(Color.WHITE);
+        groupTable.getTableHeader().setBackground(Color.WHITE);
+        groupTable.getTableHeader().setForeground(Color.BLACK);
 
         // Điều chỉnh độ rộng cột
         TableColumnModel columnModel = groupTable.getColumnModel();
@@ -174,10 +174,10 @@ public class GroupManagementPanel extends JPanel {
         sortCombo.setPreferredSize(new Dimension(280, 30));
         sortRow.add(sortCombo);
         
-        JButton applyBtn = createStyledButton("🔄 Áp dụng", SUCCESS_GREEN);
+        JButton applyBtn = createStyledButton("🔄 Áp dụng", ZALO_BLUE);
         sortRow.add(applyBtn);
         
-        JButton resetBtn = createStyledButton("↺ Đặt lại", new Color(108, 117, 125));
+        JButton resetBtn = createStyledButton("↺ Đặt lại", ZALO_BLUE);
         sortRow.add(resetBtn);
         
         panel.add(sortRow);
@@ -199,7 +199,7 @@ public class GroupManagementPanel extends JPanel {
         
         JLabel titleLabel = new JLabel("👥 Danh sách nhóm chat");
         titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
-        titleLabel.setForeground(WARNING_ORANGE);
+        titleLabel.setForeground(ZALO_BLUE);
         
         JPanel statsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 0));
         statsPanel.setOpaque(false);
@@ -223,7 +223,7 @@ public class GroupManagementPanel extends JPanel {
         panel.setOpaque(false);
 
         // Yêu cầu c: Xem danh sách thành viên
-        JButton viewMembersBtn = createStyledButton("👥 Xem thành viên", ZALO_BLUE);
+        JButton viewMembersBtn = createStyledButton("👥 Xem thành viên", INFO_CYAN);
         
         // Yêu cầu d: Xem danh sách admin
         JButton viewAdminsBtn = createStyledButton("👑 Xem danh sách admin", INFO_CYAN);

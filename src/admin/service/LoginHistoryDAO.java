@@ -1,7 +1,6 @@
-package admin.dao;
+package admin.service;
 
-import admin.model.LoginHistory;
-import admin.service.DatabaseConnection;
+import admin.socket.LoginHistory;
 
 import java.sql.*;
 import java.time.LocalDateTime;

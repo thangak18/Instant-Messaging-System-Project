@@ -1,4 +1,4 @@
-package admin.model;
+package admin.socket;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -133,6 +133,7 @@ public class User {
                 ", fullName='" + fullName + '\'' +
                 ", email='" + email + '\'' +
                 ", status='" + status + '\'' +
+                ", createdAt=" + createdAt +
                 '}';
     }
 }

@@ -1,7 +1,7 @@
-package admin.dao;
+package admin.service;
 
-import admin.model.ChatGroup;
-import admin.service.DatabaseConnection;
+import admin.socket.ChatGroup;
+import admin.socket.User;
 
 import java.sql.*;
 import java.time.LocalDateTime;
@@ -57,6 +57,38 @@ public class GroupDAO {
             
             pstmt.setString(1, "%" + keyword + "%");
             
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    groups.add(extractGroupFromResultSet(rs));
+                }
+            }
+        }
+        return groups;
+    }
+
+    /**
+     * Tìm nhóm theo tên hoặc admin
+     */
+    public List<ChatGroup> searchGroups(String keyword, boolean searchByAdmin) throws SQLException {
+        if (!searchByAdmin) {
+            return searchGroups(keyword);
+        }
+
+        List<ChatGroup> groups = new ArrayList<>();
+        String sql = "SELECT cg.*, u.full_name as creator_name, " +
+                    "(SELECT COUNT(*) FROM group_members gm WHERE gm.group_id = cg.id) as member_count " +
+                    "FROM chat_groups cg " +
+                    "JOIN users u ON cg.created_by = u.id " +
+                    "WHERE u.full_name LIKE ? OR u.username LIKE ? " +
+                    "ORDER BY cg.created_at DESC";
+
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            String searchPattern = "%" + keyword + "%";
+            pstmt.setString(1, searchPattern);
+            pstmt.setString(2, searchPattern);
+
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
                     groups.add(extractGroupFromResultSet(rs));
@@ -139,5 +171,68 @@ public class GroupDAO {
         }
         
         return group;
+    }
+
+    /**
+     * Lấy thành viên của nhóm
+     */
+    public List<User> getGroupMembers(int groupId) throws SQLException {
+        List<User> members = new ArrayList<>();
+        String sql = "SELECT u.* FROM group_members gm " +
+                    "JOIN users u ON gm.user_id = u.id " +
+                    "WHERE gm.group_id = ? ORDER BY u.full_name";
+
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, groupId);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    members.add(extractUserSummary(rs));
+                }
+            }
+        }
+        return members;
+    }
+
+    /**
+     * Lấy danh sách admin trong nhóm (bao gồm owner/admin)
+     */
+    public List<User> getGroupAdmins(int groupId) throws SQLException {
+        List<User> admins = new ArrayList<>();
+        String sql = "SELECT u.* FROM group_members gm " +
+                    "JOIN users u ON gm.user_id = u.id " +
+                    "WHERE gm.group_id = ? AND (gm.role = 'owner' OR gm.role = 'admin') " +
+                    "ORDER BY u.full_name";
+
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, groupId);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    admins.add(extractUserSummary(rs));
+                }
+            }
+        }
+        return admins;
+    }
+
+    private User extractUserSummary(ResultSet rs) throws SQLException {
+        User user = new User();
+        user.setId(rs.getInt("id"));
+        user.setUsername(rs.getString("username"));
+        user.setFullName(rs.getString("full_name"));
+        user.setEmail(rs.getString("email"));
+        user.setStatus(rs.getString("status"));
+
+        Timestamp createdAt = rs.getTimestamp("created_at");
+        if (createdAt != null) {
+            user.setCreatedAt(createdAt.toLocalDateTime());
+        }
+
+        return user;
     }
 }

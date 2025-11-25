@@ -1,7 +1,6 @@
-package admin.dao;
+package admin.service;
 
-import admin.model.SpamReport;
-import admin.service.DatabaseConnection;
+import admin.socket.SpamReport;
 
 import java.sql.*;
 import java.time.LocalDateTime;

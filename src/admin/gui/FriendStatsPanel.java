@@ -1,7 +1,7 @@
 package admin.gui;
 
-import admin.dao.StatisticsDAO;
-import admin.model.FriendStats;
+import admin.service.StatisticsDAO;
+import admin.socket.FriendStats;
 
 import javax.swing.*;
 import javax.swing.border.*;
@@ -60,8 +60,8 @@ public class FriendStatsPanel extends JPanel {
         reportTable.setAutoCreateRowSorter(true);
 
         reportTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 13));
-        reportTable.getTableHeader().setBackground(PINK);
-        reportTable.getTableHeader().setForeground(Color.WHITE);
+        reportTable.getTableHeader().setBackground(Color.WHITE);
+        reportTable.getTableHeader().setForeground(Color.BLACK);
 
         // Chỉnh độ rộng cột
         TableColumnModel columnModel = reportTable.getColumnModel();
@@ -94,7 +94,7 @@ public class FriendStatsPanel extends JPanel {
         exportButton = new JButton("📥 Xuất Excel");
         
         stylePrimaryButton(filterButton);
-        styleNeutralButton(resetButton);
+        stylePrimaryButton(resetButton);
         stylePrimaryButton(refreshButton);
         stylePrimaryButton(exportButton);
     }
@@ -128,7 +128,7 @@ public class FriendStatsPanel extends JPanel {
 
         JLabel titleLabel = new JLabel("🔍 Lọc thống kê bạn bè");
         titleLabel.setFont(new Font("Arial", Font.BOLD, 14));
-        titleLabel.setForeground(PINK);
+        titleLabel.setForeground(Color.BLUE);
         titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(titleLabel);
         panel.add(Box.createVerticalStrut(10));
@@ -194,7 +194,7 @@ public class FriendStatsPanel extends JPanel {
         
         JLabel titleLabel = new JLabel("📊 Thống kê bạn bè");
         titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
-        titleLabel.setForeground(PINK);
+        titleLabel.setForeground(Color.BLUE);
         
         JPanel statsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 0));
         statsPanel.setOpaque(false);

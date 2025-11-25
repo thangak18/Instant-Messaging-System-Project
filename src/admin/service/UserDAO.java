@@ -1,7 +1,6 @@
-package admin.dao;
+package admin.service;
 
-import admin.model.User;
-import admin.service.DatabaseConnection;
+import admin.socket.User;
 
 import java.sql.*;
 import java.time.LocalDate;
@@ -18,6 +17,13 @@ public class UserDAO {
     
     public UserDAO() {
         this.dbConnection = DatabaseConnection.getInstance();
+    }
+
+    public enum SearchType {
+        ALL,
+        USERNAME,
+        FULL_NAME,
+        EMAIL
     }
     
     /**
@@ -42,23 +48,53 @@ public class UserDAO {
      * Tìm kiếm người dùng theo tên hoặc username
      */
     public List<User> searchUsers(String keyword) throws SQLException {
+        return searchUsers(keyword, SearchType.ALL);
+    }
+
+    /**
+     * Tìm kiếm người dùng theo trường cụ thể
+     */
+    public List<User> searchUsers(String keyword, SearchType searchType) throws SQLException {
         List<User> users = new ArrayList<>();
-        String sql = "SELECT * FROM users WHERE username LIKE ? OR full_name LIKE ? " +
-                    "ORDER BY created_at DESC";
-        
+        if (keyword == null || keyword.isEmpty()) {
+            return users;
+        }
+
+        String baseSql;
+        switch (searchType) {
+            case USERNAME:
+                baseSql = "SELECT * FROM users WHERE username LIKE ? ORDER BY created_at DESC";
+                break;
+            case FULL_NAME:
+                baseSql = "SELECT * FROM users WHERE full_name LIKE ? ORDER BY created_at DESC";
+                break;
+            case EMAIL:
+                baseSql = "SELECT * FROM users WHERE email LIKE ? ORDER BY created_at DESC";
+                break;
+            default:
+                baseSql = "SELECT * FROM users WHERE username LIKE ? OR full_name LIKE ? OR email LIKE ? " +
+                          "ORDER BY created_at DESC";
+                break;
+        }
+
         try (Connection conn = dbConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
+             PreparedStatement pstmt = conn.prepareStatement(baseSql)) {
+
             String searchPattern = "%" + keyword + "%";
             pstmt.setString(1, searchPattern);
-            pstmt.setString(2, searchPattern);
-            
+
+            if (searchType == SearchType.ALL) {
+                pstmt.setString(2, searchPattern);
+                pstmt.setString(3, searchPattern);
+            }
+
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
                     users.add(extractUserFromResultSet(rs));
                 }
             }
         }
+
         return users;
     }
     

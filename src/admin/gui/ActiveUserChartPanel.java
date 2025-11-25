@@ -1,7 +1,7 @@
 package admin.gui;
 
-import admin.dao.StatisticsDAO;
-import admin.model.UserActivity;
+import admin.service.StatisticsDAO;
+import admin.socket.UserActivity;
 
 import javax.swing.*;
 import javax.swing.border.*;
@@ -47,7 +47,7 @@ public class ActiveUserChartPanel extends JPanel {
         viewButton = new JButton("📊 Xem biểu đồ");
         refreshButton = new JButton("🔄 Làm mới");
         stylePrimaryButton(viewButton);
-        styleNeutralButton(refreshButton);
+        stylePrimaryButton(refreshButton);
 
         // Panel vẽ biểu đồ
         chartPanel = new BarChartPanel();
@@ -55,7 +55,7 @@ public class ActiveUserChartPanel extends JPanel {
         // Labels hiển thị thông tin
         currentYearLabel = new JLabel("Năm: 2024");
         currentYearLabel.setFont(new Font("Arial", Font.BOLD, 14));
-        currentYearLabel.setForeground(TEAL);
+        currentYearLabel.setForeground(ZALO_BLUE);
         
         totalActiveLabel = new JLabel("Tổng số người dùng hoạt động: 0");
         totalActiveLabel.setFont(new Font("Arial", Font.BOLD, 13));
@@ -85,7 +85,7 @@ public class ActiveUserChartPanel extends JPanel {
 
         JLabel titleLabel = new JLabel("📈 Tùy chọn biểu đồ");
         titleLabel.setFont(new Font("Arial", Font.BOLD, 14));
-        titleLabel.setForeground(TEAL);
+        titleLabel.setForeground(ZALO_BLUE);
 
         JPanel formPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
         formPanel.setOpaque(false);
@@ -115,7 +115,7 @@ public class ActiveUserChartPanel extends JPanel {
         
         JLabel titleLabel = new JLabel("📊 Biểu đồ số lượng người dùng hoạt động");
         titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
-        titleLabel.setForeground(TEAL);
+        titleLabel.setForeground(ZALO_BLUE);
         
         JPanel statsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 0));
         statsPanel.setOpaque(false);
@@ -324,7 +324,7 @@ public class ActiveUserChartPanel extends JPanel {
     }
 
     private void stylePrimaryButton(JButton button) {
-        button.setBackground(TEAL);
+        button.setBackground(ZALO_BLUE);
         button.setForeground(Color.WHITE);
         button.setFont(new Font("Arial", Font.BOLD, 12));
         button.setOpaque(true);

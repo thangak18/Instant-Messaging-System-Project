@@ -1,7 +1,7 @@
 package admin.gui;
 
-import admin.dao.StatisticsDAO;
-import admin.model.UserActivity;
+import admin.service.StatisticsDAO;
+import admin.socket.UserActivity;
 
 import javax.swing.*;
 import javax.swing.border.*;
@@ -49,7 +49,7 @@ public class StatisticsPanel extends JPanel {
         viewButton = new JButton("📊 Xem biểu đồ");
         refreshButton = new JButton("🔄 Làm mới");
         stylePrimaryButton(viewButton);
-        styleNeutralButton(refreshButton);
+        stylePrimaryButton(refreshButton);
 
         // Panel vẽ biểu đồ
         chartPanel = new BarChartPanel();
