@@ -157,10 +157,12 @@ public class SocketClient {
         running = false;
         
         try {
-            // Gửi LOGOUT message
-            if (out != null) {
+            // Gửi LOGOUT message trực tiếp (không qua sendMessage để tránh loop)
+            if (out != null && socket != null && socket.isConnected()) {
                 Message logoutMsg = new Message(Message.MessageType.LOGOUT, username, null);
-                sendMessage(logoutMsg);
+                out.writeObject(logoutMsg);
+                out.flush();
+                System.out.println("📤 Sent LOGOUT");
             }
             
             // Đóng streams

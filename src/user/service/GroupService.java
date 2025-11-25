@@ -482,11 +482,13 @@ public class GroupService {
                 Map<String, Object> member = new HashMap<>();
                 int userId = rs.getInt("user_id");
                 int adminId = rs.getInt("admin_id");
+                boolean isAdmin = (userId == adminId);
                 
                 member.put("user_id", userId);
                 member.put("username", rs.getString("username"));
                 member.put("full_name", rs.getString("full_name"));
-                member.put("role", (userId == adminId) ? "admin" : "member");
+                member.put("is_admin", isAdmin);
+                member.put("role", isAdmin ? "admin" : "member");
                 member.put("joined_at", rs.getTimestamp("joined_at"));
                 members.add(member);
             }
@@ -654,5 +656,183 @@ public class GroupService {
         }
         
         return -1;
+    }
+    
+    // ==================== GROUP MANAGEMENT METHODS ====================
+    
+    /**
+     * ĐỔI TÊN NHÓM
+     */
+    public boolean updateGroupName(int groupId, String newName) {
+        String sql = "UPDATE groups SET group_name = ? WHERE group_id = ?";
+        
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setString(1, newName);
+            pstmt.setInt(2, groupId);
+            
+            int rows = pstmt.executeUpdate();
+            System.out.println("✅ Đã đổi tên nhóm " + groupId + " thành: " + newName);
+            return rows > 0;
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi khi đổi tên nhóm: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return false;
+    }
+    
+    /**
+     * THÊM THÀNH VIÊN VÀO NHÓM
+     */
+    public boolean addMemberToGroup(int groupId, String username) {
+        Connection conn = null;
+        
+        try {
+            conn = dbConnection.getConnection();
+            if (conn == null) return false;
+            
+            int userId = getUserId(conn, username);
+            if (userId == -1) return false;
+            
+            String sql = "INSERT INTO group_members (group_id, user_id, is_admin, joined_at) " +
+                        "VALUES (?, ?, false, CURRENT_TIMESTAMP)";
+            
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setInt(1, groupId);
+                pstmt.setInt(2, userId);
+                
+                int rows = pstmt.executeUpdate();
+                System.out.println("✅ Đã thêm " + username + " vào nhóm " + groupId);
+                return rows > 0;
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi khi thêm thành viên: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return false;
+    }
+    
+    /**
+     * GÁN/BỎ QUYỀN ADMIN CHO THÀNH VIÊN
+     */
+    public boolean setGroupAdmin(int groupId, String username, boolean isAdmin) {
+        Connection conn = null;
+        
+        try {
+            conn = dbConnection.getConnection();
+            if (conn == null) return false;
+            
+            int userId = getUserId(conn, username);
+            if (userId == -1) return false;
+            
+            String sql = "UPDATE group_members SET is_admin = ? " +
+                        "WHERE group_id = ? AND user_id = ?";
+            
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setBoolean(1, isAdmin);
+                pstmt.setInt(2, groupId);
+                pstmt.setInt(3, userId);
+                
+                int rows = pstmt.executeUpdate();
+                System.out.println("✅ Đã " + (isAdmin ? "gán" : "bỏ") + " quyền admin cho " + username);
+                return rows > 0;
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi khi cập nhật quyền admin: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return false;
+    }
+    
+    /**
+     * XÓA THÀNH VIÊN KHỎI NHÓM
+     */
+    public boolean removeMemberFromGroup(int groupId, String username) {
+        Connection conn = null;
+        
+        try {
+            conn = dbConnection.getConnection();
+            if (conn == null) return false;
+            
+            int userId = getUserId(conn, username);
+            if (userId == -1) return false;
+            
+            String sql = "DELETE FROM group_members WHERE group_id = ? AND user_id = ?";
+            
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setInt(1, groupId);
+                pstmt.setInt(2, userId);
+                
+                int rows = pstmt.executeUpdate();
+                System.out.println("✅ Đã xóa " + username + " khỏi nhóm " + groupId);
+                return rows > 0;
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi khi xóa thành viên: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return false;
+    }
+    
+    /**
+     * KIỂM TRA NHÓM CÓ BẬT MÃ HÓA CHƯA
+     */
+    public boolean isGroupEncrypted(int groupId) {
+        String sql = "SELECT encrypted FROM groups WHERE group_id = ?";
+        
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setInt(1, groupId);
+            
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getBoolean("encrypted");
+                }
+            }
+            
+        } catch (SQLException e) {
+            // Nếu cột encrypted chưa tồn tại, return false
+            System.err.println("⚠️ Cột encrypted có thể chưa tồn tại trong bảng groups");
+        }
+        
+        return false;
+    }
+    
+    /**
+     * BẬT/TẮT MÃ HÓA NHÓM
+     */
+    public boolean toggleGroupEncryption(int groupId) {
+        // Kiểm tra trạng thái hiện tại
+        boolean currentStatus = isGroupEncrypted(groupId);
+        
+        String sql = "UPDATE groups SET encrypted = ? WHERE group_id = ?";
+        
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setBoolean(1, !currentStatus);
+            pstmt.setInt(2, groupId);
+            
+            int rows = pstmt.executeUpdate();
+            System.out.println("✅ Đã " + (!currentStatus ? "bật" : "tắt") + " mã hóa cho nhóm " + groupId);
+            return rows > 0;
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi khi toggle encryption: " + e.getMessage());
+            System.err.println("💡 Bạn cần thêm cột 'encrypted BOOLEAN DEFAULT FALSE' vào bảng groups");
+            e.printStackTrace();
+        }
+        
+        return false;
     }
 }
