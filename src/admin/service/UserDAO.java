@@ -31,7 +31,9 @@ public class UserDAO {
      */
     public List<User> getAllUsers() throws SQLException {
         List<User> users = new ArrayList<>();
-        String sql = "SELECT * FROM users ORDER BY created_at DESC";
+        String sql = "SELECT user_id, username, password, full_name, email, address, " +
+                    "dob, gender, status, created_at, last_login " +
+                    "FROM users ORDER BY created_at DESC";
         
         try (Connection conn = dbConnection.getConnection();
              Statement stmt = conn.createStatement();
@@ -60,19 +62,21 @@ public class UserDAO {
             return users;
         }
 
+        String columns = "SELECT user_id, username, password, full_name, email, address, " +
+                        "dob, gender, status, created_at, last_login FROM users ";
         String baseSql;
         switch (searchType) {
             case USERNAME:
-                baseSql = "SELECT * FROM users WHERE username LIKE ? ORDER BY created_at DESC";
+                baseSql = columns + "WHERE username LIKE ? ORDER BY created_at DESC";
                 break;
             case FULL_NAME:
-                baseSql = "SELECT * FROM users WHERE full_name LIKE ? ORDER BY created_at DESC";
+                baseSql = columns + "WHERE full_name LIKE ? ORDER BY created_at DESC";
                 break;
             case EMAIL:
-                baseSql = "SELECT * FROM users WHERE email LIKE ? ORDER BY created_at DESC";
+                baseSql = columns + "WHERE email LIKE ? ORDER BY created_at DESC";
                 break;
             default:
-                baseSql = "SELECT * FROM users WHERE username LIKE ? OR full_name LIKE ? OR email LIKE ? " +
+                baseSql = columns + "WHERE username LIKE ? OR full_name LIKE ? OR email LIKE ? " +
                           "ORDER BY created_at DESC";
                 break;
         }
@@ -103,7 +107,9 @@ public class UserDAO {
      */
     public List<User> getUsersByStatus(String status) throws SQLException {
         List<User> users = new ArrayList<>();
-        String sql = "SELECT * FROM users WHERE status = ? ORDER BY created_at DESC";
+        String sql = "SELECT user_id, username, password, full_name, email, address, " +
+                    "dob, gender, status, created_at, last_login " +
+                    "FROM users WHERE status = ? ORDER BY created_at DESC";
         
         try (Connection conn = dbConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -123,7 +129,9 @@ public class UserDAO {
      * Lấy người dùng theo ID
      */
     public User getUserById(int id) throws SQLException {
-        String sql = "SELECT * FROM users WHERE id = ?";
+        String sql = "SELECT user_id, username, password, full_name, email, address, " +
+                    "dob, gender, status, created_at, last_login " +
+                    "FROM users WHERE user_id = ?";
         
         try (Connection conn = dbConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -144,7 +152,7 @@ public class UserDAO {
      */
     public boolean addUser(User user) throws SQLException {
         String sql = "INSERT INTO users (username, password, full_name, email, address, " +
-                    "birth_date, gender, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                    "dob, gender, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         
         try (Connection conn = dbConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -167,7 +175,7 @@ public class UserDAO {
      */
     public boolean updateUser(User user) throws SQLException {
         String sql = "UPDATE users SET full_name = ?, email = ?, address = ?, " +
-                    "birth_date = ?, gender = ?, status = ? WHERE id = ?";
+                    "dob = ?, gender = ?, status = ? WHERE user_id = ?";
         
         try (Connection conn = dbConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -188,7 +196,7 @@ public class UserDAO {
      * Xóa người dùng
      */
     public boolean deleteUser(int userId) throws SQLException {
-        String sql = "DELETE FROM users WHERE id = ?";
+        String sql = "DELETE FROM users WHERE user_id = ?";
         
         try (Connection conn = dbConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -202,7 +210,7 @@ public class UserDAO {
      * Khóa/Mở khóa tài khoản
      */
     public boolean updateUserStatus(int userId, String status) throws SQLException {
-        String sql = "UPDATE users SET status = ? WHERE id = ?";
+        String sql = "UPDATE users SET status = ? WHERE user_id = ?";
         
         try (Connection conn = dbConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -218,7 +226,7 @@ public class UserDAO {
      * Cập nhật mật khẩu
      */
     public boolean updatePassword(int userId, String newPassword) throws SQLException {
-        String sql = "UPDATE users SET password = ? WHERE id = ?";
+        String sql = "UPDATE users SET password = ? WHERE user_id = ?";
         
         try (Connection conn = dbConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -272,16 +280,16 @@ public class UserDAO {
      */
     private User extractUserFromResultSet(ResultSet rs) throws SQLException {
         User user = new User();
-        user.setId(rs.getInt("id"));
+        user.setId(rs.getInt("user_id"));
         user.setUsername(rs.getString("username"));
         user.setPassword(rs.getString("password"));
         user.setFullName(rs.getString("full_name"));
         user.setEmail(rs.getString("email"));
         user.setAddress(rs.getString("address"));
         
-        Date birthDate = rs.getDate("birth_date");
-        if (birthDate != null) {
-            user.setBirthDate(birthDate.toLocalDate());
+        Date dob = rs.getDate("dob");
+        if (dob != null) {
+            user.setBirthDate(dob.toLocalDate());
         }
         
         user.setGender(rs.getString("gender"));
@@ -292,9 +300,10 @@ public class UserDAO {
             user.setCreatedAt(createdAt.toLocalDateTime());
         }
         
-        Timestamp updatedAt = rs.getTimestamp("updated_at");
-        if (updatedAt != null) {
-            user.setUpdatedAt(updatedAt.toLocalDateTime());
+        // Note: Database có last_login thay vì updated_at
+        Timestamp lastLogin = rs.getTimestamp("last_login");
+        if (lastLogin != null) {
+            user.setUpdatedAt(lastLogin.toLocalDateTime()); // Tạm map vào updatedAt
         }
         
         return user;

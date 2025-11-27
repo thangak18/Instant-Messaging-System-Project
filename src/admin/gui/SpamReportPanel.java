@@ -309,7 +309,7 @@ public class SpamReportPanel extends JPanel {
     // Yêu cầu c: Tìm kiếm theo tên đăng nhập
     private void handleSearch() {
         String keyword = searchField.getText().trim();
-        String searchType = (String) searchTypeCombo.getSelectedItem();
+        String searchTypeSelected = (String) searchTypeCombo.getSelectedItem();
         
         if (keyword.isEmpty()) {
             JOptionPane.showMessageDialog(this, 
@@ -318,26 +318,46 @@ public class SpamReportPanel extends JPanel {
             return;
         }
         
-        JOptionPane.showMessageDialog(this, 
-            "Tìm kiếm: " + keyword + "\n" +
-            "Loại: " + searchType + "\n\n" +
-            "Chức năng sẽ được kết nối với database",
-            "Tìm kiếm", JOptionPane.INFORMATION_MESSAGE);
+        try {
+            String searchType = "Tìm người báo cáo".equals(searchTypeSelected) ? "reporter" : "reported";
+            String timeFilter = (String) timeFilterCombo.getSelectedItem();
+            String status = (String) statusFilter.getSelectedItem();
+            String sortOption = (String) sortCombo.getSelectedItem();
+            
+            List<SpamReport> reports = spamReportDAO.searchSpamReports(
+                searchType, keyword, timeFilter, status, sortOption);
+            displaySpamReports(reports);
+            updateStatistics(reports);
+            
+            JOptionPane.showMessageDialog(this, 
+                "Tìm thấy " + reports.size() + " kết quả",
+                "Kết quả", JOptionPane.INFORMATION_MESSAGE);
+        } catch (SQLException e) {
+            showError("Lỗi tìm kiếm: " + e.getMessage());
+        }
     }
 
     // Yêu cầu a, b: Áp dụng sắp xếp và lọc
     private void handleApplyFilter() {
-        String timeFilter = (String) timeFilterCombo.getSelectedItem();
-        String status = (String) statusFilter.getSelectedItem();
-        String sortOption = (String) sortCombo.getSelectedItem();
-        
-        JOptionPane.showMessageDialog(this, 
-            "Áp dụng lọc:\n" +
-            "Thời gian: " + timeFilter + "\n" +
-            "Trạng thái: " + status + "\n" +
-            "Sắp xếp: " + sortOption + "\n\n" +
-            "Chức năng sẽ được kết nối với database",
-            "Lọc dữ liệu", JOptionPane.INFORMATION_MESSAGE);
+        try {
+            String keyword = searchField.getText().trim();
+            String searchTypeSelected = (String) searchTypeCombo.getSelectedItem();
+            String searchType = "Tìm người báo cáo".equals(searchTypeSelected) ? "reporter" : "reported";
+            String timeFilter = (String) timeFilterCombo.getSelectedItem();
+            String status = (String) statusFilter.getSelectedItem();
+            String sortOption = (String) sortCombo.getSelectedItem();
+            
+            List<SpamReport> reports = spamReportDAO.searchSpamReports(
+                searchType, keyword.isEmpty() ? null : keyword, timeFilter, status, sortOption);
+            displaySpamReports(reports);
+            updateStatistics(reports);
+            
+            JOptionPane.showMessageDialog(this, 
+                "Đã lọc " + reports.size() + " báo cáo",
+                "Kết quả", JOptionPane.INFORMATION_MESSAGE);
+        } catch (SQLException e) {
+            showError("Lỗi lọc dữ liệu: " + e.getMessage());
+        }
     }
 
     private void handleReset() {
@@ -346,10 +366,41 @@ public class SpamReportPanel extends JPanel {
         timeFilterCombo.setSelectedIndex(0);
         statusFilter.setSelectedIndex(0);
         sortCombo.setSelectedIndex(0);
+        loadSpamReportsFromDatabase();
         
         JOptionPane.showMessageDialog(this, 
             "Đã đặt lại tất cả bộ lọc!",
             "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+    }
+    
+    private void updateStatistics(List<SpamReport> reports) {
+        int total = reports.size();
+        int pending = 0;
+        int resolved = 0;
+        
+        for (SpamReport report : reports) {
+            if ("pending".equalsIgnoreCase(report.getStatus())) {
+                pending++;
+            } else if ("resolved".equalsIgnoreCase(report.getStatus())) {
+                resolved++;
+            }
+        }
+        
+        // Cập nhật labels
+        Component[] components = getAllComponents(this);
+        for (Component comp : components) {
+            if (comp instanceof JLabel) {
+                JLabel label = (JLabel) comp;
+                String text = label.getText();
+                if (text.startsWith("📊 Tổng:")) {
+                    label.setText("📊 Tổng: " + total);
+                } else if (text.startsWith("⏳ Chờ xử lý:")) {
+                    label.setText("⏳ Chờ xử lý: " + pending);
+                } else if (text.startsWith("✅ Đã xử lý:")) {
+                    label.setText("✅ Đã xử lý: " + resolved);
+                }
+            }
+        }
     }
 
     private void processReport() {

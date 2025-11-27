@@ -25,15 +25,19 @@ public class StatisticsDAO {
     
     /**
      * Lấy thống kê số lượng bạn bè của mỗi người dùng
+     * Đã tối ưu: tính cả bạn trực tiếp và bạn của bạn trong 1 query
      */
     public List<FriendStats> getFriendStatistics() throws SQLException {
         List<FriendStats> stats = new ArrayList<>();
-        String sql = "SELECT u.id, u.username, u.full_name, " +
-                    "COUNT(DISTINCT f.id) as friend_count " +
+        
+        // Query tối ưu: lấy số bạn trực tiếp
+        String sql = "SELECT u.user_id, u.username, u.full_name, u.created_at, " +
+                    "COUNT(DISTINCT CASE WHEN f.user_id = u.user_id THEN f.friend_id " +
+                    "                    WHEN f.friend_id = u.user_id THEN f.user_id END) as friend_count " +
                     "FROM users u " +
-                    "LEFT JOIN friendships f ON (u.id = f.user1_id OR u.id = f.user2_id) " +
+                    "LEFT JOIN friends f ON (u.user_id = f.user_id OR u.user_id = f.friend_id) " +
                     "AND f.status = 'accepted' " +
-                    "GROUP BY u.id, u.username, u.full_name " +
+                    "GROUP BY u.user_id, u.username, u.full_name, u.created_at " +
                     "ORDER BY friend_count DESC";
         
         try (Connection conn = dbConnection.getConnection();
@@ -42,13 +46,170 @@ public class StatisticsDAO {
             
             while (rs.next()) {
                 FriendStats stat = new FriendStats();
-                stat.setUserId(rs.getInt("id"));
+                stat.setUserId(rs.getInt("user_id"));
                 stat.setUsername(rs.getString("username"));
                 stat.setFullName(rs.getString("full_name"));
                 stat.setFriendCount(rs.getInt("friend_count"));
+                stat.setFriendsOfFriendsCount(0); // Sẽ tính sau
+                
+                Timestamp createdAt = rs.getTimestamp("created_at");
+                if (createdAt != null) {
+                    stat.setCreatedAt(createdAt.toLocalDateTime());
+                }
+                
                 stats.add(stat);
             }
         }
+        
+        // Tính số bạn của bạn trong 1 query duy nhất cho tất cả users
+        Map<Integer, Integer> fofCounts = countAllFriendsOfFriends();
+        for (FriendStats stat : stats) {
+            stat.setFriendsOfFriendsCount(fofCounts.getOrDefault(stat.getUserId(), 0));
+        }
+        
+        return stats;
+    }
+    
+    /**
+     * Đếm số bạn của bạn cho TẤT CẢ users trong 1 query duy nhất
+     */
+    private Map<Integer, Integer> countAllFriendsOfFriends() throws SQLException {
+        Map<Integer, Integer> result = new HashMap<>();
+        
+        // Query tối ưu: tính friends of friends cho tất cả users cùng lúc
+        String sql = "WITH direct_friends AS (" +
+                    "  SELECT user_id as uid, friend_id as fid FROM friends WHERE status = 'accepted' " +
+                    "  UNION " +
+                    "  SELECT friend_id as uid, user_id as fid FROM friends WHERE status = 'accepted' " +
+                    "), " +
+                    "friends_of_friends AS (" +
+                    "  SELECT df1.uid as user_id, df2.fid as fof_id " +
+                    "  FROM direct_friends df1 " +
+                    "  JOIN direct_friends df2 ON df1.fid = df2.uid " +
+                    "  WHERE df2.fid != df1.uid " +  // Không tính chính mình
+                    ") " +
+                    "SELECT user_id, COUNT(DISTINCT fof_id) as fof_count " +
+                    "FROM friends_of_friends " +
+                    "GROUP BY user_id";
+        
+        try (Connection conn = dbConnection.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            
+            while (rs.next()) {
+                result.put(rs.getInt("user_id"), rs.getInt("fof_count"));
+            }
+        }
+        
+        return result;
+    }
+    
+    /**
+     * Lấy thống kê bạn bè với bộ lọc đầy đủ
+     * Đã tối ưu: chỉ cần 2 queries thay vì N+1
+     */
+    public List<FriendStats> getFriendStatisticsWithFilters(String nameFilter, 
+                                                            String comparison,
+                                                            Integer friendCount,
+                                                            String sortOption) throws SQLException {
+        List<FriendStats> stats = new ArrayList<>();
+        
+        StringBuilder sql = new StringBuilder(
+            "SELECT u.user_id, u.username, u.full_name, u.created_at, " +
+            "COUNT(DISTINCT CASE WHEN f.user_id = u.user_id THEN f.friend_id " +
+            "                    WHEN f.friend_id = u.user_id THEN f.user_id END) as friend_count " +
+            "FROM users u " +
+            "LEFT JOIN friends f ON (u.user_id = f.user_id OR u.user_id = f.friend_id) " +
+            "AND f.status = 'accepted' " +
+            "WHERE 1=1");
+        
+        List<Object> params = new ArrayList<>();
+        
+        // Lọc theo tên
+        if (nameFilter != null && !nameFilter.trim().isEmpty()) {
+            sql.append(" AND (u.username LIKE ? OR u.full_name LIKE ?)");
+            String pattern = "%" + nameFilter.trim() + "%";
+            params.add(pattern);
+            params.add(pattern);
+        }
+        
+        sql.append(" GROUP BY u.user_id, u.username, u.full_name, u.created_at");
+        
+        // Lọc theo số lượng bạn (HAVING clause)
+        if (comparison != null && !"Tất cả".equals(comparison) && friendCount != null) {
+            String havingClause = " HAVING COUNT(DISTINCT CASE WHEN f.user_id = u.user_id THEN f.friend_id " +
+                                 "WHEN f.friend_id = u.user_id THEN f.user_id END)";
+            switch (comparison) {
+                case "=":
+                    sql.append(havingClause + " = ?");
+                    params.add(friendCount);
+                    break;
+                case ">":
+                    sql.append(havingClause + " > ?");
+                    params.add(friendCount);
+                    break;
+                case "<":
+                    sql.append(havingClause + " < ?");
+                    params.add(friendCount);
+                    break;
+            }
+        }
+        
+        // Sắp xếp
+        if (sortOption != null) {
+            switch (sortOption) {
+                case "Sắp xếp theo tên (A-Z)":
+                    sql.append(" ORDER BY u.full_name ASC");
+                    break;
+                case "Sắp xếp theo tên (Z-A)":
+                    sql.append(" ORDER BY u.full_name DESC");
+                    break;
+                case "Sắp xếp theo thời gian tạo (Mới nhất)":
+                    sql.append(" ORDER BY u.created_at DESC");
+                    break;
+                case "Sắp xếp theo thời gian tạo (Cũ nhất)":
+                    sql.append(" ORDER BY u.created_at ASC");
+                    break;
+                case "Sắp xếp theo số bạn (Nhiều nhất)":
+                default:
+                    sql.append(" ORDER BY friend_count DESC");
+            }
+        } else {
+            sql.append(" ORDER BY friend_count DESC");
+        }
+        
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql.toString())) {
+            
+            for (int i = 0; i < params.size(); i++) {
+                pstmt.setObject(i + 1, params.get(i));
+            }
+            
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    FriendStats stat = new FriendStats();
+                    stat.setUserId(rs.getInt("user_id"));
+                    stat.setUsername(rs.getString("username"));
+                    stat.setFullName(rs.getString("full_name"));
+                    stat.setFriendCount(rs.getInt("friend_count"));
+                    stat.setFriendsOfFriendsCount(0);
+                    
+                    Timestamp createdAt = rs.getTimestamp("created_at");
+                    if (createdAt != null) {
+                        stat.setCreatedAt(createdAt.toLocalDateTime());
+                    }
+                    
+                    stats.add(stat);
+                }
+            }
+        }
+        
+        // Tính số bạn của bạn - 1 query cho tất cả
+        Map<Integer, Integer> fofCounts = countAllFriendsOfFriends();
+        for (FriendStats stat : stats) {
+            stat.setFriendsOfFriendsCount(fofCounts.getOrDefault(stat.getUserId(), 0));
+        }
+        
         return stats;
     }
     
@@ -57,17 +218,17 @@ public class StatisticsDAO {
      */
     public List<UserActivity> getActiveUsers(int days) throws SQLException {
         List<UserActivity> activities = new ArrayList<>();
-        String sql = "SELECT u.id, u.username, u.full_name, " +
-                    "COUNT(DISTINCT pm.id) + COUNT(DISTINCT gm.id) as activity_count, " +
-                    "GREATEST(MAX(pm.sent_at), MAX(gm.sent_at)) as last_activity " +
+        String sql = "SELECT u.user_id, u.username, u.full_name, " +
+                    "COUNT(DISTINCT pm.message_id) + COUNT(DISTINCT gm.message_id) as activity_count, " +
+                    "GREATEST(MAX(pm.created_at), MAX(gm.sent_time)) as last_activity " +
                     "FROM users u " +
-                    "LEFT JOIN private_messages pm ON (u.id = pm.sender_id) " +
-                    "AND pm.sent_at >= NOW() - INTERVAL ? DAY " +
-                    "LEFT JOIN group_messages gm ON (u.id = gm.sender_id) " +
-                    "AND gm.sent_at >= NOW() - INTERVAL ? DAY " +
+                    "LEFT JOIN messages pm ON (u.user_id = pm.sender_id) " +
+                    "AND pm.created_at >= NOW() - (? * INTERVAL '1 day') " +
+                    "LEFT JOIN group_messages gm ON (u.user_id = gm.sender_id) " +
+                    "AND gm.sent_time >= NOW() - (? * INTERVAL '1 day') " +
                     "WHERE u.status = 'active' " +
-                    "GROUP BY u.id, u.username, u.full_name " +
-                    "HAVING activity_count > 0 " +
+                    "GROUP BY u.user_id, u.username, u.full_name " +
+                    "HAVING COUNT(DISTINCT pm.message_id) + COUNT(DISTINCT gm.message_id) > 0 " +
                     "ORDER BY activity_count DESC";
         
         try (Connection conn = dbConnection.getConnection();
@@ -79,7 +240,7 @@ public class StatisticsDAO {
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
                     UserActivity activity = new UserActivity();
-                    activity.setUserId(rs.getInt("id"));
+                    activity.setUserId(rs.getInt("user_id"));
                     activity.setUsername(rs.getString("username"));
                     activity.setFullName(rs.getString("full_name"));
                     activity.setActivityCount(rs.getInt("activity_count"));
@@ -101,9 +262,9 @@ public class StatisticsDAO {
      */
     public List<Map<String, Object>> getNewUsers(int days) throws SQLException {
         List<Map<String, Object>> newUsers = new ArrayList<>();
-    String sql = "SELECT id, username, full_name, email, status, created_at " +
+    String sql = "SELECT user_id, username, full_name, email, status, created_at " +
                     "FROM users " +
-                    "WHERE created_at >= NOW() - INTERVAL ? DAY " +
+                    "WHERE created_at >= NOW() - (? * INTERVAL '1 day') " +
                     "ORDER BY created_at DESC";
         
         try (Connection conn = dbConnection.getConnection();
@@ -114,7 +275,7 @@ public class StatisticsDAO {
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
                     Map<String, Object> user = new HashMap<>();
-                    int id = rs.getInt("id");
+                    int id = rs.getInt("user_id");
                     String username = rs.getString("username");
                     String fullName = rs.getString("full_name");
                     
@@ -156,7 +317,7 @@ public class StatisticsDAO {
             endDate = tmp;
         }
 
-        StringBuilder sql = new StringBuilder("SELECT id, username, full_name, email, status, created_at " +
+        StringBuilder sql = new StringBuilder("SELECT user_id, username, full_name, email, status, created_at " +
                 "FROM users WHERE DATE(created_at) BETWEEN ? AND ?");
 
         if (nameFilter != null && !nameFilter.isEmpty()) {
@@ -207,7 +368,7 @@ public class StatisticsDAO {
 
     private User extractUserSummary(ResultSet rs) throws SQLException {
         User user = new User();
-        user.setId(rs.getInt("id"));
+        user.setId(rs.getInt("user_id"));
         user.setUsername(rs.getString("username"));
         user.setFullName(rs.getString("full_name"));
         user.setEmail(rs.getString("email"));
@@ -226,10 +387,10 @@ public class StatisticsDAO {
      */
     public List<User> getFriendsOfUser(int userId) throws SQLException {
         List<User> friends = new ArrayList<>();
-        String sql = "SELECT u.id, u.username, u.full_name, u.email, u.status, u.created_at " +
-                "FROM friendships f " +
-                "JOIN users u ON u.id = CASE WHEN f.user1_id = ? THEN f.user2_id ELSE f.user1_id END " +
-                "WHERE (f.user1_id = ? OR f.user2_id = ?) AND f.status = 'accepted' " +
+        String sql = "SELECT u.user_id, u.username, u.full_name, u.email, u.status, u.created_at " +
+                "FROM friends f " +
+                "JOIN users u ON u.user_id = CASE WHEN f.user_id = ? THEN f.friend_id ELSE f.user_id END " +
+                "WHERE (f.user_id = ? OR f.friend_id = ?) AND f.status = 'accepted' " +
                 "ORDER BY u.full_name";
 
         try (Connection conn = dbConnection.getConnection();
@@ -267,8 +428,9 @@ public class StatisticsDAO {
      */
     public int[] getUserGrowthByMonth(int year) throws SQLException {
         int[] data = new int[12];
-        String sql = "SELECT MONTH(created_at) as month, COUNT(*) as cnt " +
-                "FROM users WHERE YEAR(created_at) = ? GROUP BY MONTH(created_at)";
+        String sql = "SELECT EXTRACT(MONTH FROM created_at) as month, COUNT(*) as cnt " +
+                "FROM users WHERE EXTRACT(YEAR FROM created_at) = ? " +
+                "GROUP BY EXTRACT(MONTH FROM created_at) ORDER BY month";
 
         try (Connection conn = dbConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -306,10 +468,10 @@ public class StatisticsDAO {
 
         switch (activityType) {
             case "Chat với người":
-                return queryUserActivity("private_messages", "sent_at", "sender_id",
+                return queryUserActivity("messages", "created_at", "sender_id",
                         startDate, endDate, nameFilter, "Chat với người");
             case "Chat nhóm":
-                return queryUserActivity("group_messages", "sent_at", "sender_id",
+                return queryUserActivity("group_messages", "sent_time", "sender_id",
                         startDate, endDate, nameFilter, "Chat nhóm");
             default:
                 return queryUserActivity("login_history", "login_time", "user_id",
@@ -320,40 +482,90 @@ public class StatisticsDAO {
     private List<UserActivity> queryUserActivity(String table, String dateColumn, String userColumn,
                                                  LocalDate startDate, LocalDate endDate,
                                                  String nameFilter, String activityLabel) throws SQLException {
+        return queryUserActivityWithFilters(table, dateColumn, userColumn, startDate, endDate, 
+                                            nameFilter, activityLabel, null, null, null);
+    }
+    
+    /**
+     * Query user activities với đầy đủ bộ lọc
+     */
+    private List<UserActivity> queryUserActivityWithFilters(String table, String dateColumn, String userColumn,
+                                                            LocalDate startDate, LocalDate endDate,
+                                                            String nameFilter, String activityLabel,
+                                                            String comparison, Integer activityCount,
+                                                            String sortOption) throws SQLException {
         List<UserActivity> activities = new ArrayList<>();
 
-        StringBuilder sql = new StringBuilder("SELECT u.id, u.username, u.full_name, COUNT(*) as activity_count, " +
-                "MAX(t." + dateColumn + ") as last_activity " +
+        StringBuilder sql = new StringBuilder("SELECT u.user_id, u.username, u.full_name, u.created_at, " +
+                "COUNT(*) as activity_count, MAX(t." + dateColumn + ") as last_activity " +
                 "FROM " + table + " t " +
-                "JOIN users u ON u.id = t." + userColumn + " " +
+                "JOIN users u ON u.user_id = t." + userColumn + " " +
                 "WHERE t." + dateColumn + " >= ? AND t." + dateColumn + " < ?");
+
+        List<Object> params = new ArrayList<>();
+        params.add(Timestamp.valueOf(startDate.atStartOfDay()));
+        params.add(Timestamp.valueOf(endDate.plusDays(1).atStartOfDay()));
 
         if (nameFilter != null && !nameFilter.isEmpty()) {
             sql.append(" AND (u.username LIKE ? OR u.full_name LIKE ?)");
+            String pattern = "%" + nameFilter + "%";
+            params.add(pattern);
+            params.add(pattern);
         }
 
-        sql.append(" GROUP BY u.id, u.username, u.full_name ORDER BY activity_count DESC");
+        sql.append(" GROUP BY u.user_id, u.username, u.full_name, u.created_at");
+        
+        // Lọc theo số lượng hoạt động (HAVING)
+        if (comparison != null && !"Tất cả".equals(comparison) && activityCount != null) {
+            switch (comparison) {
+                case "=":
+                    sql.append(" HAVING COUNT(*) = ?");
+                    params.add(activityCount);
+                    break;
+                case ">":
+                    sql.append(" HAVING COUNT(*) > ?");
+                    params.add(activityCount);
+                    break;
+                case "<":
+                    sql.append(" HAVING COUNT(*) < ?");
+                    params.add(activityCount);
+                    break;
+            }
+        }
+        
+        // Sắp xếp
+        if (sortOption != null) {
+            switch (sortOption) {
+                case "Sắp xếp theo tên (A-Z)":
+                    sql.append(" ORDER BY u.full_name ASC");
+                    break;
+                case "Sắp xếp theo tên (Z-A)":
+                    sql.append(" ORDER BY u.full_name DESC");
+                    break;
+                case "Sắp xếp theo thời gian tạo (Mới nhất)":
+                    sql.append(" ORDER BY u.created_at DESC");
+                    break;
+                case "Sắp xếp theo thời gian tạo (Cũ nhất)":
+                    sql.append(" ORDER BY u.created_at ASC");
+                    break;
+                default:
+                    sql.append(" ORDER BY activity_count DESC");
+            }
+        } else {
+            sql.append(" ORDER BY activity_count DESC");
+        }
 
         try (Connection conn = dbConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql.toString())) {
 
-            Timestamp startTs = Timestamp.valueOf(startDate.atStartOfDay());
-            Timestamp endTs = Timestamp.valueOf(endDate.plusDays(1).atStartOfDay());
-
-            int idx = 1;
-            pstmt.setTimestamp(idx++, startTs);
-            pstmt.setTimestamp(idx++, endTs);
-
-            if (nameFilter != null && !nameFilter.isEmpty()) {
-                String pattern = "%" + nameFilter + "%";
-                pstmt.setString(idx++, pattern);
-                pstmt.setString(idx++, pattern);
+            for (int i = 0; i < params.size(); i++) {
+                pstmt.setObject(i + 1, params.get(i));
             }
 
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
                     UserActivity activity = new UserActivity();
-                    activity.setUserId(rs.getInt("id"));
+                    activity.setUserId(rs.getInt("user_id"));
                     activity.setUsername(rs.getString("username"));
                     activity.setFullName(rs.getString("full_name"));
                     activity.setActivityType(activityLabel);
@@ -363,6 +575,11 @@ public class StatisticsDAO {
                     if (last != null) {
                         activity.setLastActivity(last.toLocalDateTime());
                     }
+                    
+                    Timestamp created = rs.getTimestamp("created_at");
+                    if (created != null) {
+                        activity.setCreatedAt(created.toLocalDateTime());
+                    }
 
                     activities.add(activity);
                 }
@@ -371,14 +588,45 @@ public class StatisticsDAO {
 
         return activities;
     }
+    
+    /**
+     * Lấy danh sách hoạt động người dùng với đầy đủ bộ lọc
+     */
+    public List<UserActivity> getUserActivitiesWithFilters(LocalDate startDate, LocalDate endDate,
+                                                           String activityType, String nameFilter,
+                                                           String comparison, Integer activityCount,
+                                                           String sortOption) throws SQLException {
+        if (startDate == null || endDate == null) {
+            return new ArrayList<>();
+        }
+
+        if (endDate.isBefore(startDate)) {
+            LocalDate tmp = startDate;
+            startDate = endDate;
+            endDate = tmp;
+        }
+
+        switch (activityType) {
+            case "Chat với người":
+                return queryUserActivityWithFilters("messages", "created_at", "sender_id",
+                        startDate, endDate, nameFilter, "Chat với người", comparison, activityCount, sortOption);
+            case "Chat nhóm":
+                return queryUserActivityWithFilters("group_messages", "sent_time", "sender_id",
+                        startDate, endDate, nameFilter, "Chat nhóm", comparison, activityCount, sortOption);
+            default:
+                return queryUserActivityWithFilters("login_history", "login_time", "user_id",
+                        startDate, endDate, nameFilter, "Mở ứng dụng", comparison, activityCount, sortOption);
+        }
+    }
 
     /**
      * Số người dùng hoạt động theo tháng (dựa trên đăng nhập) trong một năm
      */
     public int[] getMonthlyActiveUsers(int year) throws SQLException {
         int[] data = new int[12];
-        String sql = "SELECT MONTH(login_time) as month, COUNT(DISTINCT user_id) as cnt " +
-                "FROM login_history WHERE YEAR(login_time) = ? GROUP BY MONTH(login_time)";
+        String sql = "SELECT EXTRACT(MONTH FROM login_time) as month, COUNT(DISTINCT user_id) as cnt " +
+                "FROM login_history WHERE EXTRACT(YEAR FROM login_time) = ? " +
+                "GROUP BY EXTRACT(MONTH FROM login_time) ORDER BY month";
 
         try (Connection conn = dbConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -405,7 +653,7 @@ public class StatisticsDAO {
         Map<String, Integer> loginCounts = new HashMap<>();
         String sql = "SELECT DATE(login_time) as login_date, COUNT(*) as count " +
                     "FROM login_history " +
-                    "WHERE login_time >= NOW() - INTERVAL ? DAY " +
+                    "WHERE login_time >= NOW() - (? * INTERVAL '1 day') " +
                     "GROUP BY login_date " +
                     "ORDER BY login_date";
         
@@ -441,11 +689,11 @@ public class StatisticsDAO {
             if (rs.next()) overview.put("activeUsers", rs.getInt(1));
             
             // Tổng nhóm
-            rs = stmt.executeQuery("SELECT COUNT(*) FROM chat_groups");
+            rs = stmt.executeQuery("SELECT COUNT(*) FROM groups");
             if (rs.next()) overview.put("totalGroups", rs.getInt(1));
             
             // Tổng tin nhắn
-            rs = stmt.executeQuery("SELECT COUNT(*) FROM private_messages");
+            rs = stmt.executeQuery("SELECT COUNT(*) FROM messages");
             if (rs.next()) overview.put("totalMessages", rs.getInt(1));
             
             // Báo cáo spam pending

@@ -24,7 +24,7 @@ public class LoginHistoryDAO {
         List<LoginHistory> history = new ArrayList<>();
         String sql = "SELECT lh.*, u.username, u.full_name " +
                     "FROM login_history lh " +
-                    "JOIN users u ON lh.user_id = u.id " +
+                    "JOIN users u ON lh.user_id = u.user_id " +
                     "ORDER BY lh.login_time DESC";
         
         try (Connection conn = dbConnection.getConnection();
@@ -45,7 +45,7 @@ public class LoginHistoryDAO {
         List<LoginHistory> history = new ArrayList<>();
         String sql = "SELECT lh.*, u.username, u.full_name " +
                     "FROM login_history lh " +
-                    "JOIN users u ON lh.user_id = u.id " +
+                    "JOIN users u ON lh.user_id = u.user_id " +
                     "WHERE lh.user_id = ? " +
                     "ORDER BY lh.login_time DESC";
         
@@ -71,7 +71,7 @@ public class LoginHistoryDAO {
         List<LoginHistory> history = new ArrayList<>();
         String sql = "SELECT lh.*, u.username, u.full_name " +
                     "FROM login_history lh " +
-                    "JOIN users u ON lh.user_id = u.id " +
+                    "JOIN users u ON lh.user_id = u.user_id " +
                     "WHERE lh.login_time BETWEEN ? AND ? " +
                     "ORDER BY lh.login_time DESC";
         
@@ -97,7 +97,7 @@ public class LoginHistoryDAO {
         List<LoginHistory> history = new ArrayList<>();
         String sql = "SELECT lh.*, u.username, u.full_name " +
                     "FROM login_history lh " +
-                    "JOIN users u ON lh.user_id = u.id " +
+                    "JOIN users u ON lh.user_id = u.user_id " +
                     "WHERE u.username LIKE ? OR u.full_name LIKE ? " +
                     "ORDER BY lh.login_time DESC";
         
@@ -121,7 +121,7 @@ public class LoginHistoryDAO {
      * Thêm lịch sử đăng nhập mới
      */
     public boolean addLoginHistory(LoginHistory loginHistory) throws SQLException {
-        String sql = "INSERT INTO login_history (user_id, login_time, ip_address, user_agent) " +
+        String sql = "INSERT INTO login_history (user_id, login_time, ip_address, device_info) " +
                     "VALUES (?, ?, ?, ?)";
         
         try (Connection conn = dbConnection.getConnection();
@@ -178,7 +178,7 @@ public class LoginHistoryDAO {
      */
     private LoginHistory extractLoginHistoryFromResultSet(ResultSet rs) throws SQLException {
         LoginHistory history = new LoginHistory();
-        history.setId(rs.getInt("id"));
+        history.setId(rs.getInt("history_id"));
         history.setUserId(rs.getInt("user_id"));
         history.setUsername(rs.getString("username"));
         history.setFullName(rs.getString("full_name"));
@@ -189,7 +189,7 @@ public class LoginHistoryDAO {
         }
         
         history.setIpAddress(rs.getString("ip_address"));
-        history.setUserAgent(rs.getString("user_agent"));
+        history.setUserAgent(rs.getString("device_info"));
         
         return history;
     }
