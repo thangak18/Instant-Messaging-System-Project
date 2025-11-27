@@ -34,13 +34,13 @@ public class ActiveUserChartPanel extends JPanel {
         setupLayout();
         setupEventHandlers();
         
-        // Tải dữ liệu từ database
-        loadDataForYear(2024);
+        // Tải dữ liệu từ database cho năm 2025
+        loadDataForYear(2025);
     }
 
     private void initComponents() {
-        // Bộ lọc - Chọn năm
-        Integer[] years = {2024, 2023, 2022, 2021, 2020};
+        // Bộ lọc - Chọn năm (bao gồm 2025)
+        Integer[] years = {2025, 2024, 2023, 2022, 2021, 2020};
         yearSelector = new JComboBox<>(years);
         yearSelector.setPreferredSize(new Dimension(100, 30));
         
@@ -53,7 +53,7 @@ public class ActiveUserChartPanel extends JPanel {
         chartPanel = new BarChartPanel();
         
         // Labels hiển thị thông tin
-        currentYearLabel = new JLabel("Năm: 2024");
+        currentYearLabel = new JLabel("Năm: 2025");
         currentYearLabel.setFont(new Font("Arial", Font.BOLD, 14));
         currentYearLabel.setForeground(ZALO_BLUE);
         
@@ -161,17 +161,13 @@ public class ActiveUserChartPanel extends JPanel {
      */
     private void loadDataForYear(int year) {
         try {
-            // Lấy người dùng hoạt động trong 30 ngày gần nhất
-            List<UserActivity> activeUsers = statisticsDAO.getActiveUsers(30);
+            // Lấy người dùng hoạt động theo tháng trong năm được chọn
+            int[] data = statisticsDAO.getMonthlyActiveUsers(year);
             
-            // TODO: Thực tế cần query theo tháng trong năm
-            // Tạm thời phân bố đều dữ liệu vào 12 tháng để demo
-            int[] data = new int[12];
-            int totalActive = activeUsers.size();
-            
-            // Phân bố người dùng vào các tháng (demo - cần query riêng cho từng tháng)
-            for (int i = 0; i < 12; i++) {
-                data[i] = totalActive / 12 + (i * 5); // Demo distribution
+            // Tính tổng
+            int totalActive = 0;
+            for (int count : data) {
+                totalActive += count;
             }
             
             // Cập nhật biểu đồ

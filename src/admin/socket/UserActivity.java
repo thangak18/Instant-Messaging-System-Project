@@ -13,6 +13,7 @@ public class UserActivity {
     private String activityType; // 'login', 'chat', 'group_chat', 'friend_request'
     private int activityCount;
     private LocalDateTime lastActivity;
+    private LocalDateTime createdAt; // Ngày tạo tài khoản
     
     // Constructors
     public UserActivity() {}
@@ -82,6 +83,14 @@ public class UserActivity {
     
     public void setLastActivity(LocalDateTime lastActivity) {
         this.lastActivity = lastActivity;
+    }
+    
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+    
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
     
     @Override

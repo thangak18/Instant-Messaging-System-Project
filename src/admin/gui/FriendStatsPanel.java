@@ -10,7 +10,6 @@ import java.awt.*;
 import java.sql.SQLException;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Giao diện Thống kê bạn bè - ĐẦY ĐỦ CHỨC NĂNG
@@ -39,8 +38,9 @@ public class FriendStatsPanel extends JPanel {
         this.statisticsDAO = new StatisticsDAO();
         initComponents();
         setupLayout();
-        loadFriendStatsFromDatabase();
         setupEventHandlers();
+        // Tự động load data khi mở panel
+        loadFriendStatsFromDatabase();
     }
 
     private void initComponents() {
@@ -247,8 +247,10 @@ public class FriendStatsPanel extends JPanel {
         String comparison = (String) friendFilterCombo.getSelectedItem();
         String friendCountText = friendCountField.getText().trim();
         
+        Integer friendCount = null;
+        
         // Validate input cho yêu cầu c
-        if (!comparison.equals("Tất cả")) {
+        if (!"Tất cả".equals(comparison)) {
             if (friendCountText.isEmpty()) {
                 JOptionPane.showMessageDialog(this, 
                     "Vui lòng nhập số lượng bạn để so sánh!",
@@ -257,7 +259,7 @@ public class FriendStatsPanel extends JPanel {
             }
             
             try {
-                int friendCount = Integer.parseInt(friendCountText);
+                friendCount = Integer.parseInt(friendCountText);
                 if (friendCount < 0) {
                     JOptionPane.showMessageDialog(this, 
                         "Số lượng bạn phải >= 0!",
@@ -272,45 +274,25 @@ public class FriendStatsPanel extends JPanel {
             }
         }
         
-        // Load dữ liệu với bộ lọc
-        loadFilteredData(nameFilter, comparison, friendCountText, sortOption);
-        
-        // Thông báo
-        String filterMessage;
-        if (comparison.equals("Tất cả")) {
-            filterMessage = "Tất cả";
-        } else {
-            filterMessage = "Số bạn " + comparison + " " + friendCountText;
+        // Load dữ liệu từ database
+        try {
+            List<FriendStats> stats = statisticsDAO.getFriendStatisticsWithFilters(
+                nameFilter.isEmpty() ? null : nameFilter,
+                comparison,
+                friendCount,
+                sortOption
+            );
+            
+            displayFriendStats(stats);
+            updateStatistics();
+            
+            JOptionPane.showMessageDialog(this, 
+                "Tìm thấy " + stats.size() + " người dùng",
+                "Kết quả", JOptionPane.INFORMATION_MESSAGE);
+                
+        } catch (SQLException e) {
+            showError("Lỗi lọc dữ liệu: " + e.getMessage());
         }
-
-        JOptionPane.showMessageDialog(this, 
-            "Đã lọc báo cáo với các tùy chọn:\n\n" +
-            "Lọc tên: " + (nameFilter.isEmpty() ? "Tất cả" : nameFilter) + "\n" +
-            "Lọc số bạn: " + filterMessage + "\n" +
-            "Sắp xếp: " + sortOption + "\n\n" +
-            "Chức năng sẽ được kết nối với database",
-            "Lọc báo cáo", JOptionPane.INFORMATION_MESSAGE);
-    }
-
-    /**
-     * Load dữ liệu theo bộ lọc
-     */
-    private void loadFilteredData(String nameFilter, String comparison, 
-                                   String friendCountText, String sortOption) {
-        DefaultTableModel model = (DefaultTableModel) reportTable.getModel();
-        model.setRowCount(0); // Xóa dữ liệu cũ
-        
-        // TODO: Trong thực tế, gọi database với các tham số này
-        // List<UserFriendStats> stats = UserDAO.getFriendStats(nameFilter, comparison, friendCount, sortOption);
-        
-        // Dữ liệu mẫu (giả lập filter)
-        model.addRow(new Object[]{"1", "admin", "Quản trị viên", "2024-01-01", 50, 1500});
-        model.addRow(new Object[]{"2", "user1", "Nguyễn Văn A", "2024-01-02", 120, 3200});
-        model.addRow(new Object[]{"3", "user2", "Trần Thị B", "2024-01-03", 5, 80});
-        model.addRow(new Object[]{"4", "user3", "Lê Văn C", "2024-01-04", 200, 15000});
-        model.addRow(new Object[]{"5", "user4", "Phạm Thị D", "2024-01-05", 0, 0});
-        
-        updateStatistics();
     }
 
     /**
@@ -373,9 +355,9 @@ public class FriendStatsPanel extends JPanel {
                 stat.getUserId(),
                 stat.getUsername(),
                 stat.getFullName(),
-                "", // Ngày tạo - không có trong model
+                stat.getCreatedAt() != null ? stat.getCreatedAt().format(dateFormatter) : "",
                 stat.getFriendCount(),
-                0 // TODO: Số bạn của bạn - cần query riêng nếu có
+                stat.getFriendsOfFriendsCount()
             };
             tableModel.addRow(row);
         }
@@ -386,9 +368,7 @@ public class FriendStatsPanel extends JPanel {
      */
     private void handleRefresh() {
         loadFriendStatsFromDatabase();
-        JOptionPane.showMessageDialog(this, 
-            "Đã làm mới dữ liệu!",
-            "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+        // Thông báo sẽ hiển thị sau khi load xong trong loadFriendStatsFromDatabase
     }
 
     /**

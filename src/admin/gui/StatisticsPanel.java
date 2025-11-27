@@ -37,12 +37,12 @@ public class StatisticsPanel extends JPanel {
         setupEventHandlers();
         
         // Tải dữ liệu từ database cho năm hiện tại
-        loadDataForYear(2024); 
+        loadDataForYear(2025); 
     }
 
     private void initializeComponents() {
-        // Bộ lọc - Chọn năm
-        Integer[] years = {2024, 2023, 2022, 2021, 2020};
+        // Bộ lọc - Chọn năm (bao gồm 2025)
+        Integer[] years = {2025, 2024, 2023, 2022, 2021, 2020};
         yearSelector = new JComboBox<>(years);
         yearSelector.setPreferredSize(new Dimension(100, 30));
         
@@ -55,7 +55,7 @@ public class StatisticsPanel extends JPanel {
         chartPanel = new BarChartPanel();
         
         // Labels hiển thị thông tin
-        currentYearLabel = new JLabel("Năm: 2024");
+        currentYearLabel = new JLabel("Năm: 2025");
         currentYearLabel.setFont(new Font("Arial", Font.BOLD, 14));
         currentYearLabel.setForeground(ZALO_BLUE);
         
@@ -163,29 +163,13 @@ public class StatisticsPanel extends JPanel {
      */
     private void loadDataForYear(int year) {
         try {
-            // Lấy dữ liệu tăng trưởng người dùng theo tháng
-            Map<String, Integer> growthData = statisticsDAO.getUserGrowthByMonth();
+            // Lấy dữ liệu tăng trưởng người dùng theo tháng của năm được chọn
+            int[] data = statisticsDAO.getUserGrowthByMonth(year);
             
-            // Convert Map sang mảng 12 tháng
-            int[] data = new int[12];
+            // Tính tổng
             int totalUsers = 0;
-            
-            for (Map.Entry<String, Integer> entry : growthData.entrySet()) {
-                String monthStr = entry.getKey(); // Format: "2024-01"
-                int count = entry.getValue();
-                
-                // Extract month number from string
-                if (monthStr.length() >= 7) {
-                    try {
-                        int monthNum = Integer.parseInt(monthStr.substring(5, 7));
-                        if (monthNum >= 1 && monthNum <= 12) {
-                            data[monthNum - 1] = count;
-                            totalUsers += count;
-                        }
-                    } catch (NumberFormatException e) {
-                        // Skip invalid format
-                    }
-                }
+            for (int count : data) {
+                totalUsers += count;
             }
             
             // Cập nhật biểu đồ

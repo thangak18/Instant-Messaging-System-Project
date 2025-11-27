@@ -23,11 +23,12 @@ public class GroupDAO {
      */
     public List<ChatGroup> getAllGroups() throws SQLException {
         List<ChatGroup> groups = new ArrayList<>();
-        String sql = "SELECT cg.*, u.full_name as creator_name, " +
-                    "(SELECT COUNT(*) FROM group_members gm WHERE gm.group_id = cg.id) as member_count " +
-                    "FROM chat_groups cg " +
-                    "JOIN users u ON cg.created_by = u.id " +
-                    "ORDER BY cg.created_at DESC";
+        String sql = "SELECT g.group_id, g.group_name, g.admin_id, g.created_at, g.encrypted, " +
+                    "u.full_name as creator_name, " +
+                    "(SELECT COUNT(*) FROM group_members gm WHERE gm.group_id = g.group_id) as member_count " +
+                    "FROM groups g " +
+                    "JOIN users u ON g.admin_id = u.user_id " +
+                    "ORDER BY g.created_at DESC";
         
         try (Connection conn = dbConnection.getConnection();
              Statement stmt = conn.createStatement();
@@ -45,12 +46,13 @@ public class GroupDAO {
      */
     public List<ChatGroup> searchGroups(String keyword) throws SQLException {
         List<ChatGroup> groups = new ArrayList<>();
-        String sql = "SELECT cg.*, u.full_name as creator_name, " +
-                    "(SELECT COUNT(*) FROM group_members gm WHERE gm.group_id = cg.id) as member_count " +
-                    "FROM chat_groups cg " +
-                    "JOIN users u ON cg.created_by = u.id " +
-                    "WHERE cg.group_name LIKE ? " +
-                    "ORDER BY cg.created_at DESC";
+        String sql = "SELECT g.group_id, g.group_name, g.admin_id, g.created_at, g.encrypted, " +
+                    "u.full_name as creator_name, " +
+                    "(SELECT COUNT(*) FROM group_members gm WHERE gm.group_id = g.group_id) as member_count " +
+                    "FROM groups g " +
+                    "JOIN users u ON g.admin_id = u.user_id " +
+                    "WHERE g.group_name LIKE ? " +
+                    "ORDER BY g.created_at DESC";
         
         try (Connection conn = dbConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -75,12 +77,13 @@ public class GroupDAO {
         }
 
         List<ChatGroup> groups = new ArrayList<>();
-        String sql = "SELECT cg.*, u.full_name as creator_name, " +
-                    "(SELECT COUNT(*) FROM group_members gm WHERE gm.group_id = cg.id) as member_count " +
-                    "FROM chat_groups cg " +
-                    "JOIN users u ON cg.created_by = u.id " +
+        String sql = "SELECT g.group_id, g.group_name, g.admin_id, g.created_at, g.encrypted, " +
+                    "u.full_name as creator_name, " +
+                    "(SELECT COUNT(*) FROM group_members gm WHERE gm.group_id = g.group_id) as member_count " +
+                    "FROM groups g " +
+                    "JOIN users u ON g.admin_id = u.user_id " +
                     "WHERE u.full_name LIKE ? OR u.username LIKE ? " +
-                    "ORDER BY cg.created_at DESC";
+                    "ORDER BY g.created_at DESC";
 
         try (Connection conn = dbConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -102,11 +105,12 @@ public class GroupDAO {
      * Lấy nhóm theo ID
      */
     public ChatGroup getGroupById(int groupId) throws SQLException {
-        String sql = "SELECT cg.*, u.full_name as creator_name, " +
-                    "(SELECT COUNT(*) FROM group_members gm WHERE gm.group_id = cg.id) as member_count " +
-                    "FROM chat_groups cg " +
-                    "JOIN users u ON cg.created_by = u.id " +
-                    "WHERE cg.id = ?";
+        String sql = "SELECT g.group_id, g.group_name, g.admin_id, g.created_at, g.encrypted, " +
+                    "u.full_name as creator_name, " +
+                    "(SELECT COUNT(*) FROM group_members gm WHERE gm.group_id = g.group_id) as member_count " +
+                    "FROM groups g " +
+                    "JOIN users u ON g.admin_id = u.user_id " +
+                    "WHERE g.group_id = ?";
         
         try (Connection conn = dbConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -126,7 +130,7 @@ public class GroupDAO {
      * Đếm tổng số nhóm
      */
     public int getTotalGroups() throws SQLException {
-        String sql = "SELECT COUNT(*) FROM chat_groups";
+        String sql = "SELECT COUNT(*) FROM groups";
         
         try (Connection conn = dbConnection.getConnection();
              Statement stmt = conn.createStatement();
@@ -143,7 +147,7 @@ public class GroupDAO {
      * Xóa nhóm
      */
     public boolean deleteGroup(int groupId) throws SQLException {
-        String sql = "DELETE FROM chat_groups WHERE id = ?";
+        String sql = "DELETE FROM groups WHERE group_id = ?";
         
         try (Connection conn = dbConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -158,10 +162,10 @@ public class GroupDAO {
      */
     private ChatGroup extractGroupFromResultSet(ResultSet rs) throws SQLException {
         ChatGroup group = new ChatGroup();
-        group.setId(rs.getInt("id"));
+        group.setId(rs.getInt("group_id"));
         group.setGroupName(rs.getString("group_name"));
-        group.setDescription(rs.getString("description"));
-        group.setCreatedBy(rs.getInt("created_by"));
+        group.setDescription(""); // Database không có description
+        group.setCreatedBy(rs.getInt("admin_id"));
         group.setCreatorName(rs.getString("creator_name"));
         group.setMemberCount(rs.getInt("member_count"));
         
@@ -179,7 +183,7 @@ public class GroupDAO {
     public List<User> getGroupMembers(int groupId) throws SQLException {
         List<User> members = new ArrayList<>();
         String sql = "SELECT u.* FROM group_members gm " +
-                    "JOIN users u ON gm.user_id = u.id " +
+                    "JOIN users u ON gm.user_id = u.user_id " +
                     "WHERE gm.group_id = ? ORDER BY u.full_name";
 
         try (Connection conn = dbConnection.getConnection();
@@ -197,14 +201,14 @@ public class GroupDAO {
     }
 
     /**
-     * Lấy danh sách admin trong nhóm (bao gồm owner/admin)
+     * Lấy danh sách admin trong nhóm (lấy từ bảng groups - admin_id)
      */
     public List<User> getGroupAdmins(int groupId) throws SQLException {
         List<User> admins = new ArrayList<>();
-        String sql = "SELECT u.* FROM group_members gm " +
-                    "JOIN users u ON gm.user_id = u.id " +
-                    "WHERE gm.group_id = ? AND (gm.role = 'owner' OR gm.role = 'admin') " +
-                    "ORDER BY u.full_name";
+        // Lấy admin chính từ bảng groups
+        String sql = "SELECT u.* FROM groups g " +
+                    "JOIN users u ON g.admin_id = u.user_id " +
+                    "WHERE g.group_id = ?";
 
         try (Connection conn = dbConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -222,7 +226,7 @@ public class GroupDAO {
 
     private User extractUserSummary(ResultSet rs) throws SQLException {
         User user = new User();
-        user.setId(rs.getInt("id"));
+        user.setId(rs.getInt("user_id"));
         user.setUsername(rs.getString("username"));
         user.setFullName(rs.getString("full_name"));
         user.setEmail(rs.getString("email"));

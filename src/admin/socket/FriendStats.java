@@ -1,5 +1,7 @@
 package admin.socket;
 
+import java.time.LocalDateTime;
+
 /**
  * Model đại diện cho thống kê bạn bè của người dùng
  */
@@ -9,6 +11,8 @@ public class FriendStats {
     private String fullName;
     private int friendCount;
     private int onlineFriends;
+    private int friendsOfFriendsCount; // Số bạn của bạn
+    private LocalDateTime createdAt;   // Ngày tạo tài khoản
     
     // Constructors
     public FriendStats() {}
@@ -19,6 +23,7 @@ public class FriendStats {
         this.fullName = fullName;
         this.friendCount = friendCount;
         this.onlineFriends = 0;
+        this.friendsOfFriendsCount = 0;
     }
     
     // Getters and Setters
@@ -62,12 +67,29 @@ public class FriendStats {
         this.onlineFriends = onlineFriends;
     }
     
+    public int getFriendsOfFriendsCount() {
+        return friendsOfFriendsCount;
+    }
+    
+    public void setFriendsOfFriendsCount(int friendsOfFriendsCount) {
+        this.friendsOfFriendsCount = friendsOfFriendsCount;
+    }
+    
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+    
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+    
     @Override
     public String toString() {
         return "FriendStats{" +
                 "username='" + username + '\'' +
                 ", fullName='" + fullName + '\'' +
                 ", friendCount=" + friendCount +
+                ", friendsOfFriendsCount=" + friendsOfFriendsCount +
                 '}';
     }
 }

@@ -45,6 +45,25 @@ public class ActiveUserReportPanel extends JPanel {
         initializeComponents();
         setupLayout();
         setupEventHandlers();
+        // Mặc định hiển thị dữ liệu năm 2025
+        dateFromField.setText("2025-01-01");
+        dateToField.setText("2025-12-31");
+        loadDefaultData();
+    }
+    
+    /**
+     * Load dữ liệu mặc định khi mở panel
+     */
+    private void loadDefaultData() {
+        try {
+            LocalDate start = LocalDate.of(2025, 1, 1);
+            LocalDate end = LocalDate.of(2025, 12, 31);
+            List<UserActivity> activities = statisticsDAO.getUserActivities(start, end, "Mở ứng dụng", "");
+            displayActiveUsers(activities);
+            updateStatistics();
+        } catch (SQLException e) {
+            // Ignore errors on initial load
+        }
     }
 
     private void initializeComponents() {
@@ -303,21 +322,53 @@ public class ActiveUserReportPanel extends JPanel {
             return;
         }
         
+        // Validate số lượng hoạt động nếu có
+        String comparison = (String) comparisonCombo.getSelectedItem();
+        String activityCountText = activityCountField.getText().trim();
+        Integer activityCount = null;
+        
+        if (!"Tất cả".equals(comparison)) {
+            if (activityCountText.isEmpty()) {
+                JOptionPane.showMessageDialog(this, 
+                    "Vui lòng nhập số lượng hoạt động để so sánh!",
+                    "Cảnh báo", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            try {
+                activityCount = Integer.parseInt(activityCountText);
+                if (activityCount < 0) {
+                    JOptionPane.showMessageDialog(this, 
+                        "Số lượng hoạt động phải >= 0!",
+                        "Lỗi", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(this, 
+                    "Số lượng hoạt động không hợp lệ!",
+                    "Lỗi", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+        }
+        
         // Load dữ liệu từ database
         try {
             LocalDate startDate = LocalDate.parse(fromDate, inputFormatter);
             LocalDate endDate = LocalDate.parse(toDate, inputFormatter);
+            String nameFilter = searchNameField.getText().trim();
+            String activityType = (String) activityTypeCombo.getSelectedItem();
+            String sortOption = (String) sortCombo.getSelectedItem();
             
-            // Calculate days between
-            long daysBetween = java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate);
+            // Get user activities with filters
+            List<UserActivity> activities = statisticsDAO.getUserActivitiesWithFilters(
+                startDate, endDate, activityType, 
+                nameFilter.isEmpty() ? null : nameFilter,
+                comparison, activityCount, sortOption);
             
-            // Get active users
-            List<UserActivity> activities = statisticsDAO.getActiveUsers((int)daysBetween);
             displayActiveUsers(activities);
             updateStatistics();
             
             JOptionPane.showMessageDialog(this, 
-                "Đã tải " + activities.size() + " hoạt động người dùng\n" +
+                "Tìm thấy " + activities.size() + " người dùng\n" +
                 "Từ: " + fromDate + " đến: " + toDate,
                 "Thành công", JOptionPane.INFORMATION_MESSAGE);
                 

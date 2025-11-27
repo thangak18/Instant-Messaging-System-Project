@@ -41,6 +41,25 @@ public class NewUserReportPanel extends JPanel {
         initComponents();
         setupLayout();
         setupEventHandlers();
+        // Mặc định hiển thị dữ liệu năm 2025
+        dateFromField.setText("2025-01-01");
+        dateToField.setText("2025-12-31");
+        loadDefaultData();
+    }
+    
+    /**
+     * Load dữ liệu mặc định khi mở panel
+     */
+    private void loadDefaultData() {
+        try {
+            LocalDate start = LocalDate.of(2025, 1, 1);
+            LocalDate end = LocalDate.of(2025, 12, 31);
+            List<User> users = statisticsDAO.getNewUsers(start, end, "", "Sắp xếp theo thời gian (Mới nhất)");
+            displayNewUsers(users);
+            updateStatistics();
+        } catch (SQLException e) {
+            // Ignore errors on initial load
+        }
     }
 
     private void initComponents() {
@@ -270,19 +289,18 @@ public class NewUserReportPanel extends JPanel {
         try {
             LocalDate startDate = LocalDate.parse(fromDate, inputFormatter);
             LocalDate endDate = LocalDate.parse(toDate, inputFormatter);
+            String nameFilter = searchNameField.getText().trim();
+            String sortOption = (String) sortCombo.getSelectedItem();
             
-            // Calculate days between dates
-            long daysBetween = java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate);
+            // Get new users by date range
+            List<User> newUsers = statisticsDAO.getNewUsers(startDate, endDate, nameFilter, sortOption);
             
-            // Get new users from last N days
-            List<Map<String, Object>> newUsersData = statisticsDAO.getNewUsers((int)daysBetween);
-            
-            // Convert to User objects and display
-            displayNewUsersFromMap(newUsersData);
+            // Display users
+            displayNewUsers(newUsers);
             updateStatistics();
             
             JOptionPane.showMessageDialog(this, 
-                "Đã tải " + newUsersData.size() + " người dùng mới\n" +
+                "Đã tải " + newUsers.size() + " người dùng mới\n" +
                 "Từ: " + fromDate + " đến: " + toDate,
                 "Thành công", JOptionPane.INFORMATION_MESSAGE);
                 
@@ -326,7 +344,7 @@ public class NewUserReportPanel extends JPanel {
                 user.getFullName(),
                 user.getEmail(),
                 user.getCreatedAt() != null ? user.getCreatedAt().format(dateFormatter) : "",
-                user.getStatus().equals("active") ? "Hoạt động" : "Bị khóa"
+                "active".equalsIgnoreCase(user.getStatus()) ? "Hoạt động" : "Bị khóa"
             };
             tableModel.addRow(row);
         }

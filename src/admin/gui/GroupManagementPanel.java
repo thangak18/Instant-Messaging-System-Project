@@ -2,6 +2,7 @@ package admin.gui;
 
 import admin.service.GroupDAO;
 import admin.socket.ChatGroup;
+import admin.socket.User;
 
 import javax.swing.*;
 import javax.swing.border.*;
@@ -9,6 +10,7 @@ import javax.swing.table.*;
 import java.awt.*;
 import java.sql.SQLException;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -86,8 +88,9 @@ public class GroupManagementPanel extends JPanel {
      */
     private void loadGroupsFromDatabase() {
         try {
-            List<ChatGroup> groups = groupDAO.getAllGroups();
-            displayGroups(groups);
+            currentGroups = groupDAO.getAllGroups();
+            applySorting();
+            displayGroups(currentGroups);
         } catch (SQLException e) {
             showError("Lỗi load dữ liệu nhóm: " + e.getMessage());
             e.printStackTrace();
@@ -255,6 +258,9 @@ public class GroupManagementPanel extends JPanel {
         
     }
 
+    // Cache danh sách nhóm để sắp xếp
+    private List<ChatGroup> currentGroups = new ArrayList<>();
+
     // ==================== EVENT HANDLERS ====================
     
     // Yêu cầu b: Tìm kiếm/lọc theo tên
@@ -269,27 +275,59 @@ public class GroupManagementPanel extends JPanel {
             return;
         }
         
-        JOptionPane.showMessageDialog(this, 
-            "Tìm kiếm: " + keyword + "\n" +
-            "Loại: " + searchType + "\n\n" +
-            "Chức năng sẽ được kết nối với database",
-            "Tìm kiếm", JOptionPane.INFORMATION_MESSAGE);
+        try {
+            boolean searchByAdmin = "Tìm theo admin".equals(searchType);
+            List<ChatGroup> groups = groupDAO.searchGroups(keyword, searchByAdmin);
+            currentGroups = groups;
+            applySorting();
+            displayGroups(currentGroups);
+            
+            JOptionPane.showMessageDialog(this, 
+                "Tìm thấy " + groups.size() + " nhóm",
+                "Kết quả", JOptionPane.INFORMATION_MESSAGE);
+        } catch (SQLException e) {
+            showError("Lỗi tìm kiếm: " + e.getMessage());
+        }
     }
 
     // Yêu cầu a: Sắp xếp theo tên/thời gian tạo
     private void handleSort() {
+        applySorting();
+        displayGroups(currentGroups);
+    }
+    
+    private void applySorting() {
         String sortOption = (String) sortCombo.getSelectedItem();
+        if (sortOption == null || currentGroups.isEmpty()) return;
         
-        JOptionPane.showMessageDialog(this, 
-            "Áp dụng sắp xếp: " + sortOption + "\n\n" +
-            "Chức năng sẽ được kết nối với database",
-            "Sắp xếp", JOptionPane.INFORMATION_MESSAGE);
+        java.util.Comparator<ChatGroup> comparator;
+        switch (sortOption) {
+            case "Sắp xếp theo tên (A-Z)":
+                comparator = java.util.Comparator.comparing(g -> 
+                    g.getGroupName() != null ? g.getGroupName().toLowerCase() : "");
+                break;
+            case "Sắp xếp theo tên (Z-A)":
+                comparator = java.util.Comparator.comparing((ChatGroup g) -> 
+                    g.getGroupName() != null ? g.getGroupName().toLowerCase() : "").reversed();
+                break;
+            case "Sắp xếp theo ngày tạo (Cũ nhất)":
+                comparator = java.util.Comparator.comparing(ChatGroup::getCreatedAt,
+                    java.util.Comparator.nullsLast(java.time.LocalDateTime::compareTo));
+                break;
+            case "Sắp xếp theo ngày tạo (Mới nhất)":
+            default:
+                comparator = java.util.Comparator.comparing(ChatGroup::getCreatedAt,
+                    java.util.Comparator.nullsLast(java.time.LocalDateTime::compareTo)).reversed();
+                break;
+        }
+        currentGroups.sort(comparator);
     }
 
     private void handleReset() {
         searchField.setText("");
         searchTypeCombo.setSelectedIndex(0);
         sortCombo.setSelectedIndex(0);
+        loadGroupsFromDatabase();
         
         JOptionPane.showMessageDialog(this, 
             "Đã đặt lại bộ lọc!",
@@ -306,54 +344,65 @@ public class GroupManagementPanel extends JPanel {
             return;
         }
         
+        int groupId = (int) groupTable.getValueAt(selectedRow, 0);
         String groupName = groupTable.getValueAt(selectedRow, 1).toString();
-        String memberCount = groupTable.getValueAt(selectedRow, 3).toString();
         
-        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), 
-                                    "Danh sách thành viên - " + groupName, true);
-        dialog.setLayout(new BorderLayout(10, 10));
-        dialog.setSize(700, 500);
-        dialog.setLocationRelativeTo(this);
-        
-        // Bảng thành viên
-        String[] columns = {"STT", "Tên đăng nhập", "Họ tên", "Vai trò", "Ngày tham gia"};
-        DefaultTableModel model = new DefaultTableModel(columns, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) { return false; }
-        };
-        
-        // Sample data
-        model.addRow(new Object[]{"1", "admin", "Quản trị viên", "Admin chính", "2024-01-01"});
-        model.addRow(new Object[]{"2", "user1", "Nguyễn Văn A", "Admin", "2024-01-02"});
-        model.addRow(new Object[]{"3", "user2", "Trần Thị B", "Thành viên", "2024-01-03"});
-        model.addRow(new Object[]{"4", "user3", "Lê Văn C", "Thành viên", "2024-01-05"});
-        model.addRow(new Object[]{"5", "user4", "Phạm Thị D", "Thành viên", "2024-01-07"});
-        
-        JTable memberTable = new JTable(model);
-        memberTable.setRowHeight(28);
-        memberTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 12));
-        memberTable.getTableHeader().setBackground(ZALO_BLUE);
-        memberTable.getTableHeader().setForeground(Color.WHITE);
-        
-        JPanel contentPanel = new JPanel(new BorderLayout(10, 10));
-        contentPanel.setBorder(new EmptyBorder(15, 15, 15, 15));
-        
-        JLabel infoLabel = new JLabel("📊 Tổng số thành viên: " + memberCount);
-        infoLabel.setFont(new Font("Arial", Font.BOLD, 13));
-        infoLabel.setBorder(new EmptyBorder(0, 0, 10, 0));
-        
-        contentPanel.add(infoLabel, BorderLayout.NORTH);
-        contentPanel.add(new JScrollPane(memberTable), BorderLayout.CENTER);
-        
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton closeBtn = createStyledButton("❌ Đóng", DANGER_RED);
-        closeBtn.addActionListener(e -> dialog.dispose());
-        buttonPanel.add(closeBtn);
-        
-        contentPanel.add(buttonPanel, BorderLayout.SOUTH);
-        
-        dialog.add(contentPanel);
-        dialog.setVisible(true);
+        try {
+            List<User> members = groupDAO.getGroupMembers(groupId);
+            
+            JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), 
+                                        "Danh sách thành viên - " + groupName, true);
+            dialog.setLayout(new BorderLayout(10, 10));
+            dialog.setSize(700, 500);
+            dialog.setLocationRelativeTo(this);
+            
+            // Bảng thành viên
+            String[] columns = {"STT", "Tên đăng nhập", "Họ tên", "Email", "Trạng thái"};
+            DefaultTableModel model = new DefaultTableModel(columns, 0) {
+                @Override
+                public boolean isCellEditable(int row, int column) { return false; }
+            };
+            
+            int stt = 1;
+            for (User member : members) {
+                model.addRow(new Object[]{
+                    stt++,
+                    member.getUsername(),
+                    member.getFullName(),
+                    member.getEmail(),
+                    "active".equals(member.getStatus()) ? "Hoạt động" : "Bị khóa"
+                });
+            }
+            
+            JTable memberTable = new JTable(model);
+            memberTable.setRowHeight(28);
+            memberTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 12));
+            memberTable.getTableHeader().setBackground(ZALO_BLUE);
+            memberTable.getTableHeader().setForeground(Color.WHITE);
+            
+            JPanel contentPanel = new JPanel(new BorderLayout(10, 10));
+            contentPanel.setBorder(new EmptyBorder(15, 15, 15, 15));
+            
+            JLabel infoLabel = new JLabel("📊 Tổng số thành viên: " + members.size());
+            infoLabel.setFont(new Font("Arial", Font.BOLD, 13));
+            infoLabel.setBorder(new EmptyBorder(0, 0, 10, 0));
+            
+            contentPanel.add(infoLabel, BorderLayout.NORTH);
+            contentPanel.add(new JScrollPane(memberTable), BorderLayout.CENTER);
+            
+            JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+            JButton closeBtn = createStyledButton("❌ Đóng", DANGER_RED);
+            closeBtn.addActionListener(e -> dialog.dispose());
+            buttonPanel.add(closeBtn);
+            
+            contentPanel.add(buttonPanel, BorderLayout.SOUTH);
+            
+            dialog.add(contentPanel);
+            dialog.setVisible(true);
+            
+        } catch (SQLException e) {
+            showError("Lỗi lấy danh sách thành viên: " + e.getMessage());
+        }
     }
 
     // Yêu cầu d: Xem danh sách admin 1 nhóm
@@ -366,51 +415,65 @@ public class GroupManagementPanel extends JPanel {
             return;
         }
         
+        int groupId = (int) groupTable.getValueAt(selectedRow, 0);
         String groupName = groupTable.getValueAt(selectedRow, 1).toString();
-        String adminCount = groupTable.getValueAt(selectedRow, 4).toString();
         
-        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), 
-                                    "Danh sách Admin - " + groupName, true);
-        dialog.setLayout(new BorderLayout(10, 10));
-        dialog.setSize(600, 400);
-        dialog.setLocationRelativeTo(this);
-        
-        // Bảng admin
-        String[] columns = {"STT", "Tên đăng nhập", "Họ tên", "Vai trò", "Ngày bổ nhiệm"};
-        DefaultTableModel model = new DefaultTableModel(columns, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) { return false; }
-        };
-        
-        // Sample data
-        model.addRow(new Object[]{"1", "admin", "Quản trị viên", "Admin chính", "2024-01-01"});
-        model.addRow(new Object[]{"2", "user1", "Nguyễn Văn A", "Admin", "2024-01-02"});
-        
-        JTable adminTable = new JTable(model);
-        adminTable.setRowHeight(28);
-        adminTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 12));
-        adminTable.getTableHeader().setBackground(INFO_CYAN);
-        adminTable.getTableHeader().setForeground(Color.WHITE);
-        
-        JPanel contentPanel = new JPanel(new BorderLayout(10, 10));
-        contentPanel.setBorder(new EmptyBorder(15, 15, 15, 15));
-        
-        JLabel infoLabel = new JLabel("👑 Tổng số admin: " + adminCount);
-        infoLabel.setFont(new Font("Arial", Font.BOLD, 13));
-        infoLabel.setBorder(new EmptyBorder(0, 0, 10, 0));
-        
-        contentPanel.add(infoLabel, BorderLayout.NORTH);
-        contentPanel.add(new JScrollPane(adminTable), BorderLayout.CENTER);
-        
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton closeBtn = createStyledButton("❌ Đóng", DANGER_RED);
-        closeBtn.addActionListener(e -> dialog.dispose());
-        buttonPanel.add(closeBtn);
-        
-        contentPanel.add(buttonPanel, BorderLayout.SOUTH);
-        
-        dialog.add(contentPanel);
-        dialog.setVisible(true);
+        try {
+            List<User> admins = groupDAO.getGroupAdmins(groupId);
+            
+            JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), 
+                                        "Danh sách Admin - " + groupName, true);
+            dialog.setLayout(new BorderLayout(10, 10));
+            dialog.setSize(600, 400);
+            dialog.setLocationRelativeTo(this);
+            
+            // Bảng admin
+            String[] columns = {"STT", "Tên đăng nhập", "Họ tên", "Email", "Trạng thái"};
+            DefaultTableModel model = new DefaultTableModel(columns, 0) {
+                @Override
+                public boolean isCellEditable(int row, int column) { return false; }
+            };
+            
+            int stt = 1;
+            for (User admin : admins) {
+                model.addRow(new Object[]{
+                    stt++,
+                    admin.getUsername(),
+                    admin.getFullName(),
+                    admin.getEmail(),
+                    "active".equals(admin.getStatus()) ? "Hoạt động" : "Bị khóa"
+                });
+            }
+            
+            JTable adminTable = new JTable(model);
+            adminTable.setRowHeight(28);
+            adminTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 12));
+            adminTable.getTableHeader().setBackground(INFO_CYAN);
+            adminTable.getTableHeader().setForeground(Color.WHITE);
+            
+            JPanel contentPanel = new JPanel(new BorderLayout(10, 10));
+            contentPanel.setBorder(new EmptyBorder(15, 15, 15, 15));
+            
+            JLabel infoLabel = new JLabel("👑 Tổng số admin: " + admins.size());
+            infoLabel.setFont(new Font("Arial", Font.BOLD, 13));
+            infoLabel.setBorder(new EmptyBorder(0, 0, 10, 0));
+            
+            contentPanel.add(infoLabel, BorderLayout.NORTH);
+            contentPanel.add(new JScrollPane(adminTable), BorderLayout.CENTER);
+            
+            JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+            JButton closeBtn = createStyledButton("❌ Đóng", DANGER_RED);
+            closeBtn.addActionListener(e -> dialog.dispose());
+            buttonPanel.add(closeBtn);
+            
+            contentPanel.add(buttonPanel, BorderLayout.SOUTH);
+            
+            dialog.add(contentPanel);
+            dialog.setVisible(true);
+            
+        } catch (SQLException e) {
+            showError("Lỗi lấy danh sách admin: " + e.getMessage());
+        }
     }
 
     private JButton createStyledButton(String text, Color color) {
