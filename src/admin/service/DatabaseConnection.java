@@ -45,6 +45,24 @@ public class DatabaseConnection {
             this.password = props.getProperty("db.password");
             this.driver = props.getProperty("db.driver", "org.postgresql.Driver");
             
+            // Kiểm tra xem config có placeholder không
+            if (url == null || url.contains("YOUR_PROJECT_REF") || url.contains("YOUR_")) {
+                throw new IOException("❌ Database configuration chưa được cấu hình!\n" +
+                    "Vui lòng cập nhật file release/config.properties với thông tin Supabase thực tế.\n" +
+                    "Chạy: ./configure_db.sh để cấu hình tự động.");
+            }
+            
+            if (password == null || password.contains("YOUR_PASSWORD") || password.contains("YOUR_")) {
+                throw new IOException("❌ Database password chưa được cấu hình!\n" +
+                    "Vui lòng cập nhật db.password trong file release/config.properties.\n" +
+                    "Chạy: ./configure_db.sh để cấu hình tự động.");
+            }
+            
+            if (url == null || username == null || password == null) {
+                throw new IOException("❌ Thiếu thông tin cấu hình database!\n" +
+                    "Cần có: db.url, db.username, db.password trong file release/config.properties");
+            }
+            
             System.out.println("[Admin] Config loaded successfully");
             System.out.println("[Admin] Database URL: " + url);
             System.out.println("[Admin] Database User: " + username);
@@ -72,12 +90,40 @@ public class DatabaseConnection {
      * Lấy connection tới database
      */
     public Connection getConnection() throws SQLException {
+        // Kiểm tra config trước khi kết nối
+        if (url == null || url.contains("YOUR_") || password == null || password.contains("YOUR_")) {
+            throw new SQLException("Database configuration chưa được cấu hình. " +
+                "Vui lòng cập nhật file release/config.properties hoặc chạy ./configure_db.sh");
+        }
+        
         try {
             Connection conn = DriverManager.getConnection(url, username, password);
             System.out.println("[Admin] Database connection established");
             return conn;
         } catch (SQLException e) {
-            System.err.println("[Admin] Failed to connect to database: " + e.getMessage());
+            String errorMsg = e.getMessage();
+            System.err.println("[Admin] Failed to connect to database: " + errorMsg);
+            
+            // Đưa ra gợi ý cụ thể dựa trên lỗi
+            if (errorMsg != null) {
+                if (errorMsg.contains("password authentication failed")) {
+                    throw new SQLException("❌ Sai mật khẩu database!\n" +
+                        "Vui lòng kiểm tra lại db.password trong config.properties", e);
+                } else if (errorMsg.contains("No route to host") || errorMsg.contains("Connection refused")) {
+                    throw new SQLException("❌ Không thể kết nối đến database!\n" +
+                        "Kiểm tra:\n" +
+                        "1. Project Reference có đúng không?\n" +
+                        "2. Supabase project có bị pause không? (Resume trong Dashboard)\n" +
+                        "3. Network/Firewall có chặn không?", e);
+                } else if (errorMsg.contains("The connection attempt failed")) {
+                    throw new SQLException("❌ Kết nối thất bại!\n" +
+                        "Kiểm tra:\n" +
+                        "1. File config.properties đã được cấu hình đúng chưa?\n" +
+                        "2. Chạy: ./configure_db.sh để cấu hình\n" +
+                        "3. Hoặc kiểm tra Supabase Dashboard xem project có đang hoạt động không", e);
+                }
+            }
+            
             throw e;
         }
     }
