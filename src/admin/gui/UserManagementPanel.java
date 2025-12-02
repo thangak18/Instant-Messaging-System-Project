@@ -114,7 +114,23 @@ public class UserManagementPanel extends JPanel {
             currentUsers = users;
             displayUsers(currentUsers);
         } catch (SQLException e) {
-            showError("Lỗi load dữ liệu: " + e.getMessage());
+            String errorMsg = e.getMessage();
+            String detailedMsg = "Lỗi load dữ liệu: " + errorMsg;
+            
+            // Thêm hướng dẫn nếu là lỗi cấu hình
+            if (errorMsg != null && (errorMsg.contains("chưa được cấu hình") || 
+                                     errorMsg.contains("YOUR_") ||
+                                     errorMsg.contains("configuration"))) {
+                detailedMsg += "\n\n" +
+                    "⚠️ Database chưa được cấu hình!\n\n" +
+                    "Cách sửa:\n" +
+                    "1. Chạy: ./configure_db.sh\n" +
+                    "2. Hoặc sửa file: release/config.properties\n" +
+                    "3. Thay YOUR_PROJECT_REF và YOUR_PASSWORD_HERE\n" +
+                    "   bằng thông tin Supabase thực tế";
+            }
+            
+            showError(detailedMsg);
             e.printStackTrace();
         }
     }
