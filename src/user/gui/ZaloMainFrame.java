@@ -80,8 +80,6 @@ public class ZaloMainFrame extends JFrame {
         // Tạo và lưu reference FriendRequestPanel
         friendRequestPanel = new FriendRequestPanel(this);
         rightPanel.add(friendRequestPanel, "FRIEND_REQUESTS");
-        
-        rightPanel.add(createPlaceholderPanel("Lời mời vào nhóm"), "GROUP_INVITES");
     }
     
     private void setupLayout() {
@@ -339,6 +337,33 @@ public class ZaloMainFrame extends JFrame {
         chatContentPanel.openChat(contactName);
     }
     
+    /**
+     * MỞ CHAT VÀ CUỘN ĐẾN TIN NHẮN CỤ THỂ
+     * @param contactName Tên người chat
+     * @param messageId ID tin nhắn cần cuộn đến
+     */
+    public void openChatAndScrollToMessage(String contactName, int messageId) {
+        chatContentPanel.openChat(contactName);
+        
+        // Đợi UI load xong rồi mới cuộn đến tin nhắn
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            try {
+                Thread.sleep(500); // Đợi tin nhắn load xong
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            chatContentPanel.scrollToMessage(messageId);
+        });
+    }
+    
+    /**
+     * CUỘN ĐẾN TIN NHẮN CỤ THỂ TRONG CHAT HIỆN TẠI
+     * @param messageId ID tin nhắn cần cuộn đến
+     */
+    public void scrollToMessageInChat(int messageId) {
+        chatContentPanel.scrollToMessage(messageId);
+    }
+    
     public void openGroupChat(int groupId, String groupName, boolean isAdmin) {
         // Tạo GroupChatPanel mới và hiển thị
         GroupChatPanel groupChatPanel = new GroupChatPanel(this, groupId, groupName, isAdmin);
@@ -380,6 +405,18 @@ public class ZaloMainFrame extends JFrame {
         leftCardLayout.show(leftPanel, "CONTACT");
         // Default: show friend requests
         rightCardLayout.show(rightPanel, "FRIEND_REQUESTS");
+    }
+    
+    /**
+     * SWITCH ĐẾN DANH SÁCH NHÓM VÀ REFRESH
+     */
+    public void showGroupList() {
+        leftCardLayout.show(leftPanel, "CONTACT");
+        rightCardLayout.show(rightPanel, "GROUPS");
+        // Refresh danh sách nhóm
+        if (groupListPanel != null) {
+            groupListPanel.refreshGroupList();
+        }
     }
     
     /**
