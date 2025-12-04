@@ -164,6 +164,13 @@ public class GroupListPanel extends JPanel {
         displayGroups(filteredGroups);
     }
     
+    /**
+     * Refresh danh sách nhóm
+     */
+    public void refreshGroupList() {
+        loadGroups();
+    }
+    
     public void loadGroups() {
         SwingWorker<List<Map<String, Object>>, Void> worker = new SwingWorker<>() {
             @Override

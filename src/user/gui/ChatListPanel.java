@@ -50,9 +50,13 @@ public class ChatListPanel extends JPanel {
         // Search bar with icon
         JPanel searchBarPanel = createSearchBar();
         
-        // Action buttons panel (Add Friend only)
+        // Action buttons panel
         JPanel actionButtonsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
         actionButtonsPanel.setOpaque(false);
+        
+        // Global search button (paper-plane)
+        JButton globalSearchButton = createIconButton("icons/paper-plane.png", "Tìm kiếm toàn bộ lịch sử", 24);
+        globalSearchButton.addActionListener(e -> showGlobalSearchDialog());
         
         JButton addFriendButton = createIconButton("icons/add-friend.png", "Thêm bạn", 24);
         
@@ -62,6 +66,7 @@ public class ChatListPanel extends JPanel {
             dialog.setVisible(true);
         });
         
+        actionButtonsPanel.add(globalSearchButton);
         actionButtonsPanel.add(addFriendButton);
         
         headerPanel.add(searchBarPanel, BorderLayout.CENTER);
@@ -461,7 +466,10 @@ public class ChatListPanel extends JPanel {
             setLayout(new BorderLayout(10, 5));
             setBackground(Color.WHITE);
             setBorder(new EmptyBorder(12, 15, 12, 15));
-            setMaximumSize(new Dimension(PANEL_WIDTH, 80));
+            setPreferredSize(new Dimension(PANEL_WIDTH, 70));
+            setMinimumSize(new Dimension(PANEL_WIDTH, 70));
+            setMaximumSize(new Dimension(Integer.MAX_VALUE, 70));
+            setAlignmentX(Component.LEFT_ALIGNMENT);
             setCursor(new Cursor(Cursor.HAND_CURSOR));
             
             // Avatar panel
@@ -504,7 +512,12 @@ public class ChatListPanel extends JPanel {
             JPanel bottomPanel = new JPanel(new BorderLayout());
             bottomPanel.setOpaque(false);
             
-            messageLabel = new JLabel(lastMessage);
+            // Giới hạn độ dài tin nhắn
+            String displayMessage = lastMessage;
+            if (displayMessage != null && displayMessage.length() > 30) {
+                displayMessage = displayMessage.substring(0, 30) + "...";
+            }
+            messageLabel = new JLabel(displayMessage);
             messageLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
             messageLabel.setForeground(new Color(100, 100, 100));
             
@@ -519,7 +532,7 @@ public class ChatListPanel extends JPanel {
                 bottomPanel.add(badgeLabel, BorderLayout.EAST);
             }
             
-            bottomPanel.add(messageLabel, BorderLayout.WEST);
+            bottomPanel.add(messageLabel, BorderLayout.CENTER);
             
             infoPanel.add(topPanel, BorderLayout.NORTH);
             infoPanel.add(bottomPanel, BorderLayout.CENTER);
@@ -542,13 +555,21 @@ public class ChatListPanel extends JPanel {
         }
         
         public void updateLastMessage(String message, String time) {
-            messageLabel.setText(message);
+            String displayMessage = message;
+            if (displayMessage != null && displayMessage.length() > 30) {
+                displayMessage = displayMessage.substring(0, 30) + "...";
+            }
+            messageLabel.setText(displayMessage);
             timeLabel.setText(time);
         }
         
         public void updateLastMessage(String message, java.sql.Timestamp timestamp) {
             this.sentAt = timestamp;
-            messageLabel.setText(message);
+            String displayMessage = message;
+            if (displayMessage != null && displayMessage.length() > 30) {
+                displayMessage = displayMessage.substring(0, 30) + "...";
+            }
+            messageLabel.setText(displayMessage);
             timeLabel.setText(formatTime(timestamp));
         }
         
@@ -755,5 +776,238 @@ public class ChatListPanel extends JPanel {
         };
         
         worker.execute();
+    }
+    
+    // ==================== TÌM KIẾM TOÀN BỘ LỊCH SỬ ====================
+    
+    /**
+     * Hiển thị dialog tìm kiếm toàn bộ lịch sử chat với tất cả mọi người
+     */
+    private void showGlobalSearchDialog() {
+        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), 
+            "Tìm kiếm toàn bộ lịch sử", true);
+        dialog.setSize(700, 600);
+        dialog.setLocationRelativeTo(this);
+        dialog.setLayout(new BorderLayout());
+        
+        // Header
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setBackground(PRIMARY_COLOR);
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
+        
+        JLabel titleLabel = new JLabel("🔍 Tìm kiếm trong toàn bộ lịch sử chat");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        titleLabel.setForeground(Color.WHITE);
+        headerPanel.add(titleLabel, BorderLayout.WEST);
+        
+        // Search panel
+        JPanel searchPanel = new JPanel(new BorderLayout(10, 10));
+        searchPanel.setBackground(Color.WHITE);
+        searchPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 10, 20));
+        
+        JTextField searchField = new JTextField();
+        searchField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        searchField.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(200, 200, 200)),
+            BorderFactory.createEmptyBorder(10, 12, 10, 12)
+        ));
+        searchField.putClientProperty("JTextField.placeholderText", "Nhập từ khóa tìm kiếm...");
+        
+        JButton searchButton = new JButton("Tìm kiếm");
+        searchButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        searchButton.setBackground(PRIMARY_COLOR);
+        searchButton.setForeground(Color.WHITE);
+        searchButton.setFocusPainted(false);
+        searchButton.setBorderPainted(false);
+        searchButton.setPreferredSize(new Dimension(110, 40));
+        searchButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        
+        JPanel topPanel = new JPanel(new BorderLayout(10, 0));
+        topPanel.setOpaque(false);
+        topPanel.add(searchField, BorderLayout.CENTER);
+        topPanel.add(searchButton, BorderLayout.EAST);
+        
+        searchPanel.add(topPanel, BorderLayout.NORTH);
+        
+        // Results panel
+        JPanel resultsPanel = new JPanel();
+        resultsPanel.setLayout(new BoxLayout(resultsPanel, BoxLayout.Y_AXIS));
+        resultsPanel.setBackground(Color.WHITE);
+        
+        JScrollPane resultsScroll = new JScrollPane(resultsPanel);
+        resultsScroll.setBorder(BorderFactory.createTitledBorder("Kết quả tìm kiếm"));
+        resultsScroll.getVerticalScrollBar().setUnitIncrement(16);
+        
+        searchPanel.add(resultsScroll, BorderLayout.CENTER);
+        
+        // Stats label
+        JLabel statsLabel = new JLabel("Nhập từ khóa để tìm kiếm trong toàn bộ lịch sử chat");
+        statsLabel.setFont(new Font("Segoe UI", Font.ITALIC, 12));
+        statsLabel.setForeground(new Color(120, 120, 120));
+        statsLabel.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
+        
+        searchPanel.add(statsLabel, BorderLayout.SOUTH);
+        
+        // Search action
+        Runnable doSearch = () -> {
+            String keyword = searchField.getText().trim();
+            if (keyword.isEmpty()) {
+                JOptionPane.showMessageDialog(dialog, "Vui lòng nhập từ khóa!", 
+                    "Thông báo", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            
+            if (keyword.length() < 2) {
+                JOptionPane.showMessageDialog(dialog, "Từ khóa phải có ít nhất 2 ký tự!", 
+                    "Thông báo", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            
+            resultsPanel.removeAll();
+            searchButton.setEnabled(false);
+            searchButton.setText("Đang tìm...");
+            statsLabel.setText("Đang tìm kiếm...");
+            
+            SwingWorker<java.util.List<Map<String, Object>>, Void> worker = new SwingWorker<>() {
+                @Override
+                protected java.util.List<Map<String, Object>> doInBackground() {
+                    return userService.searchAllChatHistory(mainFrame.getUsername(), keyword);
+                }
+                
+                @Override
+                protected void done() {
+                    try {
+                        java.util.List<Map<String, Object>> results = get();
+                        
+                        if (results == null || results.isEmpty()) {
+                            JLabel label = new JLabel("<html><center>😔 Không tìm thấy kết quả nào<br>Thử từ khóa khác</center></html>");
+                            label.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+                            label.setForeground(new Color(150, 150, 150));
+                            label.setAlignmentX(Component.CENTER_ALIGNMENT);
+                            label.setBorder(BorderFactory.createEmptyBorder(50, 20, 50, 20));
+                            resultsPanel.add(label);
+                            statsLabel.setText("Không tìm thấy kết quả nào");
+                        } else {
+                            statsLabel.setText("Tìm thấy " + results.size() + " tin nhắn");
+                            
+                            for (Map<String, Object> result : results) {
+                                String friendUsername = (String) result.get("friend_username");
+                                String senderUsername = (String) result.get("sender_username");
+                                String content = (String) result.get("content");
+                                java.sql.Timestamp sentAt = (java.sql.Timestamp) result.get("sent_at");
+                                int messageId = result.get("message_id") != null ? (int) result.get("message_id") : 0;
+                                
+                                // Xác định người chat
+                                boolean isSentByMe = senderUsername.equals(mainFrame.getUsername());
+                                String chatWith = friendUsername;
+                                
+                                JPanel resultItem = new JPanel(new BorderLayout(10, 5));
+                                resultItem.setBackground(Color.WHITE);
+                                resultItem.setBorder(BorderFactory.createCompoundBorder(
+                                    BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(230, 230, 230)),
+                                    BorderFactory.createEmptyBorder(12, 15, 12, 15)
+                                ));
+                                resultItem.setMaximumSize(new Dimension(Integer.MAX_VALUE, 90));
+                                resultItem.setCursor(new Cursor(Cursor.HAND_CURSOR));
+                                
+                                // Header: Chat với ai + thời gian
+                                String timeStr = new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm").format(sentAt);
+                                JLabel headerLabel = new JLabel("💬 Chat với " + chatWith + " - " + timeStr);
+                                headerLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+                                headerLabel.setForeground(PRIMARY_COLOR);
+                                
+                                // Content với highlight
+                                String displayContent = content.length() > 100 ? content.substring(0, 100) + "..." : content;
+                                JLabel contentLabel = new JLabel("<html>" + highlightKeyword(displayContent, keyword) + "</html>");
+                                contentLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+                                
+                                // Sender info
+                                JLabel senderLabel = new JLabel(isSentByMe ? "Bạn đã gửi" : senderUsername + " đã gửi");
+                                senderLabel.setFont(new Font("Segoe UI", Font.ITALIC, 11));
+                                senderLabel.setForeground(new Color(120, 120, 120));
+                                
+                                // Arrow icon
+                                JLabel arrowLabel = new JLabel("→");
+                                arrowLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+                                arrowLabel.setForeground(PRIMARY_COLOR);
+                                
+                                JPanel textPanel = new JPanel();
+                                textPanel.setLayout(new BoxLayout(textPanel, BoxLayout.Y_AXIS));
+                                textPanel.setOpaque(false);
+                                textPanel.add(headerLabel);
+                                textPanel.add(Box.createVerticalStrut(3));
+                                textPanel.add(contentLabel);
+                                textPanel.add(Box.createVerticalStrut(2));
+                                textPanel.add(senderLabel);
+                                
+                                resultItem.add(textPanel, BorderLayout.CENTER);
+                                resultItem.add(arrowLabel, BorderLayout.EAST);
+                                
+                                // Click để mở chat và scroll đến tin nhắn
+                                final String targetUser = chatWith;
+                                final int msgId = messageId;
+                                resultItem.addMouseListener(new java.awt.event.MouseAdapter() {
+                                    @Override
+                                    public void mouseClicked(java.awt.event.MouseEvent e) {
+                                        dialog.dispose();
+                                        // Mở chat với người đó
+                                        mainFrame.openChat(targetUser);
+                                        // Scroll đến tin nhắn (delay để chat load xong)
+                                        if (msgId > 0) {
+                                            javax.swing.Timer timer = new javax.swing.Timer(500, evt -> {
+                                                mainFrame.scrollToMessageInChat(msgId);
+                                            });
+                                            timer.setRepeats(false);
+                                            timer.start();
+                                        }
+                                    }
+                                    
+                                    @Override
+                                    public void mouseEntered(java.awt.event.MouseEvent e) {
+                                        resultItem.setBackground(new Color(240, 245, 255));
+                                    }
+                                    
+                                    @Override
+                                    public void mouseExited(java.awt.event.MouseEvent e) {
+                                        resultItem.setBackground(Color.WHITE);
+                                    }
+                                });
+                                
+                                resultsPanel.add(resultItem);
+                            }
+                        }
+                        
+                        resultsPanel.revalidate();
+                        resultsPanel.repaint();
+                        searchButton.setEnabled(true);
+                        searchButton.setText("Tìm kiếm");
+                        
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                        statsLabel.setText("Có lỗi xảy ra!");
+                        searchButton.setEnabled(true);
+                        searchButton.setText("Tìm kiếm");
+                    }
+                }
+            };
+            
+            worker.execute();
+        };
+        
+        searchButton.addActionListener(e -> doSearch.run());
+        searchField.addActionListener(e -> doSearch.run()); // Enter to search
+        
+        dialog.add(headerPanel, BorderLayout.NORTH);
+        dialog.add(searchPanel, BorderLayout.CENTER);
+        dialog.setVisible(true);
+    }
+    
+    /**
+     * Highlight keyword trong text
+     */
+    private String highlightKeyword(String text, String keyword) {
+        if (text == null || keyword == null) return text;
+        return text.replaceAll("(?i)(" + java.util.regex.Pattern.quote(keyword) + ")", 
+            "<span style='background-color: #FFFF00; font-weight: bold;'>$1</span>");
     }
 }

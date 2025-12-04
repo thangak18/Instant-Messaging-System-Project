@@ -76,11 +76,10 @@ public class ContactPanel extends JPanel {
         panel.setBackground(Color.WHITE);
         panel.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(230, 230, 230)));
         
-        // Menu items
+        // Menu items (đã bỏ Lời mời vào nhóm)
         panel.add(createMenuItem("👥", "Danh sách bạn bè", "FRIENDS", 0));
-        panel.add(createMenuItem("👨‍👩‍👧‍👦", "Danh sách nhóm và cộng đồng", "GROUPS", 0));
-        panel.add(createMenuItem("👋", "Lời mời kết bạn", "FRIEND_REQUESTS", 5)); // Badge: 5 requests
-        panel.add(createMenuItem("📩", "Lời mời vào nhóm và cộng đồng", "GROUP_INVITES", 0));
+        panel.add(createMenuItem("👨‍👩‍👧‍👦", "Danh sách nhóm", "GROUPS", 0));
+        panel.add(createMenuItem("👋", "Lời mời kết bạn", "FRIEND_REQUESTS", 0));
         
         return panel;
     }

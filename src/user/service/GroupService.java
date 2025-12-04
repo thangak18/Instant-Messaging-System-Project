@@ -835,4 +835,145 @@ public class GroupService {
         
         return false;
     }
+    
+    /**
+     * XÓA NHÓM CHAT (CHỈ ADMIN)
+     * Xóa toàn bộ: tin nhắn nhóm, thành viên, và nhóm
+     */
+    public boolean deleteGroup(int groupId, String username) {
+        Connection conn = null;
+        
+        try {
+            conn = dbConnection.getConnection();
+            if (conn == null) return false;
+            
+            // Kiểm tra quyền admin
+            int userId = getUserId(conn, username);
+            if (userId == -1) {
+                System.err.println("❌ Không tìm thấy user: " + username);
+                return false;
+            }
+            
+            // Kiểm tra có phải admin của nhóm không
+            String checkAdminSql = "SELECT admin_id FROM groups WHERE group_id = ?";
+            try (PreparedStatement checkStmt = conn.prepareStatement(checkAdminSql)) {
+                checkStmt.setInt(1, groupId);
+                ResultSet rs = checkStmt.executeQuery();
+                
+                if (!rs.next()) {
+                    System.err.println("❌ Không tìm thấy nhóm: " + groupId);
+                    return false;
+                }
+                
+                int adminId = rs.getInt("admin_id");
+                if (adminId != userId) {
+                    System.err.println("❌ User " + username + " không phải admin của nhóm!");
+                    return false;
+                }
+            }
+            
+            // Bắt đầu transaction
+            conn.setAutoCommit(false);
+            
+            try {
+                // 1. Xóa tất cả tin nhắn nhóm
+                String deleteMessagesSql = "DELETE FROM group_messages WHERE group_id = ?";
+                try (PreparedStatement pstmt = conn.prepareStatement(deleteMessagesSql)) {
+                    pstmt.setInt(1, groupId);
+                    int deletedMessages = pstmt.executeUpdate();
+                    System.out.println("✅ Đã xóa " + deletedMessages + " tin nhắn nhóm");
+                }
+                
+                // 2. Xóa tất cả thành viên nhóm
+                String deleteMembersSql = "DELETE FROM group_members WHERE group_id = ?";
+                try (PreparedStatement pstmt = conn.prepareStatement(deleteMembersSql)) {
+                    pstmt.setInt(1, groupId);
+                    int deletedMembers = pstmt.executeUpdate();
+                    System.out.println("✅ Đã xóa " + deletedMembers + " thành viên");
+                }
+                
+                // 3. Xóa nhóm
+                String deleteGroupSql = "DELETE FROM groups WHERE group_id = ?";
+                try (PreparedStatement pstmt = conn.prepareStatement(deleteGroupSql)) {
+                    pstmt.setInt(1, groupId);
+                    int deleted = pstmt.executeUpdate();
+                    
+                    if (deleted > 0) {
+                        conn.commit();
+                        System.out.println("✅ Đã xóa nhóm " + groupId + " thành công!");
+                        return true;
+                    }
+                }
+                
+                // Rollback nếu không xóa được
+                conn.rollback();
+                return false;
+                
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi khi xóa nhóm: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            if (conn != null) DatabaseConnection.closeConnection(conn);
+        }
+        
+        return false;
+    }
+    
+    /**
+     * TÌM KIẾM TIN NHẮN TRONG NHÓM
+     */
+    public List<Map<String, Object>> searchGroupMessages(int groupId, String keyword) {
+        List<Map<String, Object>> messages = new ArrayList<>();
+        
+        String sql = "SELECT gm.message_id, gm.message_text, gm.sent_time, u.username, u.full_name " +
+                     "FROM group_messages gm " +
+                     "JOIN users u ON gm.sender_id = u.user_id " +
+                     "WHERE gm.group_id = ? AND LOWER(gm.message_text) LIKE LOWER(?) " +
+                     "ORDER BY gm.sent_time DESC " +
+                     "LIMIT 100";
+        
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        
+        try {
+            conn = dbConnection.getConnection();
+            if (conn == null) return messages;
+            
+            pstmt = conn.prepareStatement(sql);
+            pstmt.setInt(1, groupId);
+            pstmt.setString(2, "%" + keyword + "%");
+            
+            rs = pstmt.executeQuery();
+            
+            while (rs.next()) {
+                Map<String, Object> msg = new HashMap<>();
+                msg.put("message_id", rs.getInt("message_id"));
+                msg.put("message", rs.getString("message_text"));
+                msg.put("sent_at", rs.getTimestamp("sent_time").toLocalDateTime());
+                msg.put("sender_username", rs.getString("username"));
+                msg.put("sender_full_name", rs.getString("full_name"));
+                messages.add(msg);
+            }
+            
+            System.out.println("🔍 Tìm thấy " + messages.size() + " tin nhắn trong nhóm");
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi khi tìm kiếm tin nhắn nhóm: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            if (rs != null) try { rs.close(); } catch (SQLException e) { }
+            if (pstmt != null) try { pstmt.close(); } catch (SQLException e) { }
+            if (conn != null) DatabaseConnection.closeConnection(conn);
+        }
+        
+        return messages;
+    }
 }

@@ -1,6 +1,7 @@
 package user.gui;
 
 import user.service.GroupService;
+import user.service.AIService;
 import user.socket.Message;
 
 import javax.swing.*;
@@ -9,6 +10,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 
 /**
  * Panel chat nhóm - Tương tự ChatContentPanel nhưng cho group
@@ -22,6 +24,7 @@ public class GroupChatPanel extends JPanel {
     
     private ZaloMainFrame mainFrame;
     private GroupService groupService;
+    private AIService aiService;
     
     private int groupId;
     private String groupName;
@@ -35,9 +38,13 @@ public class GroupChatPanel extends JPanel {
     private JTextArea messageInput;
     private JButton sendButton;
     
+    // Map lưu bubble theo messageId để hỗ trợ scroll tới tin nhắn
+    private Map<Integer, JPanel> messageBubbles = new HashMap<>();
+    
     public GroupChatPanel(ZaloMainFrame mainFrame, int groupId, String groupName, boolean isAdmin) {
         this.mainFrame = mainFrame;
         this.groupService = new GroupService();
+        this.aiService = new AIService();
         this.groupId = groupId;
         this.groupName = groupName;
         this.isAdmin = isAdmin;
@@ -99,6 +106,14 @@ public class GroupChatPanel extends JPanel {
         JPanel actionsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
         actionsPanel.setOpaque(false);
         
+        // Search button
+        JButton searchButton = createHeaderButton("icons/search.png", "Tìm kiếm tin nhắn", 22);
+        searchButton.addActionListener(e -> showSearchInGroupDialog());
+        
+        // AI button
+        JButton aiButton = createHeaderButton("icons/generative.png", "Trợ lý AI", 22);
+        aiButton.addActionListener(e -> showAIAssistant());
+        
         // Rename group button
         JButton renameButton = createHeaderButton("icons/file.png", "Đổi tên nhóm", 22);
         renameButton.addActionListener(e -> renameGroup());
@@ -115,10 +130,20 @@ public class GroupChatPanel extends JPanel {
         JButton encryptButton = createHeaderButton("icons/settings.png", "Mã hóa nhóm", 22);
         encryptButton.addActionListener(e -> toggleEncryption());
         
+        // Delete group button (chỉ admin mới thấy)
+        JButton deleteGroupButton = createHeaderButton("icons/bin.png", "Xóa nhóm", 22);
+        deleteGroupButton.addActionListener(e -> deleteGroup());
+        if (!isAdmin) {
+            deleteGroupButton.setVisible(false); // Ẩn nếu không phải admin
+        }
+
+        actionsPanel.add(searchButton);
+        actionsPanel.add(aiButton);
         actionsPanel.add(renameButton);
         actionsPanel.add(addMemberButton);
         actionsPanel.add(membersButton);
         actionsPanel.add(encryptButton);
+        actionsPanel.add(deleteGroupButton);
         
         panel.add(groupInfoPanel, BorderLayout.WEST);
         panel.add(actionsPanel, BorderLayout.EAST);
@@ -258,6 +283,7 @@ public class GroupChatPanel extends JPanel {
     
     private void displayMessages(List<Map<String, Object>> messages) {
         messageListPanel.removeAll();
+        messageBubbles.clear();
         
         if (messages == null || messages.isEmpty()) {
             JLabel emptyLabel = new JLabel("Chưa có tin nhắn nào");
@@ -269,6 +295,7 @@ public class GroupChatPanel extends JPanel {
             messageListPanel.add(Box.createVerticalGlue());
         } else {
             for (Map<String, Object> msg : messages) {
+                int messageId = msg.get("message_id") != null ? (int) msg.get("message_id") : 0;
                 String senderUsername = (String) msg.get("sender_username");
                 String senderFullName = (String) msg.get("sender_full_name");
                 String content = (String) msg.get("message");
@@ -277,6 +304,7 @@ public class GroupChatPanel extends JPanel {
                 boolean isSentByMe = senderUsername.equals(mainFrame.getUsername());
                 
                 JPanel messagePanel = createMessageBubble(
+                    messageId,
                     senderUsername,
                     senderFullName != null ? senderFullName : senderUsername,
                     content,
@@ -299,7 +327,7 @@ public class GroupChatPanel extends JPanel {
         });
     }
     
-    private JPanel createMessageBubble(String senderUsername, String senderName, 
+    private JPanel createMessageBubble(int messageId, String senderUsername, String senderName, 
                                       String content, LocalDateTime sentAt, boolean isSentByMe) {
         JPanel wrapper = new JPanel();
         wrapper.setLayout(new BoxLayout(wrapper, BoxLayout.X_AXIS));
@@ -355,6 +383,11 @@ public class GroupChatPanel extends JPanel {
         
         if (!isSentByMe) {
             wrapper.add(Box.createHorizontalGlue());
+        }
+        
+        // Lưu vào map để hỗ trợ scroll đến tin nhắn
+        if (messageId > 0) {
+            messageBubbles.put(messageId, wrapper);
         }
         
         return wrapper;
@@ -1000,6 +1033,567 @@ public class GroupChatPanel extends JPanel {
         dialog.add(headerPanel, BorderLayout.NORTH);
         dialog.add(contentPanel, BorderLayout.CENTER);
         dialog.add(buttonPanel, BorderLayout.SOUTH);
+        dialog.setVisible(true);
+    }
+    
+    /**
+     * XÓA NHÓM CHAT (CHỈ ADMIN)
+     */
+    private void deleteGroup() {
+        if (!isAdmin) {
+            JOptionPane.showMessageDialog(this,
+                "Chỉ admin mới có quyền xóa nhóm!",
+                "Không có quyền",
+                JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        // Tạo dialog xác nhận
+        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Xóa nhóm chat", true);
+        dialog.setSize(400, 250);
+        dialog.setLocationRelativeTo(this);
+        dialog.setLayout(new BorderLayout());
+        
+        // Header panel với icon cảnh báo
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setBackground(new Color(220, 53, 69)); // Màu đỏ cảnh báo
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        
+        JLabel iconLabel = new JLabel("⚠️");
+        iconLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 40));
+        
+        JLabel titleLabel = new JLabel("Xóa nhóm \"" + groupName + "\"?");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        titleLabel.setForeground(Color.WHITE);
+        
+        headerPanel.add(iconLabel, BorderLayout.WEST);
+        headerPanel.add(titleLabel, BorderLayout.CENTER);
+        
+        // Content panel với cảnh báo
+        JPanel contentPanel = new JPanel();
+        contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
+        contentPanel.setBackground(Color.WHITE);
+        contentPanel.setBorder(BorderFactory.createEmptyBorder(20, 25, 20, 25));
+        
+        JLabel warningLabel1 = new JLabel("Hành động này không thể hoàn tác!");
+        warningLabel1.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        warningLabel1.setForeground(new Color(220, 53, 69));
+        warningLabel1.setAlignmentX(Component.LEFT_ALIGNMENT);
+        
+        JLabel warningLabel2 = new JLabel("<html><div style='width: 300px;'>" +
+            "• Tất cả tin nhắn trong nhóm sẽ bị xóa vĩnh viễn<br>" +
+            "• Tất cả thành viên sẽ bị xóa khỏi nhóm<br>" +
+            "• Nhóm sẽ không thể khôi phục</div></html>");
+        warningLabel2.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        warningLabel2.setForeground(new Color(80, 80, 80));
+        warningLabel2.setAlignmentX(Component.LEFT_ALIGNMENT);
+        
+        contentPanel.add(warningLabel1);
+        contentPanel.add(Box.createVerticalStrut(15));
+        contentPanel.add(warningLabel2);
+        
+        // Button panel
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 15));
+        buttonPanel.setBackground(new Color(248, 249, 250));
+        buttonPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(220, 220, 220)));
+        
+        JButton cancelButton = new JButton("Hủy");
+        cancelButton.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        cancelButton.setPreferredSize(new Dimension(100, 35));
+        cancelButton.addActionListener(e -> dialog.dispose());
+        
+        JButton deleteButton = new JButton("Xóa nhóm");
+        deleteButton.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        deleteButton.setBackground(new Color(220, 53, 69));
+        deleteButton.setForeground(Color.WHITE);
+        deleteButton.setPreferredSize(new Dimension(120, 35));
+        deleteButton.setBorderPainted(false);
+        deleteButton.setFocusPainted(false);
+        deleteButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        
+        deleteButton.addActionListener(e -> {
+            // Xác nhận lần 2
+            int confirm = JOptionPane.showConfirmDialog(dialog,
+                "Bạn có CHẮC CHẮN muốn xóa nhóm \"" + groupName + "\" không?",
+                "Xác nhận xóa",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE);
+            
+            if (confirm == JOptionPane.YES_OPTION) {
+                deleteButton.setEnabled(false);
+                deleteButton.setText("Đang xóa...");
+                
+                SwingWorker<Boolean, Void> worker = new SwingWorker<>() {
+                    @Override
+                    protected Boolean doInBackground() {
+                        return groupService.deleteGroup(groupId, mainFrame.getUsername());
+                    }
+                    
+                    @Override
+                    protected void done() {
+                        try {
+                            boolean success = get();
+                            if (success) {
+                                dialog.dispose();
+                                JOptionPane.showMessageDialog(
+                                    SwingUtilities.getWindowAncestor(GroupChatPanel.this),
+                                    "Đã xóa nhóm \"" + groupName + "\" thành công!",
+                                    "Thành công",
+                                    JOptionPane.INFORMATION_MESSAGE);
+                                
+                                // Quay lại danh sách nhóm
+                                mainFrame.showGroupList();
+                            } else {
+                                JOptionPane.showMessageDialog(dialog,
+                                    "Không thể xóa nhóm! Vui lòng thử lại.",
+                                    "Lỗi",
+                                    JOptionPane.ERROR_MESSAGE);
+                                deleteButton.setEnabled(true);
+                                deleteButton.setText("Xóa nhóm");
+                            }
+                        } catch (Exception ex) {
+                            ex.printStackTrace();
+                            JOptionPane.showMessageDialog(dialog,
+                                "Có lỗi xảy ra: " + ex.getMessage(),
+                                "Lỗi",
+                                JOptionPane.ERROR_MESSAGE);
+                            deleteButton.setEnabled(true);
+                            deleteButton.setText("Xóa nhóm");
+                        }
+                    }
+                };
+                
+                worker.execute();
+            }
+        });
+        
+        buttonPanel.add(cancelButton);
+        buttonPanel.add(deleteButton);
+        
+        dialog.add(headerPanel, BorderLayout.NORTH);
+        dialog.add(contentPanel, BorderLayout.CENTER);
+        dialog.add(buttonPanel, BorderLayout.SOUTH);
+        dialog.setVisible(true);
+    }
+    
+    // ==================== TÌM KIẾM TIN NHẮN ====================
+    
+    /**
+     * Hiển thị dialog tìm kiếm tin nhắn trong nhóm
+     */
+    private void showSearchInGroupDialog() {
+        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), 
+            "Tìm kiếm trong " + groupName, true);
+        dialog.setSize(600, 500);
+        dialog.setLocationRelativeTo(this);
+        dialog.setLayout(new BorderLayout());
+        
+        // Header
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setBackground(PRIMARY_COLOR);
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
+        
+        JLabel titleLabel = new JLabel("🔍 Tìm kiếm trong " + groupName);
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        titleLabel.setForeground(Color.WHITE);
+        headerPanel.add(titleLabel, BorderLayout.WEST);
+        
+        // Search panel
+        JPanel searchPanel = new JPanel(new BorderLayout(10, 10));
+        searchPanel.setBackground(Color.WHITE);
+        searchPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 10, 20));
+        
+        JTextField searchField = new JTextField();
+        searchField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        searchField.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(200, 200, 200)),
+            BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        ));
+        
+        JButton searchButton = new JButton("Tìm kiếm");
+        searchButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        searchButton.setBackground(PRIMARY_COLOR);
+        searchButton.setForeground(Color.WHITE);
+        searchButton.setFocusPainted(false);
+        searchButton.setBorderPainted(false);
+        searchButton.setPreferredSize(new Dimension(100, 35));
+        
+        JPanel topPanel = new JPanel(new BorderLayout(10, 0));
+        topPanel.setOpaque(false);
+        topPanel.add(new JLabel("Từ khóa:"), BorderLayout.WEST);
+        topPanel.add(searchField, BorderLayout.CENTER);
+        topPanel.add(searchButton, BorderLayout.EAST);
+        
+        searchPanel.add(topPanel, BorderLayout.NORTH);
+        
+        // Results panel
+        JPanel resultsPanel = new JPanel();
+        resultsPanel.setLayout(new BoxLayout(resultsPanel, BoxLayout.Y_AXIS));
+        resultsPanel.setBackground(Color.WHITE);
+        
+        JScrollPane resultsScroll = new JScrollPane(resultsPanel);
+        resultsScroll.setBorder(null);
+        resultsScroll.getVerticalScrollBar().setUnitIncrement(16);
+        
+        searchPanel.add(resultsScroll, BorderLayout.CENTER);
+        
+        // Search action
+        searchButton.addActionListener(e -> {
+            String keyword = searchField.getText().trim();
+            if (keyword.isEmpty()) {
+                JOptionPane.showMessageDialog(dialog, "Vui lòng nhập từ khóa!", 
+                    "Thông báo", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            
+            resultsPanel.removeAll();
+            searchButton.setEnabled(false);
+            searchButton.setText("Đang tìm...");
+            
+            SwingWorker<List<Map<String, Object>>, Void> worker = new SwingWorker<>() {
+                @Override
+                protected List<Map<String, Object>> doInBackground() {
+                    return groupService.searchGroupMessages(groupId, keyword);
+                }
+                
+                @Override
+                protected void done() {
+                    try {
+                        List<Map<String, Object>> results = get();
+                        
+                        if (results == null || results.isEmpty()) {
+                            JLabel label = new JLabel("Không tìm thấy kết quả");
+                            label.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+                            label.setForeground(new Color(150, 150, 150));
+                            resultsPanel.add(label);
+                        } else {
+                            for (Map<String, Object> result : results) {
+                                int messageId = result.get("message_id") != null ? (int) result.get("message_id") : 0;
+                                String sender = (String) result.get("sender_username");
+                                String senderName = (String) result.get("sender_full_name");
+                                String content = (String) result.get("message");
+                                LocalDateTime sentAt = (LocalDateTime) result.get("sent_at");
+                                
+                                JPanel resultItem = new JPanel(new BorderLayout(10, 5));
+                                resultItem.setBackground(Color.WHITE);
+                                resultItem.setBorder(BorderFactory.createCompoundBorder(
+                                    BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(230, 230, 230)),
+                                    BorderFactory.createEmptyBorder(12, 10, 12, 10)
+                                ));
+                                resultItem.setMaximumSize(new Dimension(Integer.MAX_VALUE, 80));
+                                resultItem.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+                                
+                                boolean isSent = sender.equals(mainFrame.getUsername());
+                                String displayName = senderName != null ? senderName : sender;
+                                String timeStr = sentAt.format(DateTimeFormatter.ofPattern("dd/MM HH:mm"));
+                                
+                                JLabel nameLabel = new JLabel((isSent ? "Bạn" : displayName) + " - " + timeStr);
+                                nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+                                nameLabel.setForeground(isSent ? PRIMARY_COLOR : new Color(100, 100, 100));
+                                
+                                JLabel contentLabel = new JLabel("<html>" + highlightKeyword(content, keyword) + "</html>");
+                                contentLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+                                
+                                JLabel arrowLabel = new JLabel("→");
+                                arrowLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+                                arrowLabel.setForeground(PRIMARY_COLOR);
+                                
+                                JPanel textPanel = new JPanel();
+                                textPanel.setLayout(new BoxLayout(textPanel, BoxLayout.Y_AXIS));
+                                textPanel.setOpaque(false);
+                                textPanel.add(nameLabel);
+                                textPanel.add(contentLabel);
+                                
+                                resultItem.add(textPanel, BorderLayout.CENTER);
+                                resultItem.add(arrowLabel, BorderLayout.EAST);
+                                
+                                // Click để scroll đến tin nhắn
+                                final int msgId = messageId;
+                                resultItem.addMouseListener(new java.awt.event.MouseAdapter() {
+                                    @Override
+                                    public void mouseClicked(java.awt.event.MouseEvent e) {
+                                        dialog.dispose();
+                                        scrollToMessage(msgId);
+                                    }
+                                    
+                                    @Override
+                                    public void mouseEntered(java.awt.event.MouseEvent e) {
+                                        resultItem.setBackground(new Color(240, 245, 255));
+                                    }
+                                    
+                                    @Override
+                                    public void mouseExited(java.awt.event.MouseEvent e) {
+                                        resultItem.setBackground(Color.WHITE);
+                                    }
+                                });
+                                
+                                resultsPanel.add(resultItem);
+                            }
+                        }
+                        
+                        resultsPanel.revalidate();
+                        resultsPanel.repaint();
+                        searchButton.setEnabled(true);
+                        searchButton.setText("Tìm kiếm");
+                        
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                        searchButton.setEnabled(true);
+                        searchButton.setText("Tìm kiếm");
+                    }
+                }
+            };
+            
+            worker.execute();
+        });
+        
+        dialog.add(headerPanel, BorderLayout.NORTH);
+        dialog.add(searchPanel, BorderLayout.CENTER);
+        dialog.setVisible(true);
+    }
+    
+    /**
+     * Highlight keyword trong text
+     */
+    private String highlightKeyword(String text, String keyword) {
+        if (text == null || keyword == null) return text;
+        return text.replaceAll("(?i)(" + java.util.regex.Pattern.quote(keyword) + ")", 
+            "<span style='background-color: yellow; font-weight: bold;'>$1</span>");
+    }
+    
+    /**
+     * Scroll đến tin nhắn cụ thể và highlight
+     */
+    private void scrollToMessage(int messageId) {
+        JPanel bubble = messageBubbles.get(messageId);
+        if (bubble != null) {
+            SwingUtilities.invokeLater(() -> {
+                Rectangle bounds = bubble.getBounds();
+                bubble.scrollRectToVisible(bounds);
+                
+                // Highlight tin nhắn trong 2 giây
+                Color originalBg = bubble.getBackground();
+                bubble.setOpaque(true);
+                bubble.setBackground(new Color(255, 255, 150));
+                
+                Timer timer = new Timer(2000, e -> {
+                    bubble.setOpaque(false);
+                    bubble.setBackground(originalBg);
+                    bubble.repaint();
+                });
+                timer.setRepeats(false);
+                timer.start();
+                
+                bubble.repaint();
+            });
+        } else {
+            System.err.println("⚠️ Không tìm thấy tin nhắn với ID: " + messageId);
+        }
+    }
+    
+    // ==================== TRỢ LÝ AI ====================
+    
+    /**
+     * Hiển thị dialog trợ lý AI
+     */
+    private void showAIAssistant() {
+        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), 
+            "🤖 Trợ lý AI", true);
+        dialog.setSize(650, 600);
+        dialog.setLocationRelativeTo(this);
+        dialog.setLayout(new BorderLayout());
+        
+        // Header
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setBackground(new Color(138, 43, 226));
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
+        
+        JLabel titleLabel = new JLabel("🤖 Trợ lý AI - Gợi ý tin nhắn");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        titleLabel.setForeground(Color.WHITE);
+        
+        JLabel statusLabel = new JLabel(aiService.isAPIConfigured() ? "🟢 Online" : "🟡 Offline Mode");
+        statusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        statusLabel.setForeground(new Color(200, 200, 255));
+        
+        headerPanel.add(titleLabel, BorderLayout.WEST);
+        headerPanel.add(statusLabel, BorderLayout.EAST);
+        
+        // Content
+        JPanel contentPanel = new JPanel(new BorderLayout(10, 15));
+        contentPanel.setBackground(Color.WHITE);
+        contentPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        
+        // Quick suggestions panel
+        JPanel quickPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 5));
+        quickPanel.setOpaque(false);
+        quickPanel.setBorder(BorderFactory.createTitledBorder("💡 Gợi ý nhanh:"));
+        
+        String[] quickSuggestions = {"Xin lỗi", "Cảm ơn", "Chúc mừng", "Hẹn gặp", "Hỏi thăm", "Động viên"};
+        JTextArea inputArea = new JTextArea(3, 40);
+        
+        for (String suggestion : quickSuggestions) {
+            JButton btn = new JButton(suggestion);
+            btn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+            btn.setFocusPainted(false);
+            btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            btn.addActionListener(e -> inputArea.setText(suggestion));
+            quickPanel.add(btn);
+        }
+        
+        JLabel instructionLabel = new JLabel(
+            "<html>Mô tả tình huống, AI sẽ gợi ý tin nhắn phù hợp cho nhóm:</html>");
+        instructionLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        
+        inputArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        inputArea.setLineWrap(true);
+        inputArea.setWrapStyleWord(true);
+        inputArea.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(200, 200, 200)),
+            BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ));
+        
+        JScrollPane inputScroll = new JScrollPane(inputArea);
+        
+        JButton generateButton = new JButton("✨ Tạo gợi ý");
+        generateButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        generateButton.setBackground(new Color(138, 43, 226));
+        generateButton.setForeground(Color.WHITE);
+        generateButton.setFocusPainted(false);
+        generateButton.setBorderPainted(false);
+        generateButton.setPreferredSize(new Dimension(130, 40));
+        generateButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        
+        JTextArea resultArea = new JTextArea(8, 40);
+        resultArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        resultArea.setLineWrap(true);
+        resultArea.setWrapStyleWord(true);
+        resultArea.setEditable(false);
+        resultArea.setBackground(new Color(248, 249, 250));
+        resultArea.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(200, 200, 200)),
+            BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ));
+        resultArea.setText("Gợi ý sẽ hiển thị ở đây...");
+        resultArea.setForeground(new Color(150, 150, 150));
+        
+        JScrollPane resultScroll = new JScrollPane(resultArea);
+        resultScroll.setBorder(BorderFactory.createTitledBorder("📝 Gợi ý từ AI:"));
+        
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        buttonPanel.setOpaque(false);
+        
+        JButton regenerateButton = new JButton("🔄 Tạo lại");
+        regenerateButton.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        regenerateButton.setEnabled(false);
+        regenerateButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        
+        JButton copyButton = new JButton("📋 Sao chép");
+        copyButton.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        copyButton.setEnabled(false);
+        copyButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        copyButton.addActionListener(e -> {
+            java.awt.datatransfer.StringSelection selection = 
+                new java.awt.datatransfer.StringSelection(resultArea.getText());
+            java.awt.Toolkit.getDefaultToolkit().getSystemClipboard().setContents(selection, null);
+            copyButton.setText("✓ Đã sao chép!");
+            Timer timer = new Timer(2000, evt -> copyButton.setText("📋 Sao chép"));
+            timer.setRepeats(false);
+            timer.start();
+        });
+        
+        JButton useButton = new JButton("✓ Sử dụng");
+        useButton.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        useButton.setBackground(PRIMARY_COLOR);
+        useButton.setForeground(Color.WHITE);
+        useButton.setFocusPainted(false);
+        useButton.setBorderPainted(false);
+        useButton.setEnabled(false);
+        useButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        useButton.addActionListener(e -> {
+            messageInput.setText(resultArea.getText());
+            dialog.dispose();
+        });
+        
+        buttonPanel.add(regenerateButton);
+        buttonPanel.add(copyButton);
+        buttonPanel.add(useButton);
+        
+        // Generate action
+        Runnable generateAction = () -> {
+            String prompt = inputArea.getText().trim();
+            if (prompt.isEmpty()) {
+                JOptionPane.showMessageDialog(dialog, "Vui lòng nhập yêu cầu!", 
+                    "Thông báo", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            
+            generateButton.setEnabled(false);
+            generateButton.setText("⏳ Đang tạo...");
+            regenerateButton.setEnabled(false);
+            resultArea.setText("AI đang suy nghĩ...");
+            resultArea.setForeground(new Color(100, 100, 100));
+            
+            SwingWorker<String, Void> worker = new SwingWorker<>() {
+                @Override
+                protected String doInBackground() {
+                    String chatContext = "Đang chat trong nhóm: " + groupName;
+                    return aiService.generateSuggestion(prompt, chatContext);
+                }
+                
+                @Override
+                protected void done() {
+                    try {
+                        String suggestion = get();
+                        resultArea.setText(suggestion);
+                        resultArea.setForeground(Color.BLACK);
+                        copyButton.setEnabled(true);
+                        useButton.setEnabled(true);
+                        regenerateButton.setEnabled(true);
+                        generateButton.setEnabled(true);
+                        generateButton.setText("✨ Tạo gợi ý");
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                        resultArea.setText("❌ Lỗi: Không thể tạo gợi ý! Vui lòng thử lại.");
+                        resultArea.setForeground(new Color(200, 50, 50));
+                        generateButton.setEnabled(true);
+                        generateButton.setText("✨ Tạo gợi ý");
+                    }
+                }
+            };
+            
+            worker.execute();
+        };
+        
+        generateButton.addActionListener(e -> generateAction.run());
+        regenerateButton.addActionListener(e -> generateAction.run());
+        
+        // Input panel
+        JPanel topInputPanel = new JPanel(new BorderLayout(5, 5));
+        topInputPanel.setOpaque(false);
+        topInputPanel.add(instructionLabel, BorderLayout.NORTH);
+        topInputPanel.add(inputScroll, BorderLayout.CENTER);
+        
+        JPanel inputWithButton = new JPanel(new BorderLayout(10, 0));
+        inputWithButton.setOpaque(false);
+        inputWithButton.add(topInputPanel, BorderLayout.CENTER);
+        inputWithButton.add(generateButton, BorderLayout.EAST);
+        
+        JPanel inputPanel = new JPanel(new BorderLayout(10, 10));
+        inputPanel.setOpaque(false);
+        inputPanel.add(quickPanel, BorderLayout.NORTH);
+        inputPanel.add(inputWithButton, BorderLayout.CENTER);
+        
+        JPanel bottomPanel = new JPanel(new BorderLayout(0, 10));
+        bottomPanel.setOpaque(false);
+        bottomPanel.add(resultScroll, BorderLayout.CENTER);
+        bottomPanel.add(buttonPanel, BorderLayout.SOUTH);
+        
+        contentPanel.add(inputPanel, BorderLayout.NORTH);
+        contentPanel.add(bottomPanel, BorderLayout.CENTER);
+        
+        dialog.add(headerPanel, BorderLayout.NORTH);
+        dialog.add(contentPanel, BorderLayout.CENTER);
         dialog.setVisible(true);
     }
 }
