@@ -26,7 +26,7 @@ public class LoginHistoryPanel extends JPanel {
     private DefaultTableModel tableModel;
     private JButton refreshButton, exportButton;
     private JLabel totalLabel;
-    
+
     // Backend DAO
     private LoginHistoryDAO loginHistoryDAO;
     private DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
@@ -46,7 +46,7 @@ public class LoginHistoryPanel extends JPanel {
 
     private void initializeComponents() {
         // Bảng hiển thị lịch sử đăng nhập
-        String[] columns = {"ID", "Thời gian", "Tên đăng nhập", "Họ tên"};
+        String[] columns = { "ID", "Thời gian", "Tên đăng nhập", "Họ tên" };
         tableModel = new DefaultTableModel(columns, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -65,23 +65,23 @@ public class LoginHistoryPanel extends JPanel {
 
         // Thiết lập độ rộng cột
         TableColumnModel columnModel = historyTable.getColumnModel();
-        columnModel.getColumn(0).setPreferredWidth(60);   // ID
-        columnModel.getColumn(1).setPreferredWidth(180);  // Thời gian
-        columnModel.getColumn(2).setPreferredWidth(150);  // Tên đăng nhập
-        columnModel.getColumn(3).setPreferredWidth(200);  // Họ tên
-        
+        columnModel.getColumn(0).setPreferredWidth(60); // ID
+        columnModel.getColumn(1).setPreferredWidth(180); // Thời gian
+        columnModel.getColumn(2).setPreferredWidth(150); // Tên đăng nhập
+        columnModel.getColumn(3).setPreferredWidth(200); // Họ tên
+
         // Các nút chức năng
         refreshButton = new JButton("🔄 Làm mới");
-        exportButton = new JButton("📊 Xuất Excel");
-        
-        stylePrimaryButton(refreshButton);
-        stylePrimaryButton(exportButton);
-        
+        exportButton = new JButton("📊 Xuất CSV");
+
+        styleAddUserButtonSimple(refreshButton);
+        styleAddUserButtonSimple(exportButton);
+
         // Label thống kê
         totalLabel = new JLabel("📊 Tổng số lượt: 0");
         totalLabel.setFont(new Font("Arial", Font.BOLD, 12));
     }
-    
+
     /**
      * Load lịch sử đăng nhập từ database
      */
@@ -95,20 +95,20 @@ public class LoginHistoryPanel extends JPanel {
             e.printStackTrace();
         }
     }
-    
+
     /**
      * Hiển thị danh sách lịch sử lên table
      */
     private void displayLoginHistories(List<LoginHistory> histories) {
         tableModel.setRowCount(0); // Clear table
-        
+
         for (LoginHistory history : histories) {
             Object[] row = {
-                history.getId(),
-                history.getLoginTime() != null ? history.getLoginTime().format(dateTimeFormatter) : "",
-                history.getUsername(),
-                history.getFullName(),
-                history.getIpAddress() != null ? history.getIpAddress() : "N/A"
+                    history.getId(),
+                    history.getLoginTime() != null ? history.getLoginTime().format(dateTimeFormatter) : "",
+                    history.getUsername(),
+                    history.getFullName(),
+                    history.getIpAddress() != null ? history.getIpAddress() : "N/A"
             };
             tableModel.addRow(row);
         }
@@ -132,33 +132,32 @@ public class LoginHistoryPanel extends JPanel {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setBackground(Color.WHITE);
         panel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(Color.LIGHT_GRAY),
-            new EmptyBorder(10, 10, 10, 10)
-        ));
-        
+                BorderFactory.createLineBorder(Color.LIGHT_GRAY),
+                new EmptyBorder(10, 10, 10, 10)));
+
         // Tiêu đề bảng với thống kê
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setOpaque(false);
-        
+
         JLabel tableTitle = new JLabel("📋 Lịch sử đăng nhập");
         tableTitle.setFont(new Font("Arial", Font.BOLD, 16));
         tableTitle.setForeground(ZALO_BLUE);
-        
+
         JPanel statsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 0));
         statsPanel.setOpaque(false);
-        
-        JLabel totalLabel = new JLabel("📊 Tổng số lượt: 7");
-        totalLabel.setFont(new Font("Arial", Font.BOLD, 12));
-        
-        statsPanel.add(totalLabel);
-        
+
+        // Sử dụng instance variable để có thể update
+        this.totalLabel.setFont(new Font("Arial", Font.BOLD, 12));
+
+        statsPanel.add(this.totalLabel);
+
         headerPanel.add(tableTitle, BorderLayout.WEST);
         headerPanel.add(statsPanel, BorderLayout.EAST);
         headerPanel.setBorder(new EmptyBorder(0, 0, 10, 0));
-        
+
         JScrollPane scrollPane = new JScrollPane(historyTable);
         scrollPane.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
-        
+
         panel.add(headerPanel, BorderLayout.NORTH);
         panel.add(scrollPane, BorderLayout.CENTER);
 
@@ -176,22 +175,88 @@ public class LoginHistoryPanel extends JPanel {
     private void setupEventHandlers() {
         // Xử lý làm mới
         refreshButton.addActionListener(e -> handleRefresh());
-        
+
         // Xử lý xuất Excel
         exportButton.addActionListener(e -> handleExport());
     }
 
     private void handleRefresh() {
         loadLoginHistoryFromDatabase();
-        JOptionPane.showMessageDialog(this, 
-            "Đã làm mới dữ liệu!",
-            "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(this,
+                "Đã làm mới dữ liệu!",
+                "Thông báo", JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void handleExport() {
-        JOptionPane.showMessageDialog(this, 
-            "Chức năng xuất Excel sẽ được triển khai!",
-            "Xuất Excel", JOptionPane.INFORMATION_MESSAGE);
+        try {
+            // Lấy dữ liệu từ database
+            List<LoginHistory> histories = loginHistoryDAO.getAllLoginHistory();
+            if (histories.isEmpty()) {
+                JOptionPane.showMessageDialog(this,
+                        "Không có dữ liệu để xuất!",
+                        "Cảnh báo", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            // Chọn nơi lưu file
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Lưu file CSV");
+            fileChooser.setSelectedFile(new java.io.File("LichSuDangNhap.csv"));
+
+            int userSelection = fileChooser.showSaveDialog(this);
+            if (userSelection != JFileChooser.APPROVE_OPTION) {
+                return;
+            }
+
+            java.io.File fileToSave = fileChooser.getSelectedFile();
+            String filePath = fileToSave.getAbsolutePath();
+            if (!filePath.toLowerCase().endsWith(".csv")) {
+                filePath += ".csv";
+            }
+
+            // Ghi vào file CSV
+            try (java.io.PrintWriter writer = new java.io.PrintWriter(
+                    new java.io.OutputStreamWriter(
+                            new java.io.FileOutputStream(filePath),
+                            java.nio.charset.StandardCharsets.UTF_8))) {
+
+                // Write BOM for Excel UTF-8 recognition
+                writer.write('\ufeff');
+
+                // Ghi header
+                writer.println("ID,Thời gian,Tên đăng nhập,Họ tên,Địa chỉ IP,Thiết bị");
+
+                // Ghi dữ liệu
+                for (LoginHistory history : histories) {
+                    String line = String.format("%d,\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"",
+                            history.getId(),
+                            history.getLoginTime() != null ? history.getLoginTime().format(dateTimeFormatter) : "",
+                            escapeCsv(history.getUsername()),
+                            escapeCsv(history.getFullName()),
+                            escapeCsv(history.getIpAddress()),
+                            escapeCsv(history.getUserAgent()));
+                    writer.println(line);
+                }
+            }
+
+            JOptionPane.showMessageDialog(this,
+                    "Đã xuất " + histories.size() + " bản ghi vào file:\n" + filePath,
+                    "Thành công", JOptionPane.INFORMATION_MESSAGE);
+
+        } catch (Exception e) {
+            showError("Lỗi xuất file: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Escape special characters for CSV
+     */
+    private String escapeCsv(String value) {
+        if (value == null)
+            return "";
+        // Replace quotes with double quotes and handle special characters
+        return value.replace("\"", "\"\"");
     }
 
     private void stylePrimaryButton(JButton button) {
@@ -204,7 +269,28 @@ public class LoginHistoryPanel extends JPanel {
         button.setMargin(new Insets(5, 12, 5, 12));
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
     }
-    
+
+    private void styleAddUserButtonSimple(JButton button) {
+        // Màu xanh ngọc (Teal/Cyan) gần giống trong ảnh: #1ABC9C hoặc #20B2AA
+        // (LightSeaGreen)
+        Color tealColor = new Color(32, 178, 170); // LightSeaGreen
+
+        button.setBackground(tealColor);
+        button.setForeground(Color.WHITE); // Màu chữ trắng
+
+        // Phông chữ và kích thước (dựa trên ảnh, chữ có vẻ lớn và đậm)
+        button.setFont(new Font("Arial", Font.BOLD, 14));
+
+        button.setOpaque(true);
+        button.setBorderPainted(false); // Bỏ viền
+        button.setFocusPainted(false);
+
+        // Căn lề để tạo khoảng đệm (padding) lớn hơn
+        button.setMargin(new Insets(10, 20, 10, 20));
+
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+    }
+
     /**
      * Hiển thị thông báo lỗi
      */

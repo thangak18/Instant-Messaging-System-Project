@@ -11,20 +11,21 @@ import java.util.List;
 
 /**
  * Giao diện Biểu đồ người dùng hoạt động theo năm
- * Yêu cầu: Chọn năm, vẽ biểu đồ với trục hoành là tháng, trục tung là số lượng người có mở ứng dụng
+ * Yêu cầu: Chọn năm, vẽ biểu đồ với trục hoành là tháng, trục tung là số lượng
+ * người có mở ứng dụng
  */
 public class ActiveUserChartPanel extends JPanel {
     private static final Color TEAL = new Color(75, 192, 192);
     private static final Color ZALO_BLUE = new Color(0, 102, 255);
     private static final Color SUCCESS_GREEN = new Color(40, 167, 69);
     private static final Color NEUTRAL_GRAY = new Color(108, 117, 125);
-    
+
     private JComboBox<Integer> yearSelector;
     private JButton viewButton, refreshButton;
     private BarChartPanel chartPanel;
     private JLabel currentYearLabel;
     private JLabel totalActiveLabel;
-    
+
     // Backend
     private StatisticsDAO statisticsDAO;
 
@@ -33,17 +34,17 @@ public class ActiveUserChartPanel extends JPanel {
         initComponents();
         setupLayout();
         setupEventHandlers();
-        
+
         // Tải dữ liệu từ database cho năm 2025
         loadDataForYear(2025);
     }
 
     private void initComponents() {
         // Bộ lọc - Chọn năm (bao gồm 2025)
-        Integer[] years = {2025, 2024, 2023, 2022, 2021, 2020};
+        Integer[] years = { 2025, 2024, 2023, 2022, 2021, 2020 };
         yearSelector = new JComboBox<>(years);
         yearSelector.setPreferredSize(new Dimension(100, 30));
-        
+
         viewButton = new JButton("📊 Xem biểu đồ");
         refreshButton = new JButton("🔄 Làm mới");
         stylePrimaryButton(viewButton);
@@ -51,12 +52,12 @@ public class ActiveUserChartPanel extends JPanel {
 
         // Panel vẽ biểu đồ
         chartPanel = new BarChartPanel();
-        
+
         // Labels hiển thị thông tin
         currentYearLabel = new JLabel("Năm: 2025");
         currentYearLabel.setFont(new Font("Arial", Font.BOLD, 14));
         currentYearLabel.setForeground(ZALO_BLUE);
-        
+
         totalActiveLabel = new JLabel("Tổng số người dùng hoạt động: 0");
         totalActiveLabel.setFont(new Font("Arial", Font.BOLD, 13));
     }
@@ -79,9 +80,8 @@ public class ActiveUserChartPanel extends JPanel {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setBackground(Color.WHITE);
         panel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(TEAL, 2),
-            new EmptyBorder(15, 15, 15, 15)
-        ));
+                BorderFactory.createLineBorder(TEAL, 2),
+                new EmptyBorder(15, 15, 15, 15)));
 
         JLabel titleLabel = new JLabel("📈 Tùy chọn biểu đồ");
         titleLabel.setFont(new Font("Arial", Font.BOLD, 14));
@@ -89,7 +89,7 @@ public class ActiveUserChartPanel extends JPanel {
 
         JPanel formPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
         formPanel.setOpaque(false);
-        
+
         formPanel.add(new JLabel("Chọn năm:"));
         formPanel.add(yearSelector);
         formPanel.add(viewButton);
@@ -105,24 +105,23 @@ public class ActiveUserChartPanel extends JPanel {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setBackground(Color.WHITE);
         panel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(TEAL, 2),
-            new EmptyBorder(10, 10, 10, 10)
-        ));
+                BorderFactory.createLineBorder(TEAL, 2),
+                new EmptyBorder(10, 10, 10, 10)));
 
         // Header
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setOpaque(false);
-        
+
         JLabel titleLabel = new JLabel("📊 Biểu đồ số lượng người dùng hoạt động");
         titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
         titleLabel.setForeground(ZALO_BLUE);
-        
+
         JPanel statsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 0));
         statsPanel.setOpaque(false);
         statsPanel.add(currentYearLabel);
         statsPanel.add(new JLabel("|"));
         statsPanel.add(totalActiveLabel);
-        
+
         headerPanel.add(titleLabel, BorderLayout.WEST);
         headerPanel.add(statsPanel, BorderLayout.EAST);
         headerPanel.setBorder(new EmptyBorder(0, 0, 10, 0));
@@ -144,13 +143,13 @@ public class ActiveUserChartPanel extends JPanel {
             Integer selectedYear = (Integer) yearSelector.getSelectedItem();
             loadDataForYear(selectedYear);
         });
-        
+
         refreshButton.addActionListener(e -> {
             Integer selectedYear = (Integer) yearSelector.getSelectedItem();
             loadDataForYear(selectedYear);
-            JOptionPane.showMessageDialog(this, 
-                "Đã làm mới dữ liệu năm " + selectedYear + "!",
-                "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this,
+                    "Đã làm mới dữ liệu năm " + selectedYear + "!",
+                    "Thông báo", JOptionPane.INFORMATION_MESSAGE);
         });
     }
 
@@ -163,38 +162,35 @@ public class ActiveUserChartPanel extends JPanel {
         try {
             // Lấy người dùng hoạt động theo tháng trong năm được chọn
             int[] data = statisticsDAO.getMonthlyActiveUsers(year);
-            
-            // Tính tổng
-            int totalActive = 0;
-            for (int count : data) {
-                totalActive += count;
-            }
-            
+
+            // Tính tổng DISTINCT users trong cả năm (KHÔNG cộng từng tháng)
+            int totalActive = statisticsDAO.getTotalActiveUsersInYear(year);
+
             // Cập nhật biểu đồ
             chartPanel.updateData(data);
-            
+
             // Cập nhật labels
             currentYearLabel.setText("Năm: " + year);
             totalActiveLabel.setText("Tổng số người dùng hoạt động: " + totalActive);
-            
+
         } catch (SQLException e) {
             showError("Lỗi load dữ liệu người dùng hoạt động: " + e.getMessage());
             e.printStackTrace();
-            
+
             // Fallback: hiển thị dữ liệu rỗng
             chartPanel.updateData(new int[12]);
             currentYearLabel.setText("Năm: " + year);
             totalActiveLabel.setText("Tổng số người dùng hoạt động: 0");
         }
     }
-    
+
     /**
      * Hiển thị thông báo lỗi
      */
     private void showError(String message) {
         JOptionPane.showMessageDialog(this, message, "Lỗi", JOptionPane.ERROR_MESSAGE);
     }
-    
+
     /**
      * Lớp con để vẽ biểu đồ cột
      * Trục hoành (X): 12 tháng
@@ -202,14 +198,14 @@ public class ActiveUserChartPanel extends JPanel {
      */
     private class BarChartPanel extends JPanel {
         private int[] data = new int[12]; // 12 tháng
-        private String[] months = {"T1", "T2", "T3", "T4", "T5", "T6", 
-                                   "T7", "T8", "T9", "T10", "T11", "T12"};
+        private String[] months = { "T1", "T2", "T3", "T4", "T5", "T6",
+                "T7", "T8", "T9", "T10", "T11", "T12" };
 
         public BarChartPanel() {
             setBackground(Color.WHITE);
             setPreferredSize(new Dimension(800, 400));
         }
-        
+
         public void updateData(int[] newData) {
             if (newData != null && newData.length == 12) {
                 this.data = newData;
@@ -220,21 +216,21 @@ public class ActiveUserChartPanel extends JPanel {
         @Override
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
-            
+
             Graphics2D g2 = (Graphics2D) g;
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
             int panelWidth = getWidth();
             int panelHeight = getHeight();
-            
+
             // Định nghĩa lề
             int padding = 40;
             int labelPadding = 25;
-            
+
             // Gốc tọa độ biểu đồ
             int chartOriginX = padding + labelPadding;
             int chartOriginY = panelHeight - padding - labelPadding;
-            
+
             // Kích thước khu vực vẽ
             int chartWidth = panelWidth - 2 * padding - labelPadding;
             int chartHeight = panelHeight - 2 * padding - labelPadding;
@@ -258,18 +254,19 @@ public class ActiveUserChartPanel extends JPanel {
                 }
             }
             maxDataValue = (int) (Math.ceil(maxDataValue / 50.0) * 50);
-            if (maxDataValue == 0) maxDataValue = 100;
+            if (maxDataValue == 0)
+                maxDataValue = 100;
 
             // Vẽ các vạch chia trục Y
             int yTickCount = 5;
             g2.setStroke(new BasicStroke(1));
             for (int i = 0; i <= yTickCount; i++) {
                 int y = chartOriginY - (i * chartHeight) / yTickCount;
-                
+
                 // Vạch chia ngang
                 g2.setColor(new Color(220, 220, 220));
                 g2.drawLine(chartOriginX, y, chartOriginX + chartWidth, y);
-                
+
                 // Nhãn số
                 g2.setColor(Color.BLACK);
                 String yLabel = String.valueOf((i * maxDataValue) / yTickCount);
@@ -284,23 +281,22 @@ public class ActiveUserChartPanel extends JPanel {
 
             for (int i = 0; i < data.length; i++) {
                 int barX = chartOriginX + (i * (barWidth + barSpacing)) + barSpacing / 2;
-                
+
                 // Tính chiều cao cột dựa trên dữ liệu
                 int barHeight = (int) (((double) data[i] / maxDataValue) * chartHeight);
                 int barY = chartOriginY - barHeight;
-                
+
                 // Vẽ cột với gradient màu xanh lá
                 GradientPaint gradient = new GradientPaint(
-                    barX, barY, TEAL,
-                    barX, chartOriginY, new Color(120, 220, 220)
-                );
+                        barX, barY, TEAL,
+                        barX, chartOriginY, new Color(120, 220, 220));
                 g2.setPaint(gradient);
                 g2.fillRect(barX, barY, barWidth, barHeight);
-                
+
                 // Vẽ viền cột
                 g2.setColor(TEAL.darker());
                 g2.drawRect(barX, barY, barWidth, barHeight);
-                
+
                 // Vẽ giá trị trên đầu cột
                 g2.setColor(Color.BLACK);
                 g2.setFont(new Font("Arial", Font.BOLD, 11));
@@ -308,13 +304,13 @@ public class ActiveUserChartPanel extends JPanel {
                 FontMetrics fm = g2.getFontMetrics();
                 int labelWidth = fm.stringWidth(valueLabel);
                 g2.drawString(valueLabel, barX + (barWidth - labelWidth) / 2, barY - 5);
-                
+
                 // Vẽ nhãn tháng (Trục X)
                 g2.setFont(new Font("Arial", Font.PLAIN, 11));
                 String monthLabel = months[i];
                 labelWidth = fm.stringWidth(monthLabel);
-                g2.drawString(monthLabel, barX + (barWidth - labelWidth) / 2, 
-                             chartOriginY + fm.getHeight() + 2);
+                g2.drawString(monthLabel, barX + (barWidth - labelWidth) / 2,
+                        chartOriginY + fm.getHeight() + 2);
             }
         }
     }
