@@ -754,18 +754,6 @@ public class StatisticsDAO {
             endDate = tmp;
         }
 
-        // DEBUG: Show filter parameters
-        System.out.println("\n========== [DEBUG] User Activity Filter ==========");
-        System.out.println("[1] Từ ngày: " + startDate + " đến ngày: " + endDate);
-        System.out.println("[2] Lọc theo tên: "
-                + (nameFilter != null && !nameFilter.isEmpty() ? "'" + nameFilter + "'" : "(Không lọc)"));
-        System.out.println("[3] Lọc theo số lượng hoạt động: " +
-                (comparison != null && !"Tất cả".equals(comparison) && totalActivityCount != null
-                        ? comparison + " " + totalActivityCount
-                        : "(Không lọc)"));
-        System.out.println("[4] Sắp xếp: " + (sortOption != null ? sortOption : "(Mặc định)"));
-        System.out.println("=================================================\n");
-
         // Complex query to aggregate all 3 activity types
         // Filter by user creation date, not activity date
         StringBuilder sql = new StringBuilder(
@@ -853,11 +841,6 @@ public class StatisticsDAO {
             sql.append(" ORDER BY total_count DESC");
         }
 
-        // DEBUG: Show final SQL query
-        System.out.println("[DEBUG] SQL Query:");
-        System.out.println(sql.toString());
-        System.out.println();
-
         try (Connection conn = dbConnection.getConnection();
                 PreparedStatement pstmt = conn.prepareStatement(sql.toString())) {
 
@@ -888,25 +871,77 @@ public class StatisticsDAO {
                         activity.setCreatedAt(created.toLocalDateTime());
                     }
 
-                    // DEBUG: Print user activity details
-                    System.out.printf(
-                            "[DEBUG] User: %-15s | Login: %2d | Chat: %2d | Group: %2d | Total: %3d | Last Activity: %s | Created: %s%n",
-                            activity.getUsername(),
-                            activity.getLoginCount(),
-                            activity.getPrivateChatCount(),
-                            activity.getGroupChatCount(),
-                            activity.getActivityCount(),
-                            last != null ? last.toLocalDateTime().toLocalDate() : "N/A",
-                            created != null ? created.toLocalDateTime().toLocalDate() : "N/A");
-
                     activities.add(activity);
                 }
             }
         }
 
-        System.out.println("[DEBUG] Total users found: " + activities.size());
-        System.out.println("==================================================\n");
-
         return activities;
+    }
+
+    /**
+     * Dashboard Statistics - Get total user count
+     */
+    public int getTotalUsers() throws SQLException {
+        String sql = "SELECT COUNT(*) as total FROM users WHERE status IN ('active', 'locked')";
+        try (Connection conn = dbConnection.getConnection();
+                Statement stmt = conn.createStatement();
+                ResultSet rs = stmt.executeQuery(sql)) {
+            if (rs.next()) {
+                return rs.getInt("total");
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * Dashboard Statistics - Get online users count (mock - would need real-time
+     * tracking)
+     */
+    public int getOnlineUsers() throws SQLException {
+        // TODO: Implement real-time online tracking
+        // For now, return users active in last 15 minutes
+        String sql = "SELECT COUNT(DISTINCT user_id) as total FROM login_history " +
+                "WHERE login_time >= NOW() - INTERVAL '15 minutes'";
+        try (Connection conn = dbConnection.getConnection();
+                Statement stmt = conn.createStatement();
+                ResultSet rs = stmt.executeQuery(sql)) {
+            if (rs.next()) {
+                return rs.getInt("total");
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * Dashboard Statistics - Get total group count
+     */
+    public int getTotalGroups() throws SQLException {
+        String sql = "SELECT COUNT(*) as total FROM groups";
+        try (Connection conn = dbConnection.getConnection();
+                Statement stmt = conn.createStatement();
+                ResultSet rs = stmt.executeQuery(sql)) {
+            if (rs.next()) {
+                return rs.getInt("total");
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * Dashboard Statistics - Get total message count (private + group)
+     */
+    public int getTotalMessages() throws SQLException {
+        String sql = "SELECT " +
+                "(SELECT COUNT(*) FROM messages) + " +
+                "(SELECT COUNT(*) FROM group_messages) as total";
+        try (Connection conn = dbConnection.getConnection();
+                Statement stmt = conn.createStatement();
+                ResultSet rs = stmt.executeQuery(sql)) {
+            if (rs.next()) {
+                return rs.getInt("total");
+            }
+        }
+        return 0;
     }
 }

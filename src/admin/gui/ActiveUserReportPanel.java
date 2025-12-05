@@ -126,8 +126,8 @@ public class ActiveUserReportPanel extends JPanel {
 
         stylePrimaryButton(filterButton);
         stylePrimaryButton(resetButton);
-        stylePrimaryButton(refreshButton);
-        stylePrimaryButton(exportButton);
+        styleAddUserButtonSimple(refreshButton);
+        styleAddUserButtonSimple(exportButton);
     }
 
     private void setupLayout() {
@@ -563,6 +563,27 @@ public class ActiveUserReportPanel extends JPanel {
         button.setBorderPainted(false);
         button.setFocusPainted(false);
         button.setMargin(new Insets(5, 12, 5, 12));
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+    }
+
+    private void styleAddUserButtonSimple(JButton button) {
+        // Màu xanh ngọc (Teal/Cyan) gần giống trong ảnh: #1ABC9C hoặc #20B2AA
+        // (LightSeaGreen)
+        Color tealColor = new Color(32, 178, 170); // LightSeaGreen
+
+        button.setBackground(tealColor);
+        button.setForeground(Color.WHITE); // Màu chữ trắng
+
+        // Phông chữ và kích thước (dựa trên ảnh, chữ có vẻ lớn và đậm)
+        button.setFont(new Font("Arial", Font.BOLD, 14));
+
+        button.setOpaque(true);
+        button.setBorderPainted(false); // Bỏ viền
+        button.setFocusPainted(false);
+
+        // Căn lề để tạo khoảng đệm (padding) lớn hơn
+        button.setMargin(new Insets(10, 20, 10, 20));
+
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
     }
 

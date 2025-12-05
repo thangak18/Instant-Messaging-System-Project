@@ -1,5 +1,7 @@
 package admin.gui;
 
+import admin.service.StatisticsDAO;
+
 import javax.swing.*;
 import javax.swing.border.*;
 import java.awt.*;
@@ -14,35 +16,31 @@ public class AdminMainFrame extends JFrame {
     private static final Color DANGER_RED = new Color(220, 53, 69);
     private static final Color LIGHT_GRAY = new Color(248, 249, 250);
     private static final Color INFO_CYAN = new Color(23, 162, 184);
-    
+
     private JMenuBar menuBar;
     private JPanel contentPanel;
     private JLabel statusLabel;
     private JPanel homePanel;
-    
-    // Thêm biến database (comment lại khi chưa có database)
-    // private DatabaseConnection dbConnection;
-    // private UserDAO userDAO;
+    private StatisticsDAO statisticsDAO;
 
     public AdminMainFrame() {
-        // Khởi tạo database connection (comment lại khi chưa có database)
-        // initDatabase();
-        
+        statisticsDAO = new StatisticsDAO();
+
         initializeComponents();
         setupLayout();
         setupMenu();
         showHomePage();
     }
-    
+
     // private void initDatabase() {
-    //     try {
-    //         dbConnection = DatabaseConnection.getInstance();
-    //         userDAO = new UserDAO();
-    //     } catch (Exception e) {
-    //         JOptionPane.showMessageDialog(this, 
-    //             "Không thể kết nối database: " + e.getMessage(),
-    //             "Lỗi Database", JOptionPane.ERROR_MESSAGE);
-    //     }
+    // try {
+    // dbConnection = DatabaseConnection.getInstance();
+    // userDAO = new UserDAO();
+    // } catch (Exception e) {
+    // JOptionPane.showMessageDialog(this,
+    // "Không thể kết nối database: " + e.getMessage(),
+    // "Lỗi Database", JOptionPane.ERROR_MESSAGE);
+    // }
     // }
 
     private void showHomePage() {
@@ -79,14 +77,13 @@ public class AdminMainFrame extends JFrame {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(Color.WHITE);
         panel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(0, 0, 3, 0, ZALO_BLUE),
-            new EmptyBorder(15, 20, 15, 20)
-        ));
+                BorderFactory.createMatteBorder(0, 0, 3, 0, ZALO_BLUE),
+                new EmptyBorder(15, 20, 15, 20)));
 
         // Title panel
         JPanel titlePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         titlePanel.setOpaque(false);
-        
+
         JLabel titleLabel = new JLabel("🏠 Trang chủ quản trị");
         titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
         titleLabel.setForeground(ZALO_BLUE);
@@ -95,10 +92,9 @@ public class AdminMainFrame extends JFrame {
         // Time panel
         JPanel timePanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         timePanel.setOpaque(false);
-        
+
         JLabel timeLabel = new JLabel("🕐 " + java.time.LocalDateTime.now().format(
-            java.time.format.DateTimeFormatter.ofPattern("HH:mm - dd/MM/yyyy")
-        ));
+                java.time.format.DateTimeFormatter.ofPattern("HH:mm - dd/MM/yyyy")));
         timeLabel.setFont(new Font("Arial", Font.PLAIN, 13));
         timeLabel.setForeground(Color.GRAY);
         timePanel.add(timeLabel);
@@ -112,14 +108,90 @@ public class AdminMainFrame extends JFrame {
     private JPanel createStatisticsPanel() {
         JPanel panel = new JPanel(new GridLayout(1, 4, 12, 0));
         panel.setOpaque(false);
-        panel.setPreferredSize(new Dimension(1160, 140)); // Fix height
+        panel.setPreferredSize(new Dimension(1160, 140));
 
-        panel.add(createStatCard("Người dùng", "1,234", ZALO_BLUE, "👥"));
-        panel.add(createStatCard("Đang online", "87", ZALO_BLUE, "🟢"));
-        panel.add(createStatCard("Nhóm chat", "45", ZALO_BLUE, "💬"));
-        panel.add(createStatCard("Tin nhắn", "2,156", ZALO_BLUE, "📨"));
+        // Create cards with loading state
+        JPanel userCard = createStatCard("Người dùng", "...", ZALO_BLUE, "👥");
+        JPanel onlineCard = createStatCard("Đang online", "...", ZALO_BLUE, "🟢");
+        JPanel groupCard = createStatCard("Nhóm chat", "...", ZALO_BLUE, "💬");
+        JPanel messageCard = createStatCard("Tin nhắn", "...", ZALO_BLUE, "📨");
+
+        panel.add(userCard);
+        panel.add(onlineCard);
+        panel.add(groupCard);
+        panel.add(messageCard);
+
+        // Load statistics in background thread to avoid UI freeze
+        SwingWorker<int[], Void> worker = new SwingWorker<int[], Void>() {
+            @Override
+            protected int[] doInBackground() throws Exception {
+                // Load all stats in one background thread
+                int users = getDashboardStat(() -> statisticsDAO.getTotalUsers());
+                int online = getDashboardStat(() -> statisticsDAO.getOnlineUsers());
+                int groups = getDashboardStat(() -> statisticsDAO.getTotalGroups());
+                int messages = getDashboardStat(() -> statisticsDAO.getTotalMessages());
+                return new int[] { users, online, groups, messages };
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    int[] stats = get();
+                    updateStatCard(userCard, formatNumber(stats[0]));
+                    updateStatCard(onlineCard, formatNumber(stats[1]));
+                    updateStatCard(groupCard, formatNumber(stats[2]));
+                    updateStatCard(messageCard, formatNumber(stats[3]));
+                } catch (Exception e) {
+                    System.err.println("Error loading dashboard stats: " + e.getMessage());
+                    updateStatCard(userCard, "N/A");
+                    updateStatCard(onlineCard, "N/A");
+                    updateStatCard(groupCard, "N/A");
+                    updateStatCard(messageCard, "N/A");
+                }
+            }
+        };
+        worker.execute();
 
         return panel;
+    }
+
+    // Update value in stat card
+    private void updateStatCard(JPanel card, String newValue) {
+        Component[] components = card.getComponents();
+        for (Component comp : components) {
+            if (comp instanceof JLabel) {
+                JLabel label = (JLabel) comp;
+                try {
+                    // Find the value label (largest font)
+                    if (label.getFont().getSize() == 30) {
+                        label.setText(newValue);
+                        break;
+                    }
+                } catch (Exception e) {
+                    // Ignore
+                }
+            }
+        }
+    }
+
+    // Helper để lấy dữ liệu từ database
+    @FunctionalInterface
+    interface SQLSupplier {
+        int get() throws java.sql.SQLException;
+    }
+
+    private int getDashboardStat(SQLSupplier supplier) {
+        try {
+            return supplier.get();
+        } catch (Exception e) {
+            System.err.println("Error getting dashboard stat: " + e.getMessage());
+            return 0;
+        }
+    }
+
+    // Format number với dấu phẩy
+    private String formatNumber(int number) {
+        return String.format("%,d", number);
     }
 
     private JPanel createStatCard(String title, String value, Color color, String icon) {
@@ -127,9 +199,8 @@ public class AdminMainFrame extends JFrame {
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBackground(Color.WHITE);
         card.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(color, 2),
-            new EmptyBorder(12, 12, 12, 12)
-        ));
+                BorderFactory.createLineBorder(color, 2),
+                new EmptyBorder(12, 12, 12, 12)));
 
         // Icon
         JLabel iconLabel = new JLabel(icon);
@@ -162,6 +233,7 @@ public class AdminMainFrame extends JFrame {
 
         return card;
     }
+
     //
     private JPanel createQuickActionsPanel() {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
@@ -175,24 +247,24 @@ public class AdminMainFrame extends JFrame {
         JPanel gridPanel = new JPanel(new GridLayout(3, 3, 10, 10));
         gridPanel.setOpaque(false);
 
-        gridPanel.add(createActionCard("👤 Quản lý người dùng", 
-            "Quản lý danh sách người dùng", ZALO_BLUE, e -> openUserManagement()));
-        gridPanel.add(createActionCard("📜 Lịch sử đăng nhập", 
-            "Xem danh sách đăng nhập theo thứ tự thời gian", ZALO_BLUE, e -> openLoginHistory()));
-        gridPanel.add(createActionCard("👥 Danh sách nhóm", 
-            "Xem danh sách các nhóm chat", ZALO_BLUE, e -> openGroupManagement()));
-        gridPanel.add(createActionCard("🔔 Báo cáo spam", 
-            "Xem danh sách báo cáo spam", ZALO_BLUE, e -> openSpamReport()));
-        gridPanel.add(createActionCard("🆕 Người dùng mới", 
-            "Xem danh sách người dùng đăng ký mới", ZALO_BLUE, e -> openNewUserReport()));
-        gridPanel.add(createActionCard("📊 Thống kê", 
-            "Biểu đồ số lượng người đăng ký mới theo năm", ZALO_BLUE, e -> openStatistics()));
-        gridPanel.add(createActionCard("💝 Bạn bè", 
-            "Xem danh sách người dùng và số lượng bạn bè", ZALO_BLUE, e -> openFriendStats()));
-        gridPanel.add(createActionCard("📈 Người hoạt động", 
-            "Xem danh sách người dùng hoạt động", ZALO_BLUE, e -> openActiveUserReport()));
-        gridPanel.add(createActionCard("📉 Biểu đồ", 
-            "Biểu đồ số lượng người hoạt động theo năm", ZALO_BLUE, e -> openActiveUserChart()));
+        gridPanel.add(createActionCard("👤 Quản lý người dùng",
+                "Quản lý danh sách người dùng", ZALO_BLUE, e -> openUserManagement()));
+        gridPanel.add(createActionCard("📜 Lịch sử đăng nhập",
+                "Xem danh sách đăng nhập theo thứ tự thời gian", ZALO_BLUE, e -> openLoginHistory()));
+        gridPanel.add(createActionCard("👥 Danh sách nhóm",
+                "Xem danh sách các nhóm chat", ZALO_BLUE, e -> openGroupManagement()));
+        gridPanel.add(createActionCard("🔔 Báo cáo spam",
+                "Xem danh sách báo cáo spam", ZALO_BLUE, e -> openSpamReport()));
+        gridPanel.add(createActionCard("🆕 Người dùng mới",
+                "Xem danh sách người dùng đăng ký mới", ZALO_BLUE, e -> openNewUserReport()));
+        gridPanel.add(createActionCard("📊 Thống kê",
+                "Biểu đồ số lượng người đăng ký mới theo năm", ZALO_BLUE, e -> openStatistics()));
+        gridPanel.add(createActionCard("💝 Bạn bè",
+                "Xem danh sách người dùng và số lượng bạn bè", ZALO_BLUE, e -> openFriendStats()));
+        gridPanel.add(createActionCard("📈 Người hoạt động",
+                "Xem danh sách người dùng hoạt động", ZALO_BLUE, e -> openActiveUserReport()));
+        gridPanel.add(createActionCard("📉 Biểu đồ",
+                "Biểu đồ số lượng người hoạt động theo năm", ZALO_BLUE, e -> openActiveUserChart()));
 
         panel.add(titleLabel, BorderLayout.NORTH);
         panel.add(gridPanel, BorderLayout.CENTER);
@@ -200,15 +272,14 @@ public class AdminMainFrame extends JFrame {
         return panel;
     }
 
-    private JPanel createActionCard(String title, String description, Color color, 
-                                    java.awt.event.ActionListener action) {
+    private JPanel createActionCard(String title, String description, Color color,
+            java.awt.event.ActionListener action) {
         JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBackground(Color.WHITE);
         card.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(color, 2),
-            new EmptyBorder(18, 15, 18, 15)
-        ));
+                BorderFactory.createLineBorder(color, 2),
+                new EmptyBorder(18, 15, 18, 15)));
         card.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
         JLabel titleLabel = new JLabel(title);
@@ -228,23 +299,21 @@ public class AdminMainFrame extends JFrame {
         // Hover effect
         card.addMouseListener(new java.awt.event.MouseAdapter() {
             private final Color hoverColor = new Color(245, 245, 245);
-            
+
             @Override
             public void mouseEntered(java.awt.event.MouseEvent e) {
                 card.setBackground(hoverColor);
                 card.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(color, 3),
-                    new EmptyBorder(18, 15, 18, 15)
-                ));
+                        BorderFactory.createLineBorder(color, 3),
+                        new EmptyBorder(18, 15, 18, 15)));
             }
 
             @Override
             public void mouseExited(java.awt.event.MouseEvent e) {
                 card.setBackground(Color.WHITE);
                 card.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(color, 2),
-                    new EmptyBorder(18, 15, 18, 15)
-                ));
+                        BorderFactory.createLineBorder(color, 2),
+                        new EmptyBorder(18, 15, 18, 15)));
             }
 
             @Override
@@ -276,7 +345,7 @@ public class AdminMainFrame extends JFrame {
 
     private void setupMenu() {
         JMenu userMenu = new JMenu("Lựa chọn chức năng");
-        
+
         addMenuItem(userMenu, "Quản lý người dùng", e -> openUserManagement());
         addMenuItem(userMenu, "Lịch sử đăng nhập", e -> openLoginHistory());
         addMenuItem(userMenu, "Xem danh sách nhóm chat", e -> openGroupManagement());
@@ -286,7 +355,7 @@ public class AdminMainFrame extends JFrame {
         addMenuItem(userMenu, "Danh sách người dùng và số lượng bạn bè", e -> openFriendStats());
         addMenuItem(userMenu, "Xem danh sách người dùng hoạt động", e -> openActiveUserReport());
         addMenuItem(userMenu, "Xem biểu đồ người dùng hoạt động", e -> openActiveUserChart());
-        
+
         menuBar.add(userMenu);
     }
 
@@ -377,7 +446,7 @@ public class AdminMainFrame extends JFrame {
         backBtn.setOpaque(true);
         backBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
         backBtn.addActionListener(e -> showHomePage());
-        
+
         JPanel backPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
         backPanel.add(backBtn);
         wrapper.add(backPanel, BorderLayout.SOUTH);
@@ -388,21 +457,31 @@ public class AdminMainFrame extends JFrame {
     }
 
     private String getEmojiForTitle(String title) {
-        if (title.contains("người dùng")) return "👤";
-        if (title.contains("lịch sử")) return "📜";
-        if (title.contains("nhóm")) return "👥";
-        if (title.contains("spam")) return "🔔";
-        if (title.contains("mới")) return "🆕";
-        if (title.contains("Thống kê")) return "📊";
-        if (title.contains("bạn bè")) return "💝";
-        if (title.contains("hoạt động")) return "📈";
-        if (title.contains("Biểu đồ")) return "📉";
+        if (title.contains("người dùng"))
+            return "👤";
+        if (title.contains("lịch sử"))
+            return "📜";
+        if (title.contains("nhóm"))
+            return "👥";
+        if (title.contains("spam"))
+            return "🔔";
+        if (title.contains("mới"))
+            return "🆕";
+        if (title.contains("Thống kê"))
+            return "📊";
+        if (title.contains("bạn bè"))
+            return "💝";
+        if (title.contains("hoạt động"))
+            return "📈";
+        if (title.contains("Biểu đồ"))
+            return "📉";
         return "📋";
     }
 
     private JPanel createErrorPanel(String message) {
         JPanel panel = new JPanel(new BorderLayout());
-        JLabel label = new JLabel("<html><center>" + message + "<br><br>Vui lòng tạo file class tương ứng</center></html>");
+        JLabel label = new JLabel(
+                "<html><center>" + message + "<br><br>Vui lòng tạo file class tương ứng</center></html>");
         label.setFont(new Font("Arial", Font.PLAIN, 16));
         label.setForeground(Color.RED);
         label.setHorizontalAlignment(SwingConstants.CENTER);
@@ -411,7 +490,8 @@ public class AdminMainFrame extends JFrame {
     }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {            try {
+        SwingUtilities.invokeLater(() -> {
+            try {
                 UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
             } catch (Exception e) {
                 e.printStackTrace();

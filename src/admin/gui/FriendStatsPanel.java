@@ -28,7 +28,8 @@ public class FriendStatsPanel extends JPanel {
     private JComboBox<String> friendFilterCombo;
     private JTextField friendCountField;
     private JButton filterButton, resetButton, refreshButton, exportButton;
-    
+    private JLabel totalLabel;
+
     // Backend
     private StatisticsDAO statisticsDAO;
     private DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -45,15 +46,15 @@ public class FriendStatsPanel extends JPanel {
 
     private void initComponents() {
         // Bảng hiển thị thống kê
-        String[] columns = {"ID", "Tên đăng nhập", "Họ tên", "Ngày tạo", 
-                           "Số bạn trực tiếp", "Số bạn của bạn"};
+        String[] columns = { "ID", "Tên đăng nhập", "Họ tên", "Ngày tạo",
+                "Số bạn trực tiếp", "Số bạn của bạn" };
         tableModel = new DefaultTableModel(columns, 0) {
-            @Override 
-            public boolean isCellEditable(int row, int column) { 
-                return false; 
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
             }
         };
-        
+
         reportTable = new JTable(tableModel);
         reportTable.setRowHeight(28);
         reportTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
@@ -65,38 +66,37 @@ public class FriendStatsPanel extends JPanel {
 
         // Chỉnh độ rộng cột
         TableColumnModel columnModel = reportTable.getColumnModel();
-        columnModel.getColumn(0).setPreferredWidth(50);   // ID
-        columnModel.getColumn(1).setPreferredWidth(120);  // Tên đăng nhập
-        columnModel.getColumn(2).setPreferredWidth(150);  // Họ tên
-        columnModel.getColumn(3).setPreferredWidth(120);  // Ngày tạo
-        columnModel.getColumn(4).setPreferredWidth(130);  // Số bạn trực tiếp
-        columnModel.getColumn(5).setPreferredWidth(130);  // Số bạn của bạn
+        columnModel.getColumn(0).setPreferredWidth(50); // ID
+        columnModel.getColumn(1).setPreferredWidth(120); // Tên đăng nhập
+        columnModel.getColumn(2).setPreferredWidth(150); // Họ tên
+        columnModel.getColumn(3).setPreferredWidth(120); // Ngày tạo
+        columnModel.getColumn(4).setPreferredWidth(130); // Số bạn trực tiếp
+        columnModel.getColumn(5).setPreferredWidth(130); // Số bạn của bạn
 
         // Yêu cầu b: Lọc theo tên
         searchNameField = new JTextField(20);
-        
+
         // Yêu cầu a: Sắp xếp theo tên/thời gian tạo
-        sortCombo = new JComboBox<>(new String[]{
-            "Sắp xếp theo tên (A-Z)",
-            "Sắp xếp theo tên (Z-A)",
-            "Sắp xếp theo thời gian tạo (Mới nhất)",
-            "Sắp xếp theo thời gian tạo (Cũ nhất)",
-            "Sắp xếp theo số bạn (Nhiều nhất)"
+        sortCombo = new JComboBox<>(new String[] {
+                "Sắp xếp theo tên (A-Z)",
+                "Sắp xếp theo tên (Z-A)",
+                "Sắp xếp theo thời gian tạo (Mới nhất)",
+                "Sắp xếp theo thời gian tạo (Cũ nhất)"
         });
-        
+
         // Yêu cầu c: Lọc theo số bạn trực tiếp (=, >, <)
-        friendFilterCombo = new JComboBox<>(new String[]{"Tất cả", "=", ">", "<"});
+        friendFilterCombo = new JComboBox<>(new String[] { "Tất cả", "=", ">", "<" });
         friendCountField = new JTextField(5);
-        
-        filterButton = new JButton("📊 Lọc báo cáo");
+
+        filterButton = new JButton("🔍 Tìm kiếm và lọc");
         resetButton = new JButton("↺ Đặt lại");
         refreshButton = new JButton("🔄 Làm mới");
-        exportButton = new JButton("📥 Xuất Excel");
-        
+        exportButton = new JButton("� Xuất CSV");
+
         stylePrimaryButton(filterButton);
         stylePrimaryButton(resetButton);
-        stylePrimaryButton(refreshButton);
-        stylePrimaryButton(exportButton);
+        styleAddUserButtonSimple(refreshButton);
+        styleAddUserButtonSimple(exportButton);
     }
 
     private void setupLayout() {
@@ -122,13 +122,12 @@ public class FriendStatsPanel extends JPanel {
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBackground(Color.WHITE);
         panel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(Color.LIGHT_GRAY),
-            new EmptyBorder(15, 15, 15, 15)
-        ));
+                BorderFactory.createLineBorder(Color.LIGHT_GRAY),
+                new EmptyBorder(15, 15, 15, 15)));
 
         JLabel titleLabel = new JLabel("🔍 Lọc thống kê bạn bè");
         titleLabel.setFont(new Font("Arial", Font.BOLD, 14));
-        titleLabel.setForeground(Color.BLUE);
+        titleLabel.setForeground(ZALO_BLUE);
         titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(titleLabel);
         panel.add(Box.createVerticalStrut(10));
@@ -137,11 +136,11 @@ public class FriendStatsPanel extends JPanel {
         JPanel searchRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
         searchRow.setOpaque(false);
         searchRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-        
+
         searchRow.add(new JLabel("Lọc theo tên:"));
         searchNameField.setPreferredSize(new Dimension(200, 30));
         searchRow.add(searchNameField);
-        
+
         panel.add(searchRow);
         panel.add(Box.createVerticalStrut(5));
 
@@ -149,21 +148,21 @@ public class FriendStatsPanel extends JPanel {
         JPanel filterRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
         filterRow.setOpaque(false);
         filterRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-        
+
         // Yêu cầu c: Lọc theo số bạn trực tiếp
         filterRow.add(new JLabel("Số bạn trực tiếp:"));
         friendFilterCombo.setPreferredSize(new Dimension(80, 30));
         filterRow.add(friendFilterCombo);
         friendCountField.setPreferredSize(new Dimension(80, 30));
         filterRow.add(friendCountField);
-        
+
         filterRow.add(Box.createHorizontalStrut(20));
-        
+
         // Yêu cầu a: Sắp xếp
         filterRow.add(new JLabel("Sắp xếp:"));
         sortCombo.setPreferredSize(new Dimension(260, 30));
         filterRow.add(sortCombo);
-        
+
         panel.add(filterRow);
         panel.add(Box.createVerticalStrut(5));
 
@@ -171,10 +170,10 @@ public class FriendStatsPanel extends JPanel {
         JPanel actionRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
         actionRow.setOpaque(false);
         actionRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-        
+
         actionRow.add(filterButton);
         actionRow.add(resetButton);
-        
+
         panel.add(actionRow);
 
         return panel;
@@ -184,26 +183,28 @@ public class FriendStatsPanel extends JPanel {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(Color.WHITE);
         panel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(Color.LIGHT_GRAY),
-            new EmptyBorder(10, 10, 10, 10)
-        ));
-        
+                BorderFactory.createLineBorder(Color.LIGHT_GRAY),
+                new EmptyBorder(10, 10, 10, 10)));
+
         // Header with statistics
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setOpaque(false);
-        
+
         JLabel titleLabel = new JLabel("📊 Thống kê bạn bè");
         titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
-        titleLabel.setForeground(Color.BLUE);
-        
+        titleLabel.setForeground(ZALO_BLUE);
+
         JPanel statsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 0));
         statsPanel.setOpaque(false);
-        
-        JLabel totalLabel = new JLabel("📈 Tổng số người dùng: 0");
-        totalLabel.setFont(new Font("Arial", Font.BOLD, 12));
-        
-        statsPanel.add(totalLabel);
-        
+
+        // Khởi tạo instance variable nếu chưa có
+        if (this.totalLabel == null) {
+            this.totalLabel = new JLabel("📈 Tổng số người dùng: 0");
+        }
+        this.totalLabel.setFont(new Font("Arial", Font.BOLD, 12));
+
+        statsPanel.add(this.totalLabel);
+
         headerPanel.add(titleLabel, BorderLayout.WEST);
         headerPanel.add(statsPanel, BorderLayout.EAST);
         headerPanel.setBorder(new EmptyBorder(0, 0, 10, 0));
@@ -225,13 +226,13 @@ public class FriendStatsPanel extends JPanel {
     private void setupEventHandlers() {
         // Lọc báo cáo
         filterButton.addActionListener(e -> handleFilterReport());
-        
+
         // Đặt lại
         resetButton.addActionListener(e -> handleReset());
-        
+
         // Làm mới
         refreshButton.addActionListener(e -> handleRefresh());
-        
+
         // Xuất Excel
         exportButton.addActionListener(e -> handleExport());
     }
@@ -246,50 +247,49 @@ public class FriendStatsPanel extends JPanel {
         String sortOption = (String) sortCombo.getSelectedItem();
         String comparison = (String) friendFilterCombo.getSelectedItem();
         String friendCountText = friendCountField.getText().trim();
-        
+
         Integer friendCount = null;
-        
+
         // Validate input cho yêu cầu c
         if (!"Tất cả".equals(comparison)) {
             if (friendCountText.isEmpty()) {
-                JOptionPane.showMessageDialog(this, 
-                    "Vui lòng nhập số lượng bạn để so sánh!",
-                    "Cảnh báo", JOptionPane.WARNING_MESSAGE);
+                JOptionPane.showMessageDialog(this,
+                        "Vui lòng nhập số lượng bạn để so sánh!",
+                        "Cảnh báo", JOptionPane.WARNING_MESSAGE);
                 return;
             }
-            
+
             try {
                 friendCount = Integer.parseInt(friendCountText);
                 if (friendCount < 0) {
-                    JOptionPane.showMessageDialog(this, 
-                        "Số lượng bạn phải >= 0!",
-                        "Lỗi", JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(this,
+                            "Số lượng bạn phải >= 0!",
+                            "Lỗi", JOptionPane.ERROR_MESSAGE);
                     return;
                 }
             } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(this, 
-                    "Số lượng bạn không hợp lệ!",
-                    "Lỗi", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this,
+                        "Số lượng bạn không hợp lệ!",
+                        "Lỗi", JOptionPane.ERROR_MESSAGE);
                 return;
             }
         }
-        
+
         // Load dữ liệu từ database
         try {
             List<FriendStats> stats = statisticsDAO.getFriendStatisticsWithFilters(
-                nameFilter.isEmpty() ? null : nameFilter,
-                comparison,
-                friendCount,
-                sortOption
-            );
-            
+                    nameFilter.isEmpty() ? null : nameFilter,
+                    comparison,
+                    friendCount,
+                    sortOption);
+
             displayFriendStats(stats);
             updateStatistics();
-            
-            JOptionPane.showMessageDialog(this, 
-                "Tìm thấy " + stats.size() + " người dùng",
-                "Kết quả", JOptionPane.INFORMATION_MESSAGE);
-                
+
+            JOptionPane.showMessageDialog(this,
+                    "Tìm thấy " + stats.size() + " người dùng",
+                    "Kết quả", JOptionPane.INFORMATION_MESSAGE);
+
         } catch (SQLException e) {
             showError("Lỗi lọc dữ liệu: " + e.getMessage());
         }
@@ -300,15 +300,8 @@ public class FriendStatsPanel extends JPanel {
      */
     private void updateStatistics() {
         int totalCount = reportTable.getRowCount();
-        Component[] components = getAllComponents(this);
-        for (Component comp : components) {
-            if (comp instanceof JLabel) {
-                JLabel label = (JLabel) comp;
-                if (label.getText().startsWith("📈 Tổng số người dùng:")) {
-                    label.setText("📈 Tổng số người dùng: " + totalCount);
-                    break;
-                }
-            }
+        if (totalLabel != null) {
+            totalLabel.setText("📈 Tổng số người dùng: " + totalCount);
         }
     }
 
@@ -320,14 +313,14 @@ public class FriendStatsPanel extends JPanel {
         friendFilterCombo.setSelectedIndex(0);
         friendCountField.setText("");
         sortCombo.setSelectedIndex(0);
-        
+
         DefaultTableModel model = (DefaultTableModel) reportTable.getModel();
         model.setRowCount(0);
         updateStatistics();
-        
-        JOptionPane.showMessageDialog(this, 
-            "Đã đặt lại tất cả bộ lọc!",
-            "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+
+        JOptionPane.showMessageDialog(this,
+                "Đã đặt lại tất cả bộ lọc!",
+                "Thông báo", JOptionPane.INFORMATION_MESSAGE);
     }
 
     /**
@@ -343,21 +336,21 @@ public class FriendStatsPanel extends JPanel {
             e.printStackTrace();
         }
     }
-    
+
     /**
      * Hiển thị danh sách thống kê lên table
      */
     private void displayFriendStats(List<FriendStats> stats) {
         tableModel.setRowCount(0); // Clear table
-        
+
         for (FriendStats stat : stats) {
             Object[] row = {
-                stat.getUserId(),
-                stat.getUsername(),
-                stat.getFullName(),
-                stat.getCreatedAt() != null ? stat.getCreatedAt().format(dateFormatter) : "",
-                stat.getFriendCount(),
-                stat.getFriendsOfFriendsCount()
+                    stat.getUserId(),
+                    stat.getUsername(),
+                    stat.getFullName(),
+                    stat.getCreatedAt() != null ? stat.getCreatedAt().format(dateFormatter) : "",
+                    stat.getFriendCount(),
+                    stat.getFriendsOfFriendsCount()
             };
             tableModel.addRow(row);
         }
@@ -372,22 +365,79 @@ public class FriendStatsPanel extends JPanel {
     }
 
     /**
-     * Xuất Excel
+     * Xuất CSV
      */
     private void handleExport() {
         if (reportTable.getRowCount() == 0) {
-            JOptionPane.showMessageDialog(this, 
-                "Không có dữ liệu để xuất!",
-                "Cảnh báo", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this,
+                    "Không có dữ liệu để xuất!",
+                    "Cảnh báo", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        
-        JOptionPane.showMessageDialog(this, 
-            "Chức năng xuất Excel sẽ được triển khai!\n" +
-            "Dữ liệu: " + reportTable.getRowCount() + " người dùng",
-            "Xuất Excel", JOptionPane.INFORMATION_MESSAGE);
+
+        try {
+            // Chọn nơi lưu file
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Lưu file CSV");
+            fileChooser.setSelectedFile(new java.io.File("ThongKeBanBe.csv"));
+
+            int userSelection = fileChooser.showSaveDialog(this);
+            if (userSelection != JFileChooser.APPROVE_OPTION) {
+                return;
+            }
+
+            java.io.File fileToSave = fileChooser.getSelectedFile();
+            String filePath = fileToSave.getAbsolutePath();
+            if (!filePath.toLowerCase().endsWith(".csv")) {
+                filePath += ".csv";
+            }
+
+            // Ghi vào file CSV
+            try (java.io.PrintWriter writer = new java.io.PrintWriter(
+                    new java.io.OutputStreamWriter(
+                            new java.io.FileOutputStream(filePath),
+                            java.nio.charset.StandardCharsets.UTF_8))) {
+
+                // Write BOM for Excel UTF-8 recognition
+                writer.write('\ufeff');
+
+                // Ghi header
+                writer.println("ID,Tên đăng nhập,Họ tên,Ngày tạo,Số bạn trực tiếp,Số bạn của bạn");
+
+                // Ghi dữ liệu từ table
+                for (int i = 0; i < reportTable.getRowCount(); i++) {
+                    String line = String.format("%s,\"%s\",\"%s\",\"%s\",%s,%s",
+                            reportTable.getValueAt(i, 0), // ID
+                            escapeCsv(reportTable.getValueAt(i, 1)), // Username
+                            escapeCsv(reportTable.getValueAt(i, 2)), // Full name
+                            escapeCsv(reportTable.getValueAt(i, 3)), // Created date
+                            reportTable.getValueAt(i, 4), // Friend count
+                            reportTable.getValueAt(i, 5) // Friends of friends count
+                    );
+                    writer.println(line);
+                }
+            }
+
+            JOptionPane.showMessageDialog(this,
+                    "Đã xuất " + reportTable.getRowCount() + " người dùng vào file:\n" + filePath,
+                    "Thành công", JOptionPane.INFORMATION_MESSAGE);
+
+        } catch (Exception e) {
+            showError("Lỗi xuất file: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
-    
+
+    /**
+     * Escape special characters for CSV
+     */
+    private String escapeCsv(Object value) {
+        if (value == null)
+            return "";
+        String str = value.toString();
+        return str.replace("\"", "\"\"");
+    }
+
     /**
      * Hiển thị thông báo lỗi
      */
@@ -405,7 +455,7 @@ public class FriendStatsPanel extends JPanel {
         button.setMargin(new Insets(5, 12, 5, 12));
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
     }
-    
+
     private void styleNeutralButton(JButton button) {
         button.setBackground(NEUTRAL_GRAY);
         button.setForeground(Color.WHITE);
@@ -414,6 +464,27 @@ public class FriendStatsPanel extends JPanel {
         button.setBorderPainted(false);
         button.setFocusPainted(false);
         button.setMargin(new Insets(5, 12, 5, 12));
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+    }
+
+    private void styleAddUserButtonSimple(JButton button) {
+        // Màu xanh ngọc (Teal/Cyan) gần giống trong ảnh: #1ABC9C hoặc #20B2AA
+        // (LightSeaGreen)
+        Color tealColor = new Color(32, 178, 170); // LightSeaGreen
+
+        button.setBackground(tealColor);
+        button.setForeground(Color.WHITE); // Màu chữ trắng
+
+        // Phông chữ và kích thước (dựa trên ảnh, chữ có vẻ lớn và đậm)
+        button.setFont(new Font("Arial", Font.BOLD, 14));
+
+        button.setOpaque(true);
+        button.setBorderPainted(false); // Bỏ viền
+        button.setFocusPainted(false);
+
+        // Căn lề để tạo khoảng đệm (padding) lớn hơn
+        button.setMargin(new Insets(10, 20, 10, 20));
+
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
     }
 
