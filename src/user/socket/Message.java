@@ -20,6 +20,8 @@ public class Message implements Serializable {
         CHAT,               // Client gửi: tin nhắn chat
         BROADCAST,          // Server gửi: broadcast tin nhắn đến tất cả
         PRIVATE_MESSAGE,    // Client gửi: tin nhắn riêng
+        GROUP_MESSAGE,      // Client/Server: tin nhắn nhóm
+        GROUP_CREATED,      // Server gửi: thông báo có nhóm mới được tạo
         
         // Friend Requests
         FRIEND_REQUEST_SENT,     // Server gửi: thông báo có lời mời kết bạn mới

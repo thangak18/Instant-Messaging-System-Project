@@ -151,6 +151,33 @@ public class SocketClient {
     }
     
     /**
+     * Gửi group message - thông báo đến các thành viên nhóm
+     * @param groupId ID nhóm
+     * @param content Nội dung tin nhắn
+     */
+    public void sendGroupMessage(int groupId, String content) {
+        Message message = new Message(Message.MessageType.GROUP_MESSAGE, username, content);
+        message.setData(groupId); // Lưu groupId vào data
+        sendMessage(message);
+    }
+    
+    /**
+     * Gửi thông báo nhóm mới được tạo đến các thành viên
+     * @param groupId ID nhóm mới
+     * @param groupName Tên nhóm
+     * @param memberUsernames Danh sách username thành viên
+     */
+    public void sendGroupCreatedNotification(int groupId, String groupName, java.util.List<String> memberUsernames) {
+        Message message = new Message(Message.MessageType.GROUP_CREATED, username, groupName);
+        // Lưu groupId và danh sách members vào data
+        java.util.Map<String, Object> data = new java.util.HashMap<>();
+        data.put("groupId", groupId);
+        data.put("members", memberUsernames);
+        message.setData(data);
+        sendMessage(message);
+    }
+    
+    /**
      * Ngắt kết nối
      */
     public void disconnect() {

@@ -2,6 +2,7 @@ package user.gui;
 
 import user.service.GroupService;
 import user.service.AIService;
+import user.service.EncryptionService;
 import user.socket.Message;
 
 import javax.swing.*;
@@ -14,10 +15,12 @@ import java.util.HashMap;
 
 /**
  * Panel chat nhóm - Tương tự ChatContentPanel nhưng cho group
+ * Hỗ trợ mã hóa đầu cuối (E2E) cho các nhóm bảo mật
  */
 public class GroupChatPanel extends JPanel {
     
     private static final Color PRIMARY_COLOR = new Color(0, 132, 255);
+    private static final Color ENCRYPTED_COLOR = new Color(0, 150, 80); // Màu xanh lá cho E2E
     private static final Color SENT_BUBBLE_COLOR = new Color(0, 132, 255);
     private static final Color RECEIVED_BUBBLE_COLOR = new Color(240, 242, 245);
     private static final Color BG_COLOR = Color.WHITE;
@@ -25,14 +28,17 @@ public class GroupChatPanel extends JPanel {
     private ZaloMainFrame mainFrame;
     private GroupService groupService;
     private AIService aiService;
+    private EncryptionService encryptionService;
     
     private int groupId;
     private String groupName;
     private boolean isAdmin;
+    private boolean isEncrypted; // Nhóm có mã hóa E2E không
     
     // Components
     private JLabel groupNameLabel;
     private JLabel memberCountLabel;
+    private JLabel encryptionBadge; // Badge hiển thị trạng thái mã hóa
     private JPanel messageListPanel;
     private JScrollPane scrollPane;
     private JTextArea messageInput;
@@ -41,17 +47,69 @@ public class GroupChatPanel extends JPanel {
     // Map lưu bubble theo messageId để hỗ trợ scroll tới tin nhắn
     private Map<Integer, JPanel> messageBubbles = new HashMap<>();
     
+    /**
+     * Constructor cho nhóm thường (không mã hóa)
+     */
     public GroupChatPanel(ZaloMainFrame mainFrame, int groupId, String groupName, boolean isAdmin) {
+        this(mainFrame, groupId, groupName, isAdmin, false);
+    }
+    
+    /**
+     * Constructor với tùy chọn mã hóa
+     */
+    public GroupChatPanel(ZaloMainFrame mainFrame, int groupId, String groupName, boolean isAdmin, boolean isEncrypted) {
         this.mainFrame = mainFrame;
         this.groupService = new GroupService();
         this.aiService = new AIService();
+        this.encryptionService = EncryptionService.getInstance();
         this.groupId = groupId;
         this.groupName = groupName;
         this.isAdmin = isAdmin;
+        this.isEncrypted = isEncrypted;
+        
+        // Load encryption key nếu là nhóm mã hóa
+        if (isEncrypted) {
+            loadEncryptionKey();
+        }
         
         initializeUI();
         loadGroupMessages();
         loadMemberCount();
+    }
+    
+    /**
+     * LOAD KHÓA MÃ HÓA CHO NHÓM
+     * Nếu không tìm thấy khóa và user là admin, tự động tạo khóa mới
+     */
+    private void loadEncryptionKey() {
+        if (!encryptionService.hasGroupKey(groupId)) {
+            String key = groupService.getGroupEncryptionKey(groupId);
+            if (key != null && !key.isEmpty()) {
+                encryptionService.loadGroupKey(groupId, key);
+                System.out.println("🔓 Đã load khóa mã hóa cho nhóm " + groupId);
+            } else {
+                // Khóa chưa có - tạo mới nếu là admin
+                if (isAdmin) {
+                    System.out.println("⚠️ Nhóm mã hóa chưa có khóa, đang tạo khóa mới...");
+                    String newKey = encryptionService.generateGroupKey(groupId);
+                    if (newKey != null) {
+                        // Lưu khóa vào database
+                        groupService.saveEncryptionKey(groupId, newKey);
+                        System.out.println("✅ Đã tạo và lưu khóa mã hóa mới cho nhóm " + groupId);
+                    }
+                } else {
+                    System.err.println("⚠️ Không tìm thấy khóa mã hóa cho nhóm " + groupId + " - Liên hệ admin");
+                    // Hiển thị thông báo cho user
+                    javax.swing.SwingUtilities.invokeLater(() -> {
+                        javax.swing.JOptionPane.showMessageDialog(this,
+                            "Không tìm thấy khóa mã hóa cho nhóm này.\n" +
+                            "Vui lòng liên hệ admin của nhóm để được cấp khóa.",
+                            "Lỗi mã hóa",
+                            javax.swing.JOptionPane.WARNING_MESSAGE);
+                    });
+                }
+            }
+        }
     }
     
     private void initializeUI() {
@@ -81,9 +139,9 @@ public class GroupChatPanel extends JPanel {
     
     private JPanel createHeaderPanel() {
         JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(Color.WHITE);
+        panel.setBackground(isEncrypted ? new Color(240, 255, 240) : Color.WHITE); // Nền xanh nhạt cho E2E
         panel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(230, 230, 230)),
+            BorderFactory.createMatteBorder(0, 0, 1, 0, isEncrypted ? ENCRYPTED_COLOR : new Color(230, 230, 230)),
             BorderFactory.createEmptyBorder(12, 15, 12, 15)
         ));
         
@@ -92,14 +150,44 @@ public class GroupChatPanel extends JPanel {
         groupInfoPanel.setLayout(new BoxLayout(groupInfoPanel, BoxLayout.Y_AXIS));
         groupInfoPanel.setOpaque(false);
         
+        // Panel chứa tên nhóm và badge mã hóa
+        JPanel namePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        namePanel.setOpaque(false);
+        
+        // Icon khóa nếu là nhóm mã hóa
+        if (isEncrypted) {
+            JLabel lockIcon = new JLabel();
+            try {
+                ImageIcon icon = new ImageIcon("icons/padlock.png");
+                Image scaled = icon.getImage().getScaledInstance(20, 20, Image.SCALE_SMOOTH);
+                lockIcon.setIcon(new ImageIcon(scaled));
+            } catch (Exception e) {
+                lockIcon.setText("🔒 ");
+            }
+            namePanel.add(lockIcon);
+            namePanel.add(Box.createHorizontalStrut(6));
+        }
+        
         groupNameLabel = new JLabel(groupName);
         groupNameLabel.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        groupNameLabel.setForeground(isEncrypted ? ENCRYPTED_COLOR : Color.BLACK);
+        namePanel.add(groupNameLabel);
         
+        // Badge E2E 
+        if (isEncrypted) {
+            encryptionBadge = new JLabel(" 🔐 E2E");
+            encryptionBadge.setFont(new Font("Segoe UI Emoji", Font.BOLD, 11));
+            encryptionBadge.setForeground(ENCRYPTED_COLOR);
+            encryptionBadge.setToolTipText("Nhóm được mã hóa đầu cuối - Tin nhắn chỉ có thể đọc bởi thành viên");
+            namePanel.add(encryptionBadge);
+        }
+        
+        // Subtitle
         memberCountLabel = new JLabel("Đang tải...");
         memberCountLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         memberCountLabel.setForeground(new Color(120, 120, 120));
         
-        groupInfoPanel.add(groupNameLabel);
+        groupInfoPanel.add(namePanel);
         groupInfoPanel.add(memberCountLabel);
         
         // Right - Action buttons
@@ -260,7 +348,12 @@ public class GroupChatPanel extends JPanel {
         SwingWorker<List<Map<String, Object>>, Void> worker = new SwingWorker<>() {
             @Override
             protected List<Map<String, Object>> doInBackground() {
-                return groupService.getGroupMessages(groupId);
+                // Nếu nhóm mã hóa, sử dụng phương thức có giải mã
+                if (isEncrypted) {
+                    return groupService.getGroupMessagesDecrypted(groupId, true);
+                } else {
+                    return groupService.getGroupMessages(groupId);
+                }
             }
             
             @Override
@@ -286,9 +379,13 @@ public class GroupChatPanel extends JPanel {
         messageBubbles.clear();
         
         if (messages == null || messages.isEmpty()) {
-            JLabel emptyLabel = new JLabel("Chưa có tin nhắn nào");
+            // Hiển thị thông báo riêng cho nhóm mã hóa
+            String emptyText = isEncrypted 
+                ? "🔒 Nhóm mã hóa - Chưa có tin nhắn nào" 
+                : "Chưa có tin nhắn nào";
+            JLabel emptyLabel = new JLabel(emptyText);
             emptyLabel.setFont(new Font("Segoe UI", Font.ITALIC, 14));
-            emptyLabel.setForeground(new Color(150, 150, 150));
+            emptyLabel.setForeground(isEncrypted ? ENCRYPTED_COLOR : new Color(150, 150, 150));
             emptyLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
             messageListPanel.add(Box.createVerticalGlue());
             messageListPanel.add(emptyLabel);
@@ -406,7 +503,12 @@ public class GroupChatPanel extends JPanel {
         SwingWorker<Boolean, Void> worker = new SwingWorker<>() {
             @Override
             protected Boolean doInBackground() {
-                return groupService.sendGroupMessage(groupId, mainFrame.getUsername(), content);
+                // Nếu nhóm mã hóa, sử dụng phương thức gửi có mã hóa
+                if (isEncrypted) {
+                    return groupService.sendGroupMessageEncrypted(groupId, mainFrame.getUsername(), content, true);
+                } else {
+                    return groupService.sendGroupMessage(groupId, mainFrame.getUsername(), content);
+                }
             }
             
             @Override
@@ -418,7 +520,10 @@ public class GroupChatPanel extends JPanel {
                         messageInput.setText("");
                         loadGroupMessages(); // Reload messages
                         
-                        // TODO: Send socket message to notify other members
+                        // Gửi socket message để thông báo cho các thành viên khác
+                        if (mainFrame.getSocketClient() != null && mainFrame.getSocketClient().isConnected()) {
+                            mainFrame.getSocketClient().sendGroupMessage(groupId, content);
+                        }
                         
                     } else {
                         JOptionPane.showMessageDialog(GroupChatPanel.this,
@@ -572,6 +677,21 @@ public class GroupChatPanel extends JPanel {
     public void receiveGroupMessage(String senderUsername, String content) {
         // Called when receiving real-time group message from socket
         loadGroupMessages(); // Reload to show new message
+    }
+    
+    /**
+     * XỬ LÝ TIN NHẮN REALTIME TỪ SOCKET
+     * Được gọi từ ZaloMainFrame khi nhận GROUP_MESSAGE
+     */
+    public void handleIncomingMessage(user.socket.Message message) {
+        if (message != null && message.getSender() != null) {
+            String sender = message.getSender();
+            String content = message.getContent();
+            System.out.println("📨 GroupChatPanel nhận tin nhắn từ: " + sender);
+            
+            // Reload messages để hiển thị tin nhắn mới
+            loadGroupMessages();
+        }
     }
     
     public int getGroupId() {
@@ -892,20 +1012,33 @@ public class GroupChatPanel extends JPanel {
     }
     
     /**
-     * g. MÃ HÓA NHÓM (End-to-End Encryption)
+     * g. TẠO NHÓM MÃ HÓA TỪ NHÓM HIỆN TẠI
+     * Tạo một nhóm mới với cùng tên và thành viên nhưng có mã hóa E2E
+     * Nhóm mã hóa không thể tắt mã hóa, chỉ có thể xóa
      */
     private void toggleEncryption() {
         if (!isAdmin) {
             JOptionPane.showMessageDialog(this,
-                "Chỉ admin mới có quyền bật/tắt mã hóa!",
+                "Chỉ admin mới có quyền tạo nhóm mã hóa!",
                 "Thông báo",
                 JOptionPane.WARNING_MESSAGE);
             return;
         }
         
+        // Kiểm tra nhóm hiện tại đã mã hóa chưa
+        if (isEncrypted) {
+            JOptionPane.showMessageDialog(this,
+                "Nhóm này đã được mã hóa!\n\n" +
+                "Nhóm mã hóa không thể tắt mã hóa.\n" +
+                "Nếu muốn, bạn có thể xóa nhóm này.",
+                "Thông báo",
+                JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        
         JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), 
-            "Mã hóa đầu cuối", true);
-        dialog.setSize(500, 400);
+            "Tạo nhóm mã hóa", true);
+        dialog.setSize(500, 420);
         dialog.setLocationRelativeTo(this);
         dialog.setLayout(new BorderLayout());
         
@@ -914,7 +1047,7 @@ public class GroupChatPanel extends JPanel {
         headerPanel.setBackground(new Color(76, 175, 80)); // Green
         headerPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
         
-        JLabel titleLabel = new JLabel("🔒 Mã hóa đầu cuối");
+        JLabel titleLabel = new JLabel("🔒 Tạo nhóm mã hóa đầu cuối");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
         titleLabel.setForeground(Color.WHITE);
         headerPanel.add(titleLabel, BorderLayout.WEST);
@@ -926,12 +1059,15 @@ public class GroupChatPanel extends JPanel {
         contentPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         
         JLabel descLabel = new JLabel("<html><div style='width:400px;'>" +
-            "<b>Mã hóa đầu cuối</b> bảo vệ tin nhắn của bạn khỏi việc bị đọc trộm.<br><br>" +
-            "<b>Khi bật:</b><br>" +
-            "• Chỉ thành viên trong nhóm có thể đọc tin nhắn<br>" +
-            "• Tin nhắn được mã hóa trước khi gửi<br>" +
-            "• Ngay cả server cũng không thể đọc nội dung<br><br>" +
-            "<b>Lưu ý:</b> Tính năng này tương tự Facebook Secret Conversation" +
+            "<b>Tạo phiên bản mã hóa của nhóm \"" + groupName + "\"</b><br><br>" +
+            "Điều này sẽ tạo một <b>nhóm mới</b> với:<br>" +
+            "• Cùng tên nhóm (có icon 🔒)<br>" +
+            "• Cùng danh sách thành viên<br>" +
+            "• Mã hóa đầu cuối AES-256<br><br>" +
+            "<b style='color:orange;'>⚠️ Lưu ý quan trọng:</b><br>" +
+            "• Nhóm mã hóa <b>KHÔNG THỂ TẮT</b> mã hóa<br>" +
+            "• Chỉ có thể <b>XÓA</b> nhóm mã hóa nếu không cần<br>" +
+            "• Tin nhắn cũ không được chuyển sang nhóm mới" +
             "</div></html>");
         descLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         descLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -939,86 +1075,89 @@ public class GroupChatPanel extends JPanel {
         contentPanel.add(descLabel);
         contentPanel.add(Box.createVerticalStrut(20));
         
-        // Check current encryption status
-        SwingWorker<Boolean, Void> checkWorker = new SwingWorker<>() {
-            @Override
-            protected Boolean doInBackground() {
-                return groupService.isGroupEncrypted(groupId);
-            }
-            
-            @Override
-            protected void done() {
-                try {
-                    boolean isEncrypted = get();
-                    
-                    JLabel statusLabel = new JLabel("Trạng thái hiện tại: " + 
-                        (isEncrypted ? "🔒 Đã mã hóa" : "🔓 Chưa mã hóa"));
-                    statusLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
-                    statusLabel.setForeground(isEncrypted ? new Color(76, 175, 80) : new Color(255, 152, 0));
-                    statusLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-                    
-                    contentPanel.add(statusLabel);
-                    contentPanel.revalidate();
-                    
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        };
-        
-        checkWorker.execute();
-        
         // Buttons
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
         buttonPanel.setBackground(Color.WHITE);
         
-        JButton cancelButton = new JButton("Đóng");
+        JButton cancelButton = new JButton("Hủy");
         cancelButton.addActionListener(e -> dialog.dispose());
         
-        JButton toggleButton = new JButton("Bật/Tắt mã hóa");
-        toggleButton.setBackground(new Color(76, 175, 80));
-        toggleButton.setForeground(Color.WHITE);
-        toggleButton.setFocusPainted(false);
-        toggleButton.setBorderPainted(false);
-        toggleButton.addActionListener(e -> {
+        JButton createButton = new JButton("🔒 Tạo nhóm mã hóa");
+        createButton.setBackground(new Color(76, 175, 80));
+        createButton.setForeground(Color.WHITE);
+        createButton.setFocusPainted(false);
+        createButton.setBorderPainted(false);
+        createButton.addActionListener(e -> {
             int confirm = JOptionPane.showConfirmDialog(dialog,
-                "Bạn có chắc muốn thay đổi cài đặt mã hóa?\n" +
-                "Điều này sẽ ảnh hưởng đến tất cả thành viên trong nhóm.",
-                "Xác nhận",
-                JOptionPane.YES_NO_OPTION);
+                "Bạn có chắc muốn tạo phiên bản mã hóa của nhóm này?\n\n" +
+                "Một nhóm mới sẽ được tạo với mã hóa E2E.",
+                "Xác nhận tạo nhóm mã hóa",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE);
             
             if (confirm == JOptionPane.YES_OPTION) {
-                toggleButton.setEnabled(false);
-                toggleButton.setText("Đang xử lý...");
+                createButton.setEnabled(false);
+                createButton.setText("Đang tạo...");
                 
-                SwingWorker<Boolean, Void> worker = new SwingWorker<>() {
+                // Lấy danh sách thành viên trước để dùng cho notification
+                final java.util.List<String> memberUsernames = new java.util.ArrayList<>();
+                java.util.List<java.util.Map<String, Object>> members = groupService.getGroupMembers(groupId);
+                for (java.util.Map<String, Object> member : members) {
+                    String uname = (String) member.get("username");
+                    if (!uname.equals(mainFrame.getUsername())) {
+                        memberUsernames.add(uname);
+                    }
+                }
+                
+                SwingWorker<Integer, Void> worker = new SwingWorker<>() {
                     @Override
-                    protected Boolean doInBackground() {
-                        return groupService.toggleGroupEncryption(groupId);
+                    protected Integer doInBackground() {
+                        // Tạo nhóm mới với mã hóa
+                        return groupService.createGroup(
+                            groupName,  // Giữ nguyên tên
+                            "Phiên bản mã hóa của nhóm " + groupName,
+                            mainFrame.getUsername(),
+                            memberUsernames,
+                            true  // isEncrypted = true
+                        );
                     }
                     
                     @Override
                     protected void done() {
                         try {
-                            boolean success = get();
-                            if (success) {
+                            int newGroupId = get();
+                            if (newGroupId > 0) {
                                 JOptionPane.showMessageDialog(dialog,
-                                    "Đã cập nhật cài đặt mã hóa!",
+                                    "🔒 Đã tạo nhóm mã hóa thành công!\n\n" +
+                                    "Nhóm mới có icon ổ khóa để phân biệt.",
                                     "Thành công",
                                     JOptionPane.INFORMATION_MESSAGE);
                                 dialog.dispose();
+                                
+                                // Refresh GroupList và mở nhóm mã hóa mới
+                                mainFrame.refreshGroupList();
+                                mainFrame.openGroupChat(newGroupId, groupName, true, true);
+                                
+                                // Gửi thông báo đến các thành viên qua socket
+                                if (mainFrame.getSocketClient() != null && mainFrame.getSocketClient().isConnected()) {
+                                    mainFrame.getSocketClient().sendGroupCreatedNotification(newGroupId, groupName, memberUsernames);
+                                }
                             } else {
                                 JOptionPane.showMessageDialog(dialog,
-                                    "Không thể thay đổi cài đặt mã hóa!",
+                                    "Không thể tạo nhóm mã hóa!",
                                     "Lỗi",
                                     JOptionPane.ERROR_MESSAGE);
-                                toggleButton.setEnabled(true);
-                                toggleButton.setText("Bật/Tắt mã hóa");
+                                createButton.setEnabled(true);
+                                createButton.setText("🔒 Tạo nhóm mã hóa");
                             }
                         } catch (Exception ex) {
                             ex.printStackTrace();
-                            toggleButton.setEnabled(true);
-                            toggleButton.setText("Bật/Tắt mã hóa");
+                            JOptionPane.showMessageDialog(dialog,
+                                "Lỗi: " + ex.getMessage(),
+                                "Lỗi",
+                                JOptionPane.ERROR_MESSAGE);
+                            createButton.setEnabled(true);
+                            createButton.setText("🔒 Tạo nhóm mã hóa");
                         }
                     }
                 };
@@ -1028,7 +1167,7 @@ public class GroupChatPanel extends JPanel {
         });
         
         buttonPanel.add(cancelButton);
-        buttonPanel.add(toggleButton);
+        buttonPanel.add(createButton);
         
         dialog.add(headerPanel, BorderLayout.NORTH);
         dialog.add(contentPanel, BorderLayout.CENTER);

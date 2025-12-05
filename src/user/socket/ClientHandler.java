@@ -98,6 +98,14 @@ public class ClientHandler implements Runnable {
             case BLOCK:
                 handleFriendManagementNotification(message);
                 break;
+            
+            case GROUP_MESSAGE:
+                handleGroupMessage(message);
+                break;
+            
+            case GROUP_CREATED:
+                handleGroupCreated(message);
+                break;
                 
             default:
                 System.err.println("⚠️  Unknown message type: " + message.getType());
@@ -207,6 +215,65 @@ public class ClientHandler implements Runnable {
             } else {
                 System.out.println("⚠️  User " + receiver + " is offline. Notification not sent.");
             }
+        }
+    }
+    
+    /**
+     * Xử lý Group Message - broadcast đến tất cả thành viên nhóm
+     */
+    private void handleGroupMessage(Message message) {
+        message.setSender(username);
+        int groupId = (Integer) message.getData();
+        
+        System.out.println("📨 Group message from " + username + " to group " + groupId);
+        
+        // Lấy danh sách thành viên nhóm
+        try {
+            user.service.GroupService groupService = new user.service.GroupService();
+            java.util.List<java.util.Map<String, Object>> members = groupService.getGroupMembers(groupId);
+            
+            // Broadcast đến tất cả thành viên online (trừ người gửi)
+            for (java.util.Map<String, Object> member : members) {
+                String memberUsername = (String) member.get("username");
+                if (memberUsername != null && !memberUsername.equals(username)) {
+                    boolean sent = server.sendToUser(memberUsername, message);
+                    if (sent) {
+                        System.out.println("✅ Group message sent to: " + memberUsername);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Error broadcasting group message: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+     * Xử lý thông báo nhóm mới được tạo - gửi đến các thành viên
+     */
+    @SuppressWarnings("unchecked")
+    private void handleGroupCreated(Message message) {
+        message.setSender(username);
+        
+        try {
+            java.util.Map<String, Object> data = (java.util.Map<String, Object>) message.getData();
+            int groupId = (Integer) data.get("groupId");
+            java.util.List<String> members = (java.util.List<String>) data.get("members");
+            
+            System.out.println("📨 Group created notification from " + username + " for group " + groupId);
+            
+            // Gửi thông báo đến tất cả thành viên (trừ người tạo)
+            for (String memberUsername : members) {
+                if (!memberUsername.equals(username)) {
+                    boolean sent = server.sendToUser(memberUsername, message);
+                    if (sent) {
+                        System.out.println("✅ Group created notification sent to: " + memberUsername);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Error handling group created: " + e.getMessage());
+            e.printStackTrace();
         }
     }
     

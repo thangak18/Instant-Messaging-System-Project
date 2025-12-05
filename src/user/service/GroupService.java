@@ -9,9 +9,11 @@ import java.util.*;
 public class GroupService {
     
     private DatabaseConnection dbConnection;
+    private EncryptionService encryptionService;
     
     public GroupService() {
         this.dbConnection = DatabaseConnection.getInstance();
+        this.encryptionService = EncryptionService.getInstance();
     }
     
     /**
@@ -23,6 +25,20 @@ public class GroupService {
      * @return group_id nếu thành công, -1 nếu thất bại
      */
     public int createGroup(String groupName, String description, String creatorUsername, List<String> memberUsernames) {
+        return createGroup(groupName, description, creatorUsername, memberUsernames, false);
+    }
+    
+    /**
+     * TẠO NHÓM CHAT MỚI (CÓ TÙY CHỌN MÃ HÓA ĐẦU CUỐI)
+     * @param groupName Tên nhóm
+     * @param description Mô tả nhóm
+     * @param creatorUsername Username người tạo
+     * @param memberUsernames Danh sách username thành viên
+     * @param isEncrypted TRUE nếu muốn bật mã hóa đầu cuối
+     * @return group_id nếu thành công, -1 nếu thất bại
+     */
+    public int createGroup(String groupName, String description, String creatorUsername, 
+                          List<String> memberUsernames, boolean isEncrypted) {
         Connection conn = null;
         PreparedStatement pstmt = null;
         ResultSet rs = null;
@@ -40,13 +56,22 @@ public class GroupService {
                 return -1;
             }
             
+            // Tạo khóa mã hóa nếu là nhóm E2E
+            String encryptionKey = null;
+            if (isEncrypted) {
+                // Tạo khóa tạm thời với groupId = -1, sẽ update sau
+                encryptionKey = encryptionService.generateGroupKey(-1);
+            }
+            
             // 1. Tạo nhóm (admin_id là creator)
-            String createGroupSQL = "INSERT INTO groups (group_name, admin_id, created_at) " +
-                                   "VALUES (?, ?, CURRENT_TIMESTAMP) RETURNING group_id";
+            String createGroupSQL = "INSERT INTO groups (group_name, admin_id, is_encrypted, encryption_key, created_at) " +
+                                   "VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP) RETURNING group_id";
             
             pstmt = conn.prepareStatement(createGroupSQL);
             pstmt.setString(1, groupName);
             pstmt.setInt(2, creatorId);
+            pstmt.setBoolean(3, isEncrypted);
+            pstmt.setString(4, encryptionKey);
             
             rs = pstmt.executeQuery();
             int groupId = -1;
@@ -57,6 +82,11 @@ public class GroupService {
             if (groupId == -1) {
                 conn.rollback();
                 return -1;
+            }
+            
+            // Load khóa cho groupId thực sự nếu là nhóm mã hóa
+            if (isEncrypted && encryptionKey != null) {
+                encryptionService.loadGroupKey(groupId, encryptionKey);
             }
             
             // 2. Thêm creator vào group_members
@@ -87,7 +117,9 @@ public class GroupService {
             }
             
             conn.commit();
-            System.out.println("✅ Đã tạo nhóm: " + groupName + " (ID: " + groupId + ")");
+            
+            String encryptedFlag = isEncrypted ? " [🔒 E2E]" : "";
+            System.out.println("✅ Đã tạo nhóm: " + groupName + encryptedFlag + " (ID: " + groupId + ")");
             return groupId;
             
         } catch (SQLException e) {
@@ -405,6 +437,7 @@ public class GroupService {
         List<Map<String, Object>> groups = new ArrayList<>();
         
         String sql = "SELECT g.group_id, g.group_name, g.created_at, g.admin_id, " +
+                     "COALESCE(g.is_encrypted, false) as is_encrypted, g.encryption_key, " +
                      "(SELECT COUNT(*) FROM group_members WHERE group_id = g.group_id) as member_count, " +
                      "u.user_id " +
                      "FROM groups g " +
@@ -431,12 +464,23 @@ public class GroupService {
                 int groupId = rs.getInt("group_id");
                 int adminId = rs.getInt("admin_id");
                 int userId = rs.getInt("user_id");
+                boolean isEncrypted = rs.getBoolean("is_encrypted");
+                String encryptionKey = rs.getString("encryption_key");
                 
                 group.put("id", groupId);
                 group.put("group_name", rs.getString("group_name"));
                 group.put("created_at", rs.getTimestamp("created_at"));
                 group.put("role", (adminId == userId) ? "admin" : "member");
                 group.put("member_count", rs.getInt("member_count"));
+                group.put("is_encrypted", isEncrypted);
+                
+                // Load encryption key vào cache nếu là nhóm mã hóa
+                if (isEncrypted && encryptionKey != null && !encryptionKey.isEmpty()) {
+                    if (!encryptionService.hasGroupKey(groupId)) {
+                        encryptionService.loadGroupKey(groupId, encryptionKey);
+                    }
+                }
+                
                 groups.add(group);
             }
             
@@ -658,6 +702,29 @@ public class GroupService {
         return -1;
     }
     
+    /**
+     * Lấy username từ user_id
+     */
+    public String getUsernameById(int userId) {
+        String sql = "SELECT username FROM users WHERE user_id = ?";
+        
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setInt(1, userId);
+            
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("username");
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi khi lấy username: " + e.getMessage());
+        }
+        
+        return null;
+    }
+    
     // ==================== GROUP MANAGEMENT METHODS ====================
     
     /**
@@ -784,38 +851,13 @@ public class GroupService {
     }
     
     /**
-     * KIỂM TRA NHÓM CÓ BẬT MÃ HÓA CHƯA
-     */
-    public boolean isGroupEncrypted(int groupId) {
-        String sql = "SELECT encrypted FROM groups WHERE group_id = ?";
-        
-        try (Connection conn = dbConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
-            pstmt.setInt(1, groupId);
-            
-            try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getBoolean("encrypted");
-                }
-            }
-            
-        } catch (SQLException e) {
-            // Nếu cột encrypted chưa tồn tại, return false
-            System.err.println("⚠️ Cột encrypted có thể chưa tồn tại trong bảng groups");
-        }
-        
-        return false;
-    }
-    
-    /**
      * BẬT/TẮT MÃ HÓA NHÓM
      */
     public boolean toggleGroupEncryption(int groupId) {
         // Kiểm tra trạng thái hiện tại
         boolean currentStatus = isGroupEncrypted(groupId);
         
-        String sql = "UPDATE groups SET encrypted = ? WHERE group_id = ?";
+        String sql = "UPDATE groups SET is_encrypted = ? WHERE group_id = ?";
         
         try (Connection conn = dbConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -975,5 +1017,212 @@ public class GroupService {
         }
         
         return messages;
+    }
+    
+    // ==================== ENCRYPTION METHODS ====================
+    
+    /**
+     * KIỂM TRA NHÓM CÓ BẬT MÃ HÓA KHÔNG
+     * @param groupId ID nhóm
+     * @return true nếu nhóm đã bật E2E encryption
+     */
+    public boolean isGroupEncrypted(int groupId) {
+        String sql = "SELECT COALESCE(is_encrypted, false) as is_encrypted FROM groups WHERE group_id = ?";
+        
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        
+        try {
+            conn = dbConnection.getConnection();
+            if (conn == null) return false;
+            
+            pstmt = conn.prepareStatement(sql);
+            pstmt.setInt(1, groupId);
+            
+            rs = pstmt.executeQuery();
+            if (rs.next()) {
+                return rs.getBoolean("is_encrypted");
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi kiểm tra mã hóa nhóm: " + e.getMessage());
+        } finally {
+            if (rs != null) try { rs.close(); } catch (SQLException e) { }
+            if (pstmt != null) try { pstmt.close(); } catch (SQLException e) { }
+            if (conn != null) DatabaseConnection.closeConnection(conn);
+        }
+        
+        return false;
+    }
+    
+    /**
+     * LẤY KHÓA MÃ HÓA CỦA NHÓM
+     * @param groupId ID nhóm
+     * @return Khóa Base64 hoặc null
+     */
+    public String getGroupEncryptionKey(int groupId) {
+        String sql = "SELECT encryption_key FROM groups WHERE group_id = ? AND is_encrypted = true";
+        
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        
+        try {
+            conn = dbConnection.getConnection();
+            if (conn == null) return null;
+            
+            pstmt = conn.prepareStatement(sql);
+            pstmt.setInt(1, groupId);
+            
+            rs = pstmt.executeQuery();
+            if (rs.next()) {
+                String key = rs.getString("encryption_key");
+                if (key != null && !key.isEmpty()) {
+                    // Load key vào cache
+                    encryptionService.loadGroupKey(groupId, key);
+                }
+                return key;
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi lấy khóa mã hóa: " + e.getMessage());
+        } finally {
+            if (rs != null) try { rs.close(); } catch (SQLException e) { }
+            if (pstmt != null) try { pstmt.close(); } catch (SQLException e) { }
+            if (conn != null) DatabaseConnection.closeConnection(conn);
+        }
+        
+        return null;
+    }
+    
+    /**
+     * LƯU KHÓA MÃ HÓA CHO NHÓM
+     * @param groupId ID nhóm
+     * @param encryptionKey Khóa Base64
+     * @return true nếu lưu thành công
+     */
+    public boolean saveEncryptionKey(int groupId, String encryptionKey) {
+        String sql = "UPDATE groups SET encryption_key = ?, is_encrypted = true WHERE group_id = ?";
+        
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        
+        try {
+            conn = dbConnection.getConnection();
+            if (conn == null) return false;
+            
+            pstmt = conn.prepareStatement(sql);
+            pstmt.setString(1, encryptionKey);
+            pstmt.setInt(2, groupId);
+            
+            int rows = pstmt.executeUpdate();
+            if (rows > 0) {
+                System.out.println("✅ Đã lưu khóa mã hóa cho nhóm " + groupId);
+                return true;
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi lưu khóa mã hóa: " + e.getMessage());
+        } finally {
+            if (pstmt != null) try { pstmt.close(); } catch (SQLException e) { }
+            if (conn != null) DatabaseConnection.closeConnection(conn);
+        }
+        
+        return false;
+    }
+    
+    /**
+     * GỬI TIN NHẮN NHÓM (CÓ HỖ TRỢ MÃ HÓA)
+     * @param groupId ID nhóm
+     * @param senderUsername Username người gửi  
+     * @param content Nội dung tin nhắn (plaintext)
+     * @param encrypt TRUE để mã hóa tin nhắn
+     * @return true nếu gửi thành công
+     */
+    public boolean sendGroupMessageEncrypted(int groupId, String senderUsername, String content, boolean encrypt) {
+        // Kiểm tra có phải thành viên không
+        if (!isMember(groupId, senderUsername)) {
+            System.err.println("❌ Bạn không phải thành viên của nhóm này");
+            return false;
+        }
+        
+        String finalContent = content;
+        
+        // Mã hóa nếu cần
+        if (encrypt) {
+            String encrypted = encryptionService.encryptMessage(groupId, content);
+            if (encrypted != null) {
+                finalContent = encrypted;
+            } else {
+                System.err.println("❌ Không thể mã hóa tin nhắn!");
+                return false;
+            }
+        }
+        
+        String sql = "INSERT INTO group_messages (group_id, sender_id, message_text, sent_time) " +
+                     "VALUES (?, (SELECT user_id FROM users WHERE username = ?), ?, CURRENT_TIMESTAMP)";
+        
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        
+        try {
+            conn = dbConnection.getConnection();
+            if (conn == null) return false;
+            
+            pstmt = conn.prepareStatement(sql);
+            pstmt.setInt(1, groupId);
+            pstmt.setString(2, senderUsername);
+            pstmt.setString(3, finalContent);
+            
+            int rows = pstmt.executeUpdate();
+            
+            if (rows > 0) {
+                String encFlag = encrypt ? " [🔒 E2E]" : "";
+                System.out.println("✅ Đã gửi tin nhắn nhóm" + encFlag);
+                return true;
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi khi gửi tin nhắn nhóm: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            if (pstmt != null) try { pstmt.close(); } catch (SQLException e) { }
+            if (conn != null) DatabaseConnection.closeConnection(conn);
+        }
+        
+        return false;
+    }
+    
+    /**
+     * LẤY TIN NHẮN NHÓM (CÓ GIẢI MÃ NẾU CẦN)
+     * @param groupId ID nhóm  
+     * @param decrypt TRUE để giải mã tin nhắn
+     * @return Danh sách tin nhắn đã giải mã
+     */
+    public List<Map<String, Object>> getGroupMessagesDecrypted(int groupId, boolean decrypt) {
+        List<Map<String, Object>> messages = getGroupMessages(groupId);
+        
+        if (!decrypt) {
+            return messages;
+        }
+        
+        // Giải mã từng tin nhắn
+        for (Map<String, Object> msg : messages) {
+            String content = (String) msg.get("message");
+            if (content != null) {
+                String decrypted = encryptionService.decryptMessage(groupId, content);
+                msg.put("message", decrypted);
+            }
+        }
+        
+        return messages;
+    }
+    
+    /**
+     * LẤY EncryptionService INSTANCE
+     */
+    public EncryptionService getEncryptionService() {
+        return encryptionService;
     }
 }
