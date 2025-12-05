@@ -1,6 +1,7 @@
 package admin.gui;
 
 import admin.service.GroupDAO;
+import admin.service.UserDAO;
 import admin.socket.ChatGroup;
 import admin.socket.User;
 
@@ -31,13 +32,16 @@ public class GroupManagementPanel extends JPanel {
     private JTextField searchField;
     private JComboBox<String> sortCombo;
     private JComboBox<String> searchTypeCombo;
-    
+    private JLabel totalLabel;
+
     // Backend
     private GroupDAO groupDAO;
+    private UserDAO userDAO;
     private DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     public GroupManagementPanel() {
         this.groupDAO = new GroupDAO();
+        this.userDAO = new UserDAO();
         initComponents();
         setupLayout();
         loadGroupsFromDatabase();
@@ -46,10 +50,12 @@ public class GroupManagementPanel extends JPanel {
 
     private void initComponents() {
         // Bảng nhóm với cột đầy đủ thông tin
-        String[] columns = {"ID", "Tên nhóm", "Admin chính", "Số thành viên", "Ngày tạo"};
+        String[] columns = { "ID", "Tên nhóm", "Admin chính", "Số thành viên", "Ngày tạo" };
         tableModel = new DefaultTableModel(columns, 0) {
             @Override
-            public boolean isCellEditable(int row, int column) { return false; }
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
         };
 
         groupTable = new JTable(tableModel);
@@ -61,28 +67,28 @@ public class GroupManagementPanel extends JPanel {
 
         // Điều chỉnh độ rộng cột
         TableColumnModel columnModel = groupTable.getColumnModel();
-        columnModel.getColumn(0).setPreferredWidth(50);   // ID
-        columnModel.getColumn(1).setPreferredWidth(250);  // Tên nhóm
-        columnModel.getColumn(2).setPreferredWidth(150);  // Admin chính
-        columnModel.getColumn(3).setPreferredWidth(100);  // Số thành viên
-        columnModel.getColumn(4).setPreferredWidth(120);  // Ngày tạo
+        columnModel.getColumn(0).setPreferredWidth(50); // ID
+        columnModel.getColumn(1).setPreferredWidth(250); // Tên nhóm
+        columnModel.getColumn(2).setPreferredWidth(150); // Admin chính
+        columnModel.getColumn(3).setPreferredWidth(100); // Số thành viên
+        columnModel.getColumn(4).setPreferredWidth(120); // Ngày tạo
 
         // Yêu cầu b: Tìm kiếm/lọc theo tên
         searchField = new JTextField(20);
-        searchTypeCombo = new JComboBox<>(new String[]{
-            "Tìm theo tên nhóm", 
-            "Tìm theo admin"
+        searchTypeCombo = new JComboBox<>(new String[] {
+                "Tìm theo tên nhóm",
+                "Tìm theo admin"
         });
 
         // Yêu cầu a: Sắp xếp theo tên/thời gian tạo
-        sortCombo = new JComboBox<>(new String[]{
-            "Sắp xếp theo tên (A-Z)",
-            "Sắp xếp theo tên (Z-A)",
-            "Sắp xếp theo ngày tạo (Mới nhất)",
-            "Sắp xếp theo ngày tạo (Cũ nhất)",
+        sortCombo = new JComboBox<>(new String[] {
+                "Sắp xếp theo tên (A-Z)",
+                "Sắp xếp theo tên (Z-A)",
+                "Sắp xếp theo ngày tạo (Mới nhất)",
+                "Sắp xếp theo ngày tạo (Cũ nhất)",
         });
     }
-    
+
     /**
      * Load danh sách nhóm từ database
      */
@@ -90,26 +96,30 @@ public class GroupManagementPanel extends JPanel {
         try {
             currentGroups = groupDAO.getAllGroups();
             applySorting();
+            // Update label tổng số nhóm
+            if (totalLabel != null) {
+                totalLabel.setText("📊 Tổng số nhóm: " + currentGroups.size());
+            }
             displayGroups(currentGroups);
         } catch (SQLException e) {
             showError("Lỗi load dữ liệu nhóm: " + e.getMessage());
             e.printStackTrace();
         }
     }
-    
+
     /**
      * Hiển thị danh sách nhóm lên table
      */
     private void displayGroups(List<ChatGroup> groups) {
         tableModel.setRowCount(0); // Clear table
-        
+
         for (ChatGroup group : groups) {
             Object[] row = {
-                group.getId(),
-                group.getGroupName(),
-                group.getCreatorName(),
-                group.getMemberCount(),
-                group.getCreatedAt() != null ? group.getCreatedAt().format(dateFormatter) : ""
+                    group.getId(),
+                    group.getGroupName(),
+                    group.getCreatorName(),
+                    group.getMemberCount(),
+                    group.getCreatedAt() != null ? group.getCreatedAt().format(dateFormatter) : ""
             };
             tableModel.addRow(row);
         }
@@ -138,9 +148,8 @@ public class GroupManagementPanel extends JPanel {
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBackground(Color.WHITE);
         panel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(Color.LIGHT_GRAY),
-            new EmptyBorder(15, 15, 15, 15)
-        ));
+                BorderFactory.createLineBorder(Color.LIGHT_GRAY),
+                new EmptyBorder(15, 15, 15, 15)));
 
         JLabel titleLabel = new JLabel("🔍 Tìm kiếm & Lọc nhóm chat");
         titleLabel.setFont(new Font("Arial", Font.BOLD, 14));
@@ -153,18 +162,15 @@ public class GroupManagementPanel extends JPanel {
         JPanel searchRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
         searchRow.setOpaque(false);
         searchRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-        
+
         searchRow.add(new JLabel("Loại tìm kiếm:"));
         searchTypeCombo.setPreferredSize(new Dimension(150, 30));
         searchRow.add(searchTypeCombo);
-        
+
         searchRow.add(new JLabel("Từ khóa:"));
         searchField.setPreferredSize(new Dimension(250, 30));
         searchRow.add(searchField);
-        
-        JButton searchBtn = createStyledButton("🔍 Tìm kiếm", ZALO_BLUE);
-        searchRow.add(searchBtn);
-        
+
         panel.add(searchRow);
         panel.add(Box.createVerticalStrut(5));
 
@@ -172,17 +178,18 @@ public class GroupManagementPanel extends JPanel {
         JPanel sortRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
         sortRow.setOpaque(false);
         sortRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-        
+
         sortRow.add(new JLabel("Sắp xếp:"));
         sortCombo.setPreferredSize(new Dimension(280, 30));
         sortRow.add(sortCombo);
-        
-        JButton applyBtn = createStyledButton("🔄 Áp dụng", ZALO_BLUE);
-        sortRow.add(applyBtn);
-        
+
+        // Nút duy nhất để tìm kiếm và lọc
+        JButton searchFilterBtn = createStyledButton("Tìm kiếm + Lọc", ZALO_BLUE);
+        sortRow.add(searchFilterBtn);
+
         JButton resetBtn = createStyledButton("↺ Đặt lại", ZALO_BLUE);
         sortRow.add(resetBtn);
-        
+
         panel.add(sortRow);
 
         return panel;
@@ -192,25 +199,27 @@ public class GroupManagementPanel extends JPanel {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(Color.WHITE);
         panel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(Color.LIGHT_GRAY),
-            new EmptyBorder(10, 10, 10, 10)
-        ));
+                BorderFactory.createLineBorder(Color.LIGHT_GRAY),
+                new EmptyBorder(10, 10, 10, 10)));
 
         // Header with statistics
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setOpaque(false);
-        
+
         JLabel titleLabel = new JLabel("👥 Danh sách nhóm chat");
         titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
         titleLabel.setForeground(ZALO_BLUE);
-        
+
         JPanel statsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 0));
         statsPanel.setOpaque(false);
-        
-        JLabel totalLabel = new JLabel("📊 Tổng số nhóm: 3");
-        totalLabel.setFont(new Font("Arial", Font.BOLD, 12));
-        statsPanel.add(totalLabel);
-        
+
+        // Khởi tạo instance variable nếu chưa có
+        if (this.totalLabel == null) {
+            this.totalLabel = new JLabel("📊 Tổng số nhóm: 0");
+        }
+        this.totalLabel.setFont(new Font("Arial", Font.BOLD, 12));
+        statsPanel.add(this.totalLabel);
+
         headerPanel.add(titleLabel, BorderLayout.WEST);
         headerPanel.add(statsPanel, BorderLayout.EAST);
         headerPanel.setBorder(new EmptyBorder(0, 0, 10, 0));
@@ -227,97 +236,109 @@ public class GroupManagementPanel extends JPanel {
 
         // Yêu cầu c: Xem danh sách thành viên
         JButton viewMembersBtn = createStyledButton("👥 Xem thành viên", INFO_CYAN);
-        
+
         // Yêu cầu d: Xem danh sách admin
         JButton viewAdminsBtn = createStyledButton("👑 Xem danh sách admin", INFO_CYAN);
-        
-        
+        JButton exportBtn = createStyledButton("📊 Xuất CSV", INFO_CYAN);
 
         panel.add(viewMembersBtn);
         panel.add(viewAdminsBtn);
-
+        panel.add(exportBtn);
 
         return panel;
     }
 
     private void setupEventHandlers() {
-        // Yêu cầu b: Tìm kiếm
-        addActionToButton("🔍 Tìm kiếm", e -> handleSearch());
-        
-        // Yêu cầu a: Áp dụng sắp xếp
-        addActionToButton("🔄 Áp dụng", e -> handleSort());
-        
+        // Nút duy nhất: Tìm kiếm + Lọc
+        addActionToButton("Tìm kiếm + Lọc", e -> handleSearchAndFilter());
+
         // Đặt lại
         addActionToButton("↺ Đặt lại", e -> handleReset());
-        
+
         // Yêu cầu c: Xem thành viên
         addActionToButton("👥 Xem thành viên", e -> showMembersDialog());
-        
+
         // Yêu cầu d: Xem admin
         addActionToButton("👑 Xem danh sách admin", e -> showAdminsDialog());
-        
+
+        // Xuất CSV
+        addActionToButton("📊 Xuất CSV", e -> handleExportCSV());
     }
 
     // Cache danh sách nhóm để sắp xếp
     private List<ChatGroup> currentGroups = new ArrayList<>();
 
     // ==================== EVENT HANDLERS ====================
-    
-    // Yêu cầu b: Tìm kiếm/lọc theo tên
-    private void handleSearch() {
+
+    /**
+     * Xử lý tìm kiếm và lọc kết hợp
+     * - Nếu có từ khóa: tìm kiếm theo từ khóa
+     * - Nếu không có từ khóa: lấy tất cả nhóm
+     * - Sau đó áp dụng sắp xếp
+     */
+    private void handleSearchAndFilter() {
         String keyword = searchField.getText().trim();
         String searchType = (String) searchTypeCombo.getSelectedItem();
-        
-        if (keyword.isEmpty()) {
-            JOptionPane.showMessageDialog(this, 
-                "Vui lòng nhập từ khóa tìm kiếm!",
-                "Cảnh báo", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-        
+
         try {
-            boolean searchByAdmin = "Tìm theo admin".equals(searchType);
-            List<ChatGroup> groups = groupDAO.searchGroups(keyword, searchByAdmin);
+            // Bước 1: Lấy danh sách groups (có hoặc không có từ khóa)
+            List<ChatGroup> groups;
+            if (!keyword.isEmpty()) {
+                boolean searchByAdmin = "Tìm theo admin".equals(searchType);
+                groups = groupDAO.searchGroups(keyword, searchByAdmin);
+            } else {
+                groups = groupDAO.getAllGroups();
+            }
+
+            // Bước 2: Cập nhật danh sách hiện tại
             currentGroups = groups;
+
+            // Bước 3: Áp dụng sắp xếp
             applySorting();
+
+            // Bước 4: Hiển thị
             displayGroups(currentGroups);
-            
-            JOptionPane.showMessageDialog(this, 
-                "Tìm thấy " + groups.size() + " nhóm",
-                "Kết quả", JOptionPane.INFORMATION_MESSAGE);
+
+            // Bước 5: Cập nhật label tổng số
+            if (totalLabel != null) {
+                totalLabel.setText("📊 Tổng số nhóm: " + currentGroups.size());
+            }
+
+            // Thông báo kết quả
+            String message = !keyword.isEmpty()
+                    ? "Tìm thấy " + groups.size() + " nhóm"
+                    : "Đã lọc " + groups.size() + " nhóm";
+            JOptionPane.showMessageDialog(this, message,
+                    "Kết quả", JOptionPane.INFORMATION_MESSAGE);
         } catch (SQLException e) {
-            showError("Lỗi tìm kiếm: " + e.getMessage());
+            showError("Lỗi: " + e.getMessage());
         }
     }
 
-    // Yêu cầu a: Sắp xếp theo tên/thời gian tạo
-    private void handleSort() {
-        applySorting();
-        displayGroups(currentGroups);
-    }
-    
     private void applySorting() {
         String sortOption = (String) sortCombo.getSelectedItem();
-        if (sortOption == null || currentGroups.isEmpty()) return;
-        
+        if (sortOption == null || currentGroups.isEmpty())
+            return;
+
         java.util.Comparator<ChatGroup> comparator;
         switch (sortOption) {
             case "Sắp xếp theo tên (A-Z)":
-                comparator = java.util.Comparator.comparing(g -> 
-                    g.getGroupName() != null ? g.getGroupName().toLowerCase() : "");
+                comparator = java.util.Comparator
+                        .comparing(g -> g.getGroupName() != null ? g.getGroupName().toLowerCase() : "");
                 break;
             case "Sắp xếp theo tên (Z-A)":
-                comparator = java.util.Comparator.comparing((ChatGroup g) -> 
-                    g.getGroupName() != null ? g.getGroupName().toLowerCase() : "").reversed();
+                comparator = java.util.Comparator
+                        .comparing((ChatGroup g) -> g.getGroupName() != null ? g.getGroupName().toLowerCase() : "")
+                        .reversed();
                 break;
             case "Sắp xếp theo ngày tạo (Cũ nhất)":
                 comparator = java.util.Comparator.comparing(ChatGroup::getCreatedAt,
-                    java.util.Comparator.nullsLast(java.time.LocalDateTime::compareTo));
+                        java.util.Comparator.nullsLast(java.time.LocalDateTime::compareTo));
                 break;
             case "Sắp xếp theo ngày tạo (Mới nhất)":
             default:
                 comparator = java.util.Comparator.comparing(ChatGroup::getCreatedAt,
-                    java.util.Comparator.nullsLast(java.time.LocalDateTime::compareTo)).reversed();
+                        java.util.Comparator.nullsLast(java.time.LocalDateTime::compareTo)).reversed();
                 break;
         }
         currentGroups.sort(comparator);
@@ -328,78 +349,92 @@ public class GroupManagementPanel extends JPanel {
         searchTypeCombo.setSelectedIndex(0);
         sortCombo.setSelectedIndex(0);
         loadGroupsFromDatabase();
-        
-        JOptionPane.showMessageDialog(this, 
-            "Đã đặt lại bộ lọc!",
-            "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+
+        JOptionPane.showMessageDialog(this,
+                "Đã đặt lại bộ lọc!",
+                "Thông báo", JOptionPane.INFORMATION_MESSAGE);
     }
 
     // Yêu cầu c: Xem danh sách thành viên 1 nhóm
     private void showMembersDialog() {
         int selectedRow = groupTable.getSelectedRow();
         if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, 
-                "Vui lòng chọn nhóm chat!",
-                "Cảnh báo", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this,
+                    "Vui lòng chọn nhóm chat!",
+                    "Cảnh báo", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        
+
         int groupId = (int) groupTable.getValueAt(selectedRow, 0);
         String groupName = groupTable.getValueAt(selectedRow, 1).toString();
-        
+
         try {
             List<User> members = groupDAO.getGroupMembers(groupId);
-            
-            JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), 
-                                        "Danh sách thành viên - " + groupName, true);
+
+            JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this),
+                    "Danh sách thành viên - " + groupName, true);
             dialog.setLayout(new BorderLayout(10, 10));
             dialog.setSize(700, 500);
             dialog.setLocationRelativeTo(this);
-            
+
             // Bảng thành viên
-            String[] columns = {"STT", "Tên đăng nhập", "Họ tên", "Email", "Trạng thái"};
+            String[] columns = { "STT", "Tên đăng nhập", "Họ tên", "Ngày sinh", "Giới tính", "Email", "Trạng thái" };
             DefaultTableModel model = new DefaultTableModel(columns, 0) {
                 @Override
-                public boolean isCellEditable(int row, int column) { return false; }
+                public boolean isCellEditable(int row, int column) {
+                    return false;
+                }
             };
-            
+
+            DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
             int stt = 1;
             for (User member : members) {
-                model.addRow(new Object[]{
-                    stt++,
-                    member.getUsername(),
-                    member.getFullName(),
-                    member.getEmail(),
-                    "active".equals(member.getStatus()) ? "Hoạt động" : "Bị khóa"
-                });
+                try {
+                    // Lấy đầy đủ thông tin user từ database
+                    User fullUserInfo = userDAO.getUserById(member.getId());
+                    if (fullUserInfo != null) {
+                        model.addRow(new Object[] {
+                                stt++,
+                                fullUserInfo.getUsername(),
+                                fullUserInfo.getFullName() != null ? fullUserInfo.getFullName() : "",
+                                fullUserInfo.getBirthDate() != null ? fullUserInfo.getBirthDate().format(dateFormatter)
+                                        : "",
+                                fullUserInfo.getGender() != null ? fullUserInfo.getGender() : "",
+                                fullUserInfo.getEmail() != null ? fullUserInfo.getEmail() : "",
+                                "active".equals(fullUserInfo.getStatus()) ? "Hoạt động" : "Bị khóa"
+                        });
+                    }
+                } catch (SQLException e) {
+                    System.err.println("Lỗi lấy thông tin user ID: " + member.getId());
+                }
             }
-            
+
             JTable memberTable = new JTable(model);
             memberTable.setRowHeight(28);
             memberTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 12));
             memberTable.getTableHeader().setBackground(ZALO_BLUE);
             memberTable.getTableHeader().setForeground(Color.WHITE);
-            
+
             JPanel contentPanel = new JPanel(new BorderLayout(10, 10));
             contentPanel.setBorder(new EmptyBorder(15, 15, 15, 15));
-            
+
             JLabel infoLabel = new JLabel("📊 Tổng số thành viên: " + members.size());
             infoLabel.setFont(new Font("Arial", Font.BOLD, 13));
             infoLabel.setBorder(new EmptyBorder(0, 0, 10, 0));
-            
+
             contentPanel.add(infoLabel, BorderLayout.NORTH);
             contentPanel.add(new JScrollPane(memberTable), BorderLayout.CENTER);
-            
+
             JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
             JButton closeBtn = createStyledButton("❌ Đóng", DANGER_RED);
             closeBtn.addActionListener(e -> dialog.dispose());
             buttonPanel.add(closeBtn);
-            
+
             contentPanel.add(buttonPanel, BorderLayout.SOUTH);
-            
+
             dialog.add(contentPanel);
             dialog.setVisible(true);
-            
+
         } catch (SQLException e) {
             showError("Lỗi lấy danh sách thành viên: " + e.getMessage());
         }
@@ -409,68 +444,82 @@ public class GroupManagementPanel extends JPanel {
     private void showAdminsDialog() {
         int selectedRow = groupTable.getSelectedRow();
         if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, 
-                "Vui lòng chọn nhóm chat!",
-                "Cảnh báo", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this,
+                    "Vui lòng chọn nhóm chat!",
+                    "Cảnh báo", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        
+
         int groupId = (int) groupTable.getValueAt(selectedRow, 0);
         String groupName = groupTable.getValueAt(selectedRow, 1).toString();
-        
+
         try {
             List<User> admins = groupDAO.getGroupAdmins(groupId);
-            
-            JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), 
-                                        "Danh sách Admin - " + groupName, true);
+
+            JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this),
+                    "Danh sách Admin - " + groupName, true);
             dialog.setLayout(new BorderLayout(10, 10));
             dialog.setSize(600, 400);
             dialog.setLocationRelativeTo(this);
-            
+
             // Bảng admin
-            String[] columns = {"STT", "Tên đăng nhập", "Họ tên", "Email", "Trạng thái"};
+            String[] columns = { "STT", "Tên đăng nhập", "Họ tên", "Ngày sinh", "Giới tính", "Email", "Trạng thái" };
             DefaultTableModel model = new DefaultTableModel(columns, 0) {
                 @Override
-                public boolean isCellEditable(int row, int column) { return false; }
+                public boolean isCellEditable(int row, int column) {
+                    return false;
+                }
             };
-            
+
+            DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
             int stt = 1;
             for (User admin : admins) {
-                model.addRow(new Object[]{
-                    stt++,
-                    admin.getUsername(),
-                    admin.getFullName(),
-                    admin.getEmail(),
-                    "active".equals(admin.getStatus()) ? "Hoạt động" : "Bị khóa"
-                });
+                try {
+                    // Lấy đầy đủ thông tin user từ database
+                    User fullUserInfo = userDAO.getUserById(admin.getId());
+                    if (fullUserInfo != null) {
+                        model.addRow(new Object[] {
+                                stt++,
+                                fullUserInfo.getUsername(),
+                                fullUserInfo.getFullName() != null ? fullUserInfo.getFullName() : "",
+                                fullUserInfo.getBirthDate() != null ? fullUserInfo.getBirthDate().format(dateFormatter)
+                                        : "",
+                                fullUserInfo.getGender() != null ? fullUserInfo.getGender() : "",
+                                fullUserInfo.getEmail() != null ? fullUserInfo.getEmail() : "",
+                                "active".equals(fullUserInfo.getStatus()) ? "Hoạt động" : "Bị khóa"
+                        });
+                    }
+                } catch (SQLException e) {
+                    System.err.println("Lỗi lấy thông tin user ID: " + admin.getId());
+                }
             }
-            
+
             JTable adminTable = new JTable(model);
             adminTable.setRowHeight(28);
             adminTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 12));
             adminTable.getTableHeader().setBackground(INFO_CYAN);
             adminTable.getTableHeader().setForeground(Color.WHITE);
-            
+
             JPanel contentPanel = new JPanel(new BorderLayout(10, 10));
             contentPanel.setBorder(new EmptyBorder(15, 15, 15, 15));
-            
+
             JLabel infoLabel = new JLabel("👑 Tổng số admin: " + admins.size());
             infoLabel.setFont(new Font("Arial", Font.BOLD, 13));
             infoLabel.setBorder(new EmptyBorder(0, 0, 10, 0));
-            
+
             contentPanel.add(infoLabel, BorderLayout.NORTH);
             contentPanel.add(new JScrollPane(adminTable), BorderLayout.CENTER);
-            
+
             JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
             JButton closeBtn = createStyledButton("❌ Đóng", DANGER_RED);
             closeBtn.addActionListener(e -> dialog.dispose());
             buttonPanel.add(closeBtn);
-            
+
             contentPanel.add(buttonPanel, BorderLayout.SOUTH);
-            
+
             dialog.add(contentPanel);
             dialog.setVisible(true);
-            
+
         } catch (SQLException e) {
             showError("Lỗi lấy danh sách admin: " + e.getMessage());
         }
@@ -488,7 +537,7 @@ public class GroupManagementPanel extends JPanel {
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
         return button;
     }
-    
+
     /**
      * Hiển thị thông báo lỗi
      */
@@ -522,5 +571,77 @@ public class GroupManagementPanel extends JPanel {
             }
         }
         return list.toArray(new Component[0]);
+    }
+
+    /**
+     * Xuất danh sách nhóm chat ra file CSV
+     */
+    private void handleExportCSV() {
+        try {
+            // Lấy dữ liệu từ currentGroups (data hiện tại đang hiển thị)
+            if (currentGroups.isEmpty()) {
+                JOptionPane.showMessageDialog(this,
+                        "Không có dữ liệu để xuất!",
+                        "Cảnh báo", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            // Chọn nơi lưu file
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Lưu file CSV");
+            fileChooser.setSelectedFile(new java.io.File("DanhSachNhomChat.csv"));
+
+            int userSelection = fileChooser.showSaveDialog(this);
+            if (userSelection != JFileChooser.APPROVE_OPTION) {
+                return;
+            }
+
+            java.io.File fileToSave = fileChooser.getSelectedFile();
+            String filePath = fileToSave.getAbsolutePath();
+            if (!filePath.toLowerCase().endsWith(".csv")) {
+                filePath += ".csv";
+            }
+
+            // Ghi vào file CSV
+            try (java.io.PrintWriter writer = new java.io.PrintWriter(
+                    new java.io.OutputStreamWriter(
+                            new java.io.FileOutputStream(filePath),
+                            java.nio.charset.StandardCharsets.UTF_8))) {
+
+                // Write BOM for Excel UTF-8 recognition
+                writer.write('\ufeff');
+
+                // Ghi header
+                writer.println("ID,Tên nhóm,Admin chính,Số thành viên,Ngày tạo");
+
+                // Ghi dữ liệu
+                for (ChatGroup group : currentGroups) {
+                    String line = String.format("%d,\"%s\",\"%s\",%d,\"%s\"",
+                            group.getId(),
+                            escapeCsv(group.getGroupName()),
+                            escapeCsv(group.getCreatorName()),
+                            group.getMemberCount(),
+                            group.getCreatedAt() != null ? group.getCreatedAt().format(dateFormatter) : "");
+                    writer.println(line);
+                }
+            }
+
+            JOptionPane.showMessageDialog(this,
+                    "Đã xuất " + currentGroups.size() + " nhóm vào file:\n" + filePath,
+                    "Thành công", JOptionPane.INFORMATION_MESSAGE);
+
+        } catch (Exception e) {
+            showError("Lỗi xuất file: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Escape special characters for CSV
+     */
+    private String escapeCsv(String value) {
+        if (value == null)
+            return "";
+        return value.replace("\"", "\"\"");
     }
 }
