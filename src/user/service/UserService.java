@@ -4,6 +4,8 @@ import java.sql.*;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
 
@@ -1672,7 +1674,7 @@ public class UserService {
      */
     public boolean reportSpam(String reporterUsername, String reportedUsername, String reason) {
         String sql = "INSERT INTO spam_reports (reporter_id, reported_user_id, reason, status) " +
-                     "SELECT u1.id, u2.id, ?, 'pending' " +
+                     "SELECT u1.user_id, u2.user_id, ?, 'pending' " +
                      "FROM users u1, users u2 " +
                      "WHERE u1.username = ? AND u2.username = ?";
         
@@ -1818,8 +1820,11 @@ public class UserService {
      * XÓA TOÀN BỘ LỊCH SỬ CHAT VỚI 1 NGƯỜI
      */
     public boolean deleteChatHistory(String username, String friendUsername) {
-        String sql = "DELETE FROM messages WHERE " +
-                     "(sender = ? AND receiver = ?) OR (sender = ? AND receiver = ?)";
+        String sql = "DELETE FROM messages WHERE message_id IN (" +
+                     "SELECT m.message_id FROM messages m " +
+                     "JOIN users u1 ON m.sender_id = u1.user_id " +
+                     "JOIN users u2 ON m.receiver_id = u2.user_id " +
+                     "WHERE (u1.username = ? AND u2.username = ?) OR (u1.username = ? AND u2.username = ?))";
         
         try (Connection conn = dbConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -1845,11 +1850,13 @@ public class UserService {
      * TÌM KIẾM TRONG LỊCH SỬ CHAT VỚI 1 NGƯỜI
      */
     public java.util.List<Map<String, Object>> searchInChatHistory(String username, String friendUsername, String keyword) {
-        String sql = "SELECT sender, receiver, content, sent_at " +
-                     "FROM messages " +
-                     "WHERE ((sender = ? AND receiver = ?) OR (sender = ? AND receiver = ?)) " +
-                     "AND LOWER(content) LIKE LOWER(?) " +
-                     "ORDER BY sent_at DESC " +
+        String sql = "SELECT m.message_id, u1.username as sender, u2.username as receiver, m.content, m.created_at as sent_at " +
+                     "FROM messages m " +
+                     "JOIN users u1 ON m.sender_id = u1.user_id " +
+                     "JOIN users u2 ON m.receiver_id = u2.user_id " +
+                     "WHERE ((u1.username = ? AND u2.username = ?) OR (u1.username = ? AND u2.username = ?)) " +
+                     "AND LOWER(m.content) LIKE LOWER(?) " +
+                     "ORDER BY m.created_at DESC " +
                      "LIMIT 100";
         
         java.util.List<Map<String, Object>> results = new java.util.ArrayList<>();
@@ -1867,6 +1874,7 @@ public class UserService {
             
             while (rs.next()) {
                 Map<String, Object> message = new HashMap<>();
+                message.put("id", rs.getInt("message_id"));
                 message.put("sender", rs.getString("sender"));
                 message.put("receiver", rs.getString("receiver"));
                 message.put("content", rs.getString("content"));
@@ -1970,6 +1978,66 @@ public class UserService {
         }
         
         return false;
+    }
+    
+    // ==================== TÌM KIẾM TOÀN BỘ LỊCH SỬ CHAT ====================
+    
+    /**
+     * TÌM KIẾM TRONG TẤT CẢ LỊCH SỬ CHAT VỚI MỌI NGƯỜI
+     * @param username Username của người dùng hiện tại
+     * @param keyword Từ khóa tìm kiếm
+     * @return Danh sách kết quả tìm kiếm
+     */
+    public List<Map<String, Object>> searchAllChatHistory(String username, String keyword) {
+        List<Map<String, Object>> results = new ArrayList<>();
+        
+        String sql = "SELECT m.message_id, m.content, m.created_at as sent_at, " +
+                     "sender.username as sender_username, receiver.username as receiver_username, " +
+                     "CASE WHEN sender.username = ? THEN receiver.username ELSE sender.username END as friend_username " +
+                     "FROM messages m " +
+                     "JOIN users sender ON m.sender_id = sender.user_id " +
+                     "JOIN users receiver ON m.receiver_id = receiver.user_id " +
+                     "WHERE (sender.username = ? OR receiver.username = ?) " +
+                     "AND LOWER(m.content) LIKE LOWER(?) " +
+                     "AND m.message_id NOT IN (" +
+                     "    SELECT dm.message_id FROM deleted_messages dm " +
+                     "    JOIN users u ON dm.user_id = u.user_id " +
+                     "    WHERE u.username = ?" +
+                     ") " +
+                     "ORDER BY m.created_at DESC LIMIT 100";
+        
+        try (Connection conn = dbConnection.getConnection()) {
+            if (conn == null) return results;
+            
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setString(1, username);
+                pstmt.setString(2, username);
+                pstmt.setString(3, username);
+                pstmt.setString(4, "%" + keyword + "%");
+                pstmt.setString(5, username);
+                
+                ResultSet rs = pstmt.executeQuery();
+                
+                while (rs.next()) {
+                    Map<String, Object> message = new HashMap<>();
+                    message.put("message_id", rs.getInt("message_id"));
+                    message.put("content", rs.getString("content"));
+                    message.put("sent_at", rs.getTimestamp("sent_at"));
+                    message.put("sender_username", rs.getString("sender_username"));
+                    message.put("receiver_username", rs.getString("receiver_username"));
+                    message.put("friend_username", rs.getString("friend_username"));
+                    results.add(message);
+                }
+                
+                System.out.println("🔍 Tìm kiếm toàn bộ: Tìm thấy " + results.size() + " kết quả cho từ khóa: " + keyword);
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi khi tìm kiếm toàn bộ lịch sử: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return results;
     }
 }
 

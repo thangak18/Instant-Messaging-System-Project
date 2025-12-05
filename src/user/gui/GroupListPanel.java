@@ -164,6 +164,13 @@ public class GroupListPanel extends JPanel {
         displayGroups(filteredGroups);
     }
     
+    /**
+     * Refresh danh sách nhóm
+     */
+    public void refreshGroupList() {
+        loadGroups();
+    }
+    
     public void loadGroups() {
         SwingWorker<List<Map<String, Object>>, Void> worker = new SwingWorker<>() {
             @Override
@@ -223,6 +230,7 @@ public class GroupListPanel extends JPanel {
     private class GroupItemPanel extends JPanel {
         
         private Map<String, Object> groupData;
+        private static final Color ENCRYPTED_COLOR = new Color(0, 150, 80); // Màu xanh lá cho E2E
         
         public GroupItemPanel(Map<String, Object> groupData) {
             this.groupData = groupData;
@@ -236,11 +244,15 @@ public class GroupListPanel extends JPanel {
             ));
             setCursor(new Cursor(Cursor.HAND_CURSOR));
             
-            // Icon nhóm
+            // Kiểm tra nhóm có mã hóa không
+            boolean isEncrypted = groupData.get("is_encrypted") != null 
+                                  && (Boolean) groupData.get("is_encrypted");
+            
+            // Icon nhóm - đơn giản hóa, chỉ dùng 1 label
             JLabel iconLabel = new JLabel();
             iconLabel.setPreferredSize(new Dimension(50, 50));
             iconLabel.setOpaque(true);
-            iconLabel.setBackground(PRIMARY_COLOR);
+            iconLabel.setBackground(isEncrypted ? ENCRYPTED_COLOR : PRIMARY_COLOR);
             iconLabel.setHorizontalAlignment(SwingConstants.CENTER);
             iconLabel.setVerticalAlignment(SwingConstants.CENTER);
             
@@ -255,15 +267,23 @@ public class GroupListPanel extends JPanel {
             infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
             infoPanel.setBackground(Color.WHITE);
             
-            JLabel nameLabel = new JLabel(groupName);
+            // Tên nhóm với badge mã hóa (nếu có)
+            String displayName = isEncrypted ? groupName + " 🔒" : groupName;
+            JLabel nameLabel = new JLabel(displayName);
             nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
-            nameLabel.setForeground(new Color(50, 50, 50));
+            nameLabel.setForeground(isEncrypted ? ENCRYPTED_COLOR : new Color(50, 50, 50));
+            if (isEncrypted) {
+                nameLabel.setToolTipText("Nhóm mã hóa đầu cuối (E2E)");
+            }
             
             String role = (String) groupData.get("role");
             int memberCount = ((Number) groupData.get("member_count")).intValue();
             String subtitle = memberCount + " thành viên";
             if ("admin".equals(role)) {
                 subtitle = "Quản trị viên • " + subtitle;
+            }
+            if (isEncrypted) {
+                subtitle = "🔐 E2E • " + subtitle;
             }
             
             JLabel subtitleLabel = new JLabel(subtitle);
@@ -323,9 +343,11 @@ public class GroupListPanel extends JPanel {
             String groupName = (String) groupData.get("group_name");
             String role = (String) groupData.get("role");
             boolean isAdmin = "admin".equals(role);
+            boolean isEncrypted = groupData.get("is_encrypted") != null 
+                                  && (Boolean) groupData.get("is_encrypted");
             
-            // Mở GroupChatPanel
-            mainFrame.openGroupChat(groupId, groupName, isAdmin);
+            // Mở GroupChatPanel với thông tin mã hóa
+            mainFrame.openGroupChat(groupId, groupName, isAdmin, isEncrypted);
         }
         
         private void showGroupMenu(int x, int y) {

@@ -2,12 +2,14 @@ package user.gui;
 
 import user.socket.Message;
 import user.service.UserService;
+import user.service.AIService;
 
 import javax.swing.*;
 import java.awt.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
+import java.util.HashMap;
 
 /**
  * Chat Content Panel - Khu vực chat chính
@@ -22,6 +24,7 @@ public class ChatContentPanel extends JPanel {
     
     private ZaloMainFrame mainFrame;
     private UserService userService;
+    private AIService aiService;
     private String currentChatUser;
     
     // Components
@@ -32,9 +35,13 @@ public class ChatContentPanel extends JPanel {
     private JTextArea messageInput;
     private JButton sendButton;
     
+    // Map lưu bubble theo messageId để hỗ trợ scroll tới tin nhắn
+    private Map<Integer, JPanel> messageBubbles = new HashMap<>();
+    
     public ChatContentPanel(ZaloMainFrame mainFrame) {
         this.mainFrame = mainFrame;
         this.userService = new UserService();
+        this.aiService = new AIService();
         initializeUI();
     }
     
@@ -275,8 +282,9 @@ public class ChatContentPanel extends JPanel {
         // Check online status
         updateUserOnlineStatus(userName);
         
-        // Clear old messages
+        // Clear old messages và map
         messageListPanel.removeAll();
+        messageBubbles.clear();
         messageListPanel.revalidate();
         messageListPanel.repaint();
         
@@ -484,6 +492,11 @@ public class ChatContentPanel extends JPanel {
         // Menu popup khi click "..."
         menuButton.addActionListener(e -> showMessageMenu(menuButton, messageId, isSent, bubbleContainer));
         
+        // Lưu bubble vào map để hỗ trợ scroll tới tin nhắn
+        if (messageId > 0) {
+            messageBubbles.put(messageId, bubbleContainer);
+        }
+        
         // Thêm bubble vào cuối danh sách, mỗi bubble chỉ chiếm đúng chiều cao của nó
         messageListPanel.add(bubbleContainer);
         messageListPanel.revalidate();
@@ -662,6 +675,38 @@ public class ChatContentPanel extends JPanel {
             JScrollBar vertical = scrollPane.getVerticalScrollBar();
             vertical.setValue(vertical.getMaximum());
         });
+    }
+    
+    /**
+     * Scroll tới tin nhắn cụ thể và highlight nó
+     */
+    public void scrollToMessage(int messageId) {
+        JPanel bubble = messageBubbles.get(messageId);
+        if (bubble != null) {
+            SwingUtilities.invokeLater(() -> {
+                // Scroll tới vị trí tin nhắn
+                Rectangle bounds = bubble.getBounds();
+                bubble.scrollRectToVisible(bounds);
+                
+                // Highlight tin nhắn trong 2 giây
+                Color originalBg = bubble.getBackground();
+                bubble.setOpaque(true);
+                bubble.setBackground(new Color(255, 255, 150)); // Màu vàng highlight
+                
+                // Timer để remove highlight sau 2 giây
+                Timer timer = new Timer(2000, e -> {
+                    bubble.setOpaque(false);
+                    bubble.setBackground(originalBg);
+                    bubble.repaint();
+                });
+                timer.setRepeats(false);
+                timer.start();
+                
+                bubble.repaint();
+            });
+        } else {
+            System.err.println("⚠️ Không tìm thấy tin nhắn với ID: " + messageId);
+        }
     }
     
     /**
@@ -954,6 +999,7 @@ public class ChatContentPanel extends JPanel {
                             resultsPanel.add(label);
                         } else {
                             for (Map<String, Object> result : results) {
+                                int messageId = (Integer) result.get("id");
                                 String sender = (String) result.get("sender");
                                 String content = (String) result.get("content");
                                 java.sql.Timestamp sentAt = (java.sql.Timestamp) result.get("sent_at");
@@ -965,6 +1011,7 @@ public class ChatContentPanel extends JPanel {
                                     BorderFactory.createEmptyBorder(12, 10, 12, 10)
                                 ));
                                 resultItem.setMaximumSize(new Dimension(Integer.MAX_VALUE, 70));
+                                resultItem.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
                                 
                                 boolean isSent = sender.equals(mainFrame.getUsername());
                                 String timeStr = new java.text.SimpleDateFormat("dd/MM HH:mm").format(sentAt);
@@ -976,6 +1023,11 @@ public class ChatContentPanel extends JPanel {
                                 JLabel contentLabel = new JLabel("<html>" + highlightKeyword(content, keyword) + "</html>");
                                 contentLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
                                 
+                                // Icon để chỉ có thể click
+                                JLabel arrowLabel = new JLabel("→");
+                                arrowLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+                                arrowLabel.setForeground(PRIMARY_COLOR);
+                                
                                 JPanel textPanel = new JPanel();
                                 textPanel.setLayout(new BoxLayout(textPanel, BoxLayout.Y_AXIS));
                                 textPanel.setOpaque(false);
@@ -983,6 +1035,28 @@ public class ChatContentPanel extends JPanel {
                                 textPanel.add(contentLabel);
                                 
                                 resultItem.add(textPanel, BorderLayout.CENTER);
+                                resultItem.add(arrowLabel, BorderLayout.EAST);
+                                
+                                // Thêm click listener để di chuyển đến tin nhắn
+                                final int msgId = messageId;
+                                resultItem.addMouseListener(new java.awt.event.MouseAdapter() {
+                                    @Override
+                                    public void mouseClicked(java.awt.event.MouseEvent e) {
+                                        dialog.dispose(); // Đóng dialog
+                                        scrollToMessage(msgId); // Scroll tới tin nhắn
+                                    }
+                                    
+                                    @Override
+                                    public void mouseEntered(java.awt.event.MouseEvent e) {
+                                        resultItem.setBackground(new Color(240, 245, 255));
+                                    }
+                                    
+                                    @Override
+                                    public void mouseExited(java.awt.event.MouseEvent e) {
+                                        resultItem.setBackground(Color.WHITE);
+                                    }
+                                });
+                                
                                 resultsPanel.add(resultItem);
                             }
                         }
@@ -1020,7 +1094,7 @@ public class ChatContentPanel extends JPanel {
     private void showLLMAssistant() {
         JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), 
             "🤖 Trợ lý AI", true);
-        dialog.setSize(600, 550);
+        dialog.setSize(650, 600);
         dialog.setLocationRelativeTo(this);
         dialog.setLayout(new BorderLayout());
         
@@ -1032,18 +1106,41 @@ public class ChatContentPanel extends JPanel {
         JLabel titleLabel = new JLabel("🤖 Trợ lý AI - Gợi ý tin nhắn");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
         titleLabel.setForeground(Color.WHITE);
+        
+        // Status label
+        JLabel statusLabel = new JLabel(aiService.isAPIConfigured() ? "🟢 Online" : "🟡 Offline Mode");
+        statusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        statusLabel.setForeground(new Color(200, 200, 255));
+        
         headerPanel.add(titleLabel, BorderLayout.WEST);
+        headerPanel.add(statusLabel, BorderLayout.EAST);
         
         // Content
-        JPanel contentPanel = new JPanel(new BorderLayout(10, 10));
+        JPanel contentPanel = new JPanel(new BorderLayout(10, 15));
         contentPanel.setBackground(Color.WHITE);
         contentPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         
+        // Quick suggestions panel
+        JPanel quickPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 5));
+        quickPanel.setOpaque(false);
+        quickPanel.setBorder(BorderFactory.createTitledBorder("💡 Gợi ý nhanh:"));
+        
+        String[] quickSuggestions = {"Xin lỗi", "Cảm ơn", "Chúc mừng", "Hẹn gặp", "Hỏi thăm", "Động viên", "Từ chối lịch sự"};
+        JTextArea inputArea = new JTextArea(3, 40);
+        
+        for (String suggestion : quickSuggestions) {
+            JButton btn = new JButton(suggestion);
+            btn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+            btn.setFocusPainted(false);
+            btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            btn.addActionListener(e -> inputArea.setText(suggestion));
+            quickPanel.add(btn);
+        }
+        
         JLabel instructionLabel = new JLabel(
-            "<html>Nhập tình huống hoặc yêu cầu, AI sẽ gợi ý tin nhắn phù hợp:</html>");
+            "<html>Mô tả tình huống hoặc nhập yêu cầu, AI sẽ gợi ý tin nhắn phù hợp:</html>");
         instructionLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         
-        JTextArea inputArea = new JTextArea(3, 40);
         inputArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         inputArea.setLineWrap(true);
         inputArea.setWrapStyleWord(true);
@@ -1054,40 +1151,51 @@ public class ChatContentPanel extends JPanel {
         
         JScrollPane inputScroll = new JScrollPane(inputArea);
         
-        JButton generateButton = new JButton("Tạo gợi ý");
+        JButton generateButton = new JButton("✨ Tạo gợi ý");
         generateButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
         generateButton.setBackground(new Color(138, 43, 226));
         generateButton.setForeground(Color.WHITE);
         generateButton.setFocusPainted(false);
         generateButton.setBorderPainted(false);
-        generateButton.setPreferredSize(new Dimension(120, 40));
+        generateButton.setPreferredSize(new Dimension(130, 40));
+        generateButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
-        JTextArea resultArea = new JTextArea(10, 40);
+        JTextArea resultArea = new JTextArea(8, 40);
         resultArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         resultArea.setLineWrap(true);
         resultArea.setWrapStyleWord(true);
         resultArea.setEditable(false);
-        resultArea.setBackground(new Color(245, 245, 245));
+        resultArea.setBackground(new Color(248, 249, 250));
         resultArea.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(new Color(200, 200, 200)),
             BorderFactory.createEmptyBorder(10, 10, 10, 10)
         ));
+        resultArea.setText("Gợi ý sẽ hiển thị ở đây...");
+        resultArea.setForeground(new Color(150, 150, 150));
         
         JScrollPane resultScroll = new JScrollPane(resultArea);
-        resultScroll.setBorder(BorderFactory.createTitledBorder("Gợi ý từ AI:"));
+        resultScroll.setBorder(BorderFactory.createTitledBorder("📝 Gợi ý từ AI:"));
         
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         buttonPanel.setOpaque(false);
         
+        JButton regenerateButton = new JButton("🔄 Tạo lại");
+        regenerateButton.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        regenerateButton.setEnabled(false);
+        regenerateButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        
         JButton copyButton = new JButton("📋 Sao chép");
         copyButton.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         copyButton.setEnabled(false);
+        copyButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         copyButton.addActionListener(e -> {
             java.awt.datatransfer.StringSelection selection = 
                 new java.awt.datatransfer.StringSelection(resultArea.getText());
             java.awt.Toolkit.getDefaultToolkit().getSystemClipboard().setContents(selection, null);
-            JOptionPane.showMessageDialog(dialog, "Đã sao chép!", 
-                "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+            copyButton.setText("✓ Đã sao chép!");
+            Timer timer = new Timer(2000, evt -> copyButton.setText("📋 Sao chép"));
+            timer.setRepeats(false);
+            timer.start();
         });
         
         JButton useButton = new JButton("✓ Sử dụng");
@@ -1097,15 +1205,18 @@ public class ChatContentPanel extends JPanel {
         useButton.setFocusPainted(false);
         useButton.setBorderPainted(false);
         useButton.setEnabled(false);
+        useButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         useButton.addActionListener(e -> {
             messageInput.setText(resultArea.getText());
             dialog.dispose();
         });
         
+        buttonPanel.add(regenerateButton);
         buttonPanel.add(copyButton);
         buttonPanel.add(useButton);
         
-        generateButton.addActionListener(e -> {
+        // Generate action
+        Runnable generateAction = () -> {
             String prompt = inputArea.getText().trim();
             if (prompt.isEmpty()) {
                 JOptionPane.showMessageDialog(dialog, "Vui lòng nhập yêu cầu!", 
@@ -1114,34 +1225,20 @@ public class ChatContentPanel extends JPanel {
             }
             
             generateButton.setEnabled(false);
-            generateButton.setText("Đang tạo...");
+            generateButton.setText("⏳ Đang tạo...");
+            regenerateButton.setEnabled(false);
             resultArea.setText("AI đang suy nghĩ...");
+            resultArea.setForeground(new Color(100, 100, 100));
             
             SwingWorker<String, Void> worker = new SwingWorker<>() {
                 @Override
                 protected String doInBackground() {
-                    // Mock AI response (có thể tích hợp OpenAI/Gemini sau)
-                    try {
-                        Thread.sleep(1500);
-                    } catch (InterruptedException ex) {
-                        ex.printStackTrace();
+                    // Lấy context từ chat (5 tin nhắn gần nhất)
+                    String chatContext = "";
+                    if (currentChatUser != null) {
+                        chatContext = "Đang chat với: " + currentChatUser;
                     }
-                    
-                    String lower = prompt.toLowerCase();
-                    if (lower.contains("xin lỗi") || lower.contains("sorry")) {
-                        return "Mình thật sự xin lỗi về điều đó. Mình không có ý làm bạn khó chịu. Hy vọng bạn có thể thông cảm cho mình.";
-                    } else if (lower.contains("cảm ơn") || lower.contains("thank")) {
-                        return "Cảm ơn bạn rất nhiều! Mình thực sự trân trọng sự giúp đỡ của bạn. 😊";
-                    } else if (lower.contains("mời") || lower.contains("invite")) {
-                        return "Bạn có rảnh không? Mình muốn mời bạn đi [địa điểm]. Hy vọng chúng ta có thể gặp nhau!";
-                    } else if (lower.contains("chúc mừng")) {
-                        return "Chúc mừng bạn nhé! 🎉 Mình thật sự vui cho thành công của bạn!";
-                    } else if (lower.contains("hẹn gặp") || lower.contains("meet")) {
-                        return "Chúng ta hẹn gặp nhau lúc [thời gian] tại [địa điểm] nhé! Mình rất mong được gặp bạn!";
-                    } else {
-                        return "Dựa vào yêu cầu của bạn:\n\n\"" + prompt + 
-                            "\"\n\nBạn có thể dùng: Mình hiểu ý bạn rồi. Chúng ta có thể thảo luận thêm về vấn đề này nhé!";
-                    }
+                    return aiService.generateSuggestion(prompt, chatContext);
                 }
                 
                 @Override
@@ -1149,27 +1246,43 @@ public class ChatContentPanel extends JPanel {
                     try {
                         String suggestion = get();
                         resultArea.setText(suggestion);
+                        resultArea.setForeground(Color.BLACK);
                         copyButton.setEnabled(true);
                         useButton.setEnabled(true);
+                        regenerateButton.setEnabled(true);
                         generateButton.setEnabled(true);
-                        generateButton.setText("Tạo gợi ý");
+                        generateButton.setText("✨ Tạo gợi ý");
                     } catch (Exception ex) {
                         ex.printStackTrace();
-                        resultArea.setText("Lỗi: Không thể tạo gợi ý!");
+                        resultArea.setText("❌ Lỗi: Không thể tạo gợi ý! Vui lòng thử lại.");
+                        resultArea.setForeground(new Color(200, 50, 50));
                         generateButton.setEnabled(true);
-                        generateButton.setText("Tạo gợi ý");
+                        generateButton.setText("✨ Tạo gợi ý");
                     }
                 }
             };
             
             worker.execute();
-        });
+        };
+        
+        generateButton.addActionListener(e -> generateAction.run());
+        regenerateButton.addActionListener(e -> generateAction.run());
+        
+        // Input panel
+        JPanel topInputPanel = new JPanel(new BorderLayout(5, 5));
+        topInputPanel.setOpaque(false);
+        topInputPanel.add(instructionLabel, BorderLayout.NORTH);
+        topInputPanel.add(inputScroll, BorderLayout.CENTER);
+        
+        JPanel inputWithButton = new JPanel(new BorderLayout(10, 0));
+        inputWithButton.setOpaque(false);
+        inputWithButton.add(topInputPanel, BorderLayout.CENTER);
+        inputWithButton.add(generateButton, BorderLayout.EAST);
         
         JPanel inputPanel = new JPanel(new BorderLayout(10, 10));
         inputPanel.setOpaque(false);
-        inputPanel.add(instructionLabel, BorderLayout.NORTH);
-        inputPanel.add(inputScroll, BorderLayout.CENTER);
-        inputPanel.add(generateButton, BorderLayout.EAST);
+        inputPanel.add(quickPanel, BorderLayout.NORTH);
+        inputPanel.add(inputWithButton, BorderLayout.CENTER);
         
         JPanel bottomPanel = new JPanel(new BorderLayout(0, 10));
         bottomPanel.setOpaque(false);

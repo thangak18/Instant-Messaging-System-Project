@@ -26,6 +26,8 @@ public class ZaloMainFrame extends JFrame {
     private FriendRequestPanel friendRequestPanel; // Lưu reference để refresh
     private FriendListPanel friendListPanel; // Lưu reference để refresh online status
     private GroupListPanel groupListPanel; // Lưu reference để refresh groups
+    private GroupChatPanel currentGroupChatPanel; // Lưu reference group chat hiện tại để handle realtime messages
+    private int currentGroupId = -1; // ID nhóm đang mở
     
     // Panel switching
     private JPanel leftPanel; // CardLayout container for chatList and contactPanel
@@ -80,8 +82,6 @@ public class ZaloMainFrame extends JFrame {
         // Tạo và lưu reference FriendRequestPanel
         friendRequestPanel = new FriendRequestPanel(this);
         rightPanel.add(friendRequestPanel, "FRIEND_REQUESTS");
-        
-        rightPanel.add(createPlaceholderPanel("Lời mời vào nhóm"), "GROUP_INVITES");
     }
     
     private void setupLayout() {
@@ -208,6 +208,37 @@ public class ZaloMainFrame extends JFrame {
                         message.getSender() + " đã chặn bạn",
                         "Thông báo",
                         JOptionPane.WARNING_MESSAGE);
+                });
+            }
+            
+            // Handle group message realtime
+            else if (message.getType() == Message.MessageType.GROUP_MESSAGE) {
+                int groupId = (Integer) message.getData();
+                System.out.println("📨 Nhận tin nhắn nhóm " + groupId + " từ: " + message.getSender());
+                
+                // Nếu đang mở đúng group chat này thì refresh
+                if (currentGroupChatPanel != null && currentGroupId == groupId) {
+                    currentGroupChatPanel.handleIncomingMessage(message);
+                }
+            }
+            
+            // Handle group created notification - refresh danh sách nhóm
+            else if (message.getType() == Message.MessageType.GROUP_CREATED) {
+                String groupName = message.getContent();
+                String creator = message.getSender();
+                System.out.println("📨 Nhận thông báo nhóm mới: " + groupName + " từ " + creator);
+                
+                // Refresh group list để hiển thị nhóm mới
+                if (groupListPanel != null) {
+                    groupListPanel.refreshGroupList();
+                }
+                
+                // Hiển thị thông báo
+                SwingUtilities.invokeLater(() -> {
+                    JOptionPane.showMessageDialog(this,
+                        creator + " đã thêm bạn vào nhóm \"" + groupName + "\"",
+                        "Nhóm mới",
+                        JOptionPane.INFORMATION_MESSAGE);
                 });
             }
         });
@@ -339,21 +370,67 @@ public class ZaloMainFrame extends JFrame {
         chatContentPanel.openChat(contactName);
     }
     
-    public void openGroupChat(int groupId, String groupName, boolean isAdmin) {
-        // Tạo GroupChatPanel mới và hiển thị
-        GroupChatPanel groupChatPanel = new GroupChatPanel(this, groupId, groupName, isAdmin);
+    /**
+     * MỞ CHAT VÀ CUỘN ĐẾN TIN NHẮN CỤ THỂ
+     * @param contactName Tên người chat
+     * @param messageId ID tin nhắn cần cuộn đến
+     */
+    public void openChatAndScrollToMessage(String contactName, int messageId) {
+        chatContentPanel.openChat(contactName);
         
-        // Remove old GROUP_CHAT if exists
-        try {
-            rightPanel.remove(rightPanel.getComponentCount() - 1); // Remove last if it's GROUP_CHAT
-        } catch (Exception e) {
-            // Ignore
+        // Đợi UI load xong rồi mới cuộn đến tin nhắn
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            try {
+                Thread.sleep(500); // Đợi tin nhắn load xong
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            chatContentPanel.scrollToMessage(messageId);
+        });
+    }
+    
+    /**
+     * CUỘN ĐẾN TIN NHẮN CỤ THỂ TRONG CHAT HIỆN TẠI
+     * @param messageId ID tin nhắn cần cuộn đến
+     */
+    public void scrollToMessageInChat(int messageId) {
+        chatContentPanel.scrollToMessage(messageId);
+    }
+    
+    /**
+     * MỞ GROUP CHAT (NHÓM THƯỜNG)
+     */
+    public void openGroupChat(int groupId, String groupName, boolean isAdmin) {
+        openGroupChat(groupId, groupName, isAdmin, false);
+    }
+    
+    /**
+     * MỞ GROUP CHAT VỚI TÙY CHỌN MÃ HÓA
+     * @param groupId ID nhóm
+     * @param groupName Tên nhóm
+     * @param isAdmin Có phải admin không
+     * @param isEncrypted Nhóm có mã hóa E2E không
+     */
+    public void openGroupChat(int groupId, String groupName, boolean isAdmin, boolean isEncrypted) {
+        // Lưu lại groupId hiện tại
+        this.currentGroupId = groupId;
+        
+        // Remove old GROUP_CHAT panel nếu tồn tại
+        if (currentGroupChatPanel != null) {
+            rightPanel.remove(currentGroupChatPanel);
         }
         
-        // Add new group chat panel
-        rightPanel.add(groupChatPanel, "GROUP_CHAT");
+        // Tạo GroupChatPanel mới
+        currentGroupChatPanel = new GroupChatPanel(this, groupId, groupName, isAdmin, isEncrypted);
         
-        // Giữ nguyên ở ContactPanel, chỉ switch panel bên phải
+        // Add new group chat panel
+        rightPanel.add(currentGroupChatPanel, "GROUP_CHAT");
+        
+        // Revalidate để cập nhật layout
+        rightPanel.revalidate();
+        rightPanel.repaint();
+        
+        // Switch đến GROUP_CHAT
         rightCardLayout.show(rightPanel, "GROUP_CHAT");
     }
     
@@ -380,6 +457,27 @@ public class ZaloMainFrame extends JFrame {
         leftCardLayout.show(leftPanel, "CONTACT");
         // Default: show friend requests
         rightCardLayout.show(rightPanel, "FRIEND_REQUESTS");
+    }
+    
+    /**
+     * SWITCH ĐẾN DANH SÁCH NHÓM VÀ REFRESH
+     */
+    public void showGroupList() {
+        leftCardLayout.show(leftPanel, "CONTACT");
+        rightCardLayout.show(rightPanel, "GROUPS");
+        // Refresh danh sách nhóm
+        if (groupListPanel != null) {
+            groupListPanel.refreshGroupList();
+        }
+    }
+    
+    /**
+     * REFRESH DANH SÁCH NHÓM (không switch view)
+     */
+    public void refreshGroupList() {
+        if (groupListPanel != null) {
+            groupListPanel.refreshGroupList();
+        }
     }
     
     /**

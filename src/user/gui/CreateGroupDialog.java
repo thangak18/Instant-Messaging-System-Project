@@ -17,6 +17,7 @@ public class CreateGroupDialog extends JDialog {
     
     private static final Color PRIMARY_COLOR = new Color(0, 132, 255);
     private static final Color BG_COLOR = new Color(245, 247, 250);
+    private static final Color ENCRYPTED_COLOR = new Color(0, 150, 80); // Màu xanh lá cho E2E
     
     private ZaloMainFrame mainFrame;
     private UserService userService;
@@ -26,6 +27,7 @@ public class CreateGroupDialog extends JDialog {
     private JTextArea descriptionArea;
     private JList<CheckableItem> friendsList;
     private DefaultListModel<CheckableItem> friendsListModel;
+    private JCheckBox encryptedCheckbox; // Checkbox mã hóa đầu cuối
     private JButton createButton, cancelButton;
     
     private List<Map<String, Object>> allFriends;
@@ -99,6 +101,9 @@ public class CreateGroupDialog extends JDialog {
         descScroll.setBorder(BorderFactory.createLineBorder(new Color(220, 220, 220), 1));
         descPanel.add(descScroll);
         
+        // Encryption checkbox - Panel mã hóa đầu cuối
+        JPanel encryptionPanel = createEncryptionPanel();
+        
         // Friends list
         JPanel friendsPanel = createFieldPanel("Chọn thành viên:");
         friendsListModel = new DefaultListModel<>();
@@ -119,13 +124,15 @@ public class CreateGroupDialog extends JDialog {
         });
         
         JScrollPane friendsScroll = new JScrollPane(friendsList);
-        friendsScroll.setPreferredSize(new Dimension(440, 250));
+        friendsScroll.setPreferredSize(new Dimension(440, 220)); // Giảm xuống một chút để có chỗ cho checkbox
         friendsScroll.setBorder(BorderFactory.createLineBorder(new Color(220, 220, 220), 1));
         friendsPanel.add(friendsScroll);
         
         contentPanel.add(namePanel);
         contentPanel.add(Box.createVerticalStrut(15));
         contentPanel.add(descPanel);
+        contentPanel.add(Box.createVerticalStrut(15));
+        contentPanel.add(encryptionPanel);
         contentPanel.add(Box.createVerticalStrut(15));
         contentPanel.add(friendsPanel);
         
@@ -146,6 +153,58 @@ public class CreateGroupDialog extends JDialog {
         add(headerPanel, BorderLayout.NORTH);
         add(contentPanel, BorderLayout.CENTER);
         add(buttonPanel, BorderLayout.SOUTH);
+    }
+    
+    /**
+     * TẠO PANEL CHO TÙY CHỌN MÃ HÓA ĐẦU CUỐI
+     */
+    private JPanel createEncryptionPanel() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(BG_COLOR);
+        panel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        
+        // Panel chính chứa checkbox và icon
+        JPanel checkboxPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        checkboxPanel.setBackground(new Color(240, 255, 240)); // Màu nền xanh nhạt
+        checkboxPanel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(ENCRYPTED_COLOR, 1, true),
+            new EmptyBorder(10, 12, 10, 12)
+        ));
+        
+        // Icon ổ khóa
+        JLabel lockIcon = new JLabel();
+        try {
+            ImageIcon icon = new ImageIcon("icons/padlock.png");
+            Image scaled = icon.getImage().getScaledInstance(24, 24, Image.SCALE_SMOOTH);
+            lockIcon.setIcon(new ImageIcon(scaled));
+        } catch (Exception e) {
+            lockIcon.setText("🔒");
+            lockIcon.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 18));
+        }
+        
+        // Checkbox
+        encryptedCheckbox = new JCheckBox("Mã hóa đầu cuối (E2E)");
+        encryptedCheckbox.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        encryptedCheckbox.setForeground(ENCRYPTED_COLOR);
+        encryptedCheckbox.setBackground(new Color(240, 255, 240));
+        encryptedCheckbox.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        
+        checkboxPanel.add(lockIcon);
+        checkboxPanel.add(Box.createHorizontalStrut(10));
+        checkboxPanel.add(encryptedCheckbox);
+        
+        // Mô tả
+        JLabel descLabel = new JLabel("<html><small>• Tin nhắn được mã hóa AES-256, server không thể đọc<br>" +
+                                      "• Nhóm mã hóa sẽ hiển thị với biểu tượng ổ khóa 🔒</small></html>");
+        descLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        descLabel.setForeground(new Color(100, 100, 100));
+        descLabel.setBorder(new EmptyBorder(8, 0, 0, 0));
+        
+        panel.add(checkboxPanel);
+        panel.add(descLabel);
+        
+        return panel;
     }
     
     private JPanel createFieldPanel(String label) {
@@ -222,6 +281,7 @@ public class CreateGroupDialog extends JDialog {
     private void handleCreateGroup() {
         String groupName = groupNameField.getText().trim();
         String description = descriptionArea.getText().trim();
+        boolean isEncrypted = encryptedCheckbox.isSelected();
         
         // Validation
         if (groupName.isEmpty()) {
@@ -249,15 +309,34 @@ public class CreateGroupDialog extends JDialog {
             return;
         }
         
+        // Xác nhận nếu tạo nhóm mã hóa
+        if (isEncrypted) {
+            int confirm = JOptionPane.showConfirmDialog(this,
+                "Bạn đang tạo nhóm MÃ HÓA ĐẦU CUỐI.\n\n" +
+                "⚠️ Lưu ý:\n" +
+                "• Tin nhắn sẽ được mã hóa, server không thể đọc\n" +
+                "• Nếu mất khóa, tin nhắn không thể khôi phục\n" +
+                "• Nhóm sẽ hiển thị với biểu tượng 🔒\n\n" +
+                "Bạn có chắc muốn tiếp tục?",
+                "Xác nhận tạo nhóm mã hóa",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE);
+            
+            if (confirm != JOptionPane.YES_OPTION) {
+                return;
+            }
+        }
+        
         // Disable button
         createButton.setEnabled(false);
         createButton.setText("Đang tạo...");
         
         // Create group
+        final boolean encrypted = isEncrypted;
         SwingWorker<Integer, Void> worker = new SwingWorker<>() {
             @Override
             protected Integer doInBackground() {
-                return groupService.createGroup(groupName, description, mainFrame.getUsername(), selectedMembers);
+                return groupService.createGroup(groupName, description, mainFrame.getUsername(), selectedMembers, encrypted);
             }
             
             @Override
@@ -266,20 +345,30 @@ public class CreateGroupDialog extends JDialog {
                     int groupId = get();
                     
                     if (groupId > 0) {
+                        String successMsg = encrypted 
+                            ? "🔒 Tạo nhóm MÃ HÓA thành công!\n\nTin nhắn trong nhóm này được bảo vệ với mã hóa AES-256."
+                            : "Tạo nhóm thành công!";
+                        
                         JOptionPane.showMessageDialog(CreateGroupDialog.this,
-                            "Tạo nhóm thành công!",
+                            successMsg,
                             "Thành công",
                             JOptionPane.INFORMATION_MESSAGE);
                         
                         dispose();
                         
                         // Mở group chat (sẽ tự động refresh khi cần)
-                        mainFrame.openGroupChat(groupId, groupName, true);
+                        mainFrame.openGroupChat(groupId, groupName, true, encrypted);
                         
-                        // Refresh chat list để hiển thị nhóm mới
+                        // Refresh chat list và group list để hiển thị nhóm mới
                         SwingUtilities.invokeLater(() -> {
                             mainFrame.refreshChatList();
+                            mainFrame.refreshGroupList();
                         });
+                        
+                        // Gửi thông báo đến các thành viên qua socket
+                        if (mainFrame.getSocketClient() != null && mainFrame.getSocketClient().isConnected()) {
+                            mainFrame.getSocketClient().sendGroupCreatedNotification(groupId, groupName, selectedMembers);
+                        }
                         
                     } else {
                         JOptionPane.showMessageDialog(CreateGroupDialog.this,
