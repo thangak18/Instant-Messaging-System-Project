@@ -370,7 +370,6 @@ public class SpamReportPanel extends JPanel {
     }
 
     private void updateStatistics(List<SpamReport> reports) {
-        int total = reports.size();
         int pending = 0;
         int resolved = 0;
         int rejected = 0;
@@ -385,6 +384,9 @@ public class SpamReportPanel extends JPanel {
                 rejected++;
             }
         }
+
+        // Tổng = pending + resolved + rejected
+        int total = pending + resolved + rejected;
 
         // Cập nhật labels
         if (pendingLabel != null) {

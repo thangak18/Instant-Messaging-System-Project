@@ -18,7 +18,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -33,7 +32,6 @@ public class UserManagementPanel extends JPanel {
     private static final Color ZALO_BLUE = new Color(0, 102, 255);
     private static final Color SUCCESS_GREEN = new Color(40, 167, 69);
     private static final Color DANGER_RED = new Color(220, 53, 69);
-    private static final Color WARNING_ORANGE = new Color(255, 193, 7);
     private static final Color INFO_CYAN = new Color(23, 162, 184);
 
     private JTable userTable;
@@ -700,30 +698,17 @@ public class UserManagementPanel extends JPanel {
 
             // Bước 1: Lấy TẤT CẢ users từ database
             List<User> users = userDAO.getAllUsers();
-            System.out.println("DEBUG: Tổng số users trong DB: " + users.size());
 
             // Bước 2: Lọc theo trạng thái (nếu không chọn "Tất cả")
             String statusValue = (String) statusFilter.getSelectedItem();
             if (!"Tất cả".equals(statusValue)) {
                 users.removeIf(user -> !matchesStatus(user, statusValue));
-                System.out.println("DEBUG: Sau khi lọc trạng thái '" + statusValue + "': " + users.size() + " users");
-            }
-
-            // Debug: In ra username của users để kiểm tra
-            if (!keyword.isEmpty() && users.size() > 0 && users.size() < 20) {
-                System.out.println("DEBUG: Danh sách username:");
-                for (User u : users) {
-                    System.out.println("  - " + u.getUsername() + " (status: " + u.getStatus() + " → hiển thị: "
-                            + formatStatus(u.getStatus()) + ")");
-                }
             }
 
             // Bước 3: Lọc theo từ khóa (nếu có)
             if (!keyword.isEmpty()) {
                 SearchType searchType = resolveSearchType((String) searchTypeCombo.getSelectedItem());
-                System.out.println("DEBUG: Tìm kiếm với từ khóa '" + keyword + "' theo loại: " + searchType);
                 users.removeIf(user -> !matchesKeyword(user, keyword, searchType));
-                System.out.println("DEBUG: Sau khi lọc từ khóa: " + users.size() + " users");
             }
 
             // Bước 3: Sắp xếp
@@ -1193,13 +1178,6 @@ public class UserManagementPanel extends JPanel {
             return "Đã xóa";
         }
         return "locked".equalsIgnoreCase(status) ? "Bị khóa" : "Hoạt động";
-    }
-
-    private String resolveStatusFromDisplay(String displayStatus) {
-        if (displayStatus == null) {
-            return "active";
-        }
-        return displayStatus.toLowerCase().contains("khóa") ? "locked" : "active";
     }
 
     private SearchType resolveSearchType(String selected) {
