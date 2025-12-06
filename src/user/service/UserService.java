@@ -138,6 +138,9 @@ public class UserService {
                 if (verifyPassword(password, storedPassword)) {
                     System.out.println("✅ Đăng nhập thành công: " + username);
                     
+                    // Cập nhật last_login trong bảng users
+                    updateLastLogin(userId);
+                    
                     // Ghi lại lịch sử đăng nhập
                     logLoginHistory(userId);
                     
@@ -495,6 +498,31 @@ public class UserService {
         }
         
         return false;
+    }
+    
+    /**
+     * Cập nhật last_login trong bảng users khi user đăng nhập
+     */
+    private void updateLastLogin(int userId) {
+        String sql = "UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE user_id = ?";
+        
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        
+        try {
+            conn = dbConnection.getConnection();
+            if (conn == null) return;
+            
+            pstmt = conn.prepareStatement(sql);
+            pstmt.setInt(1, userId);
+            pstmt.executeUpdate();
+            
+        } catch (SQLException e) {
+            // Log lỗi nhưng không ảnh hưởng đến quá trình đăng nhập
+            System.err.println("⚠️  Không cập nhật được last_login: " + e.getMessage());
+        } finally {
+            closeResources(conn, pstmt, null);
+        }
     }
     
     /**

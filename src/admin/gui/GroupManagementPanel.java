@@ -102,7 +102,18 @@ public class GroupManagementPanel extends JPanel {
             }
             displayGroups(currentGroups);
         } catch (SQLException e) {
-            showError("Lỗi load dữ liệu nhóm: " + e.getMessage());
+            String errorMsg = e.getMessage();
+            String detailedMsg = "Lỗi load dữ liệu nhóm chat: " + errorMsg;
+            
+            if (errorMsg != null && (errorMsg.contains("connection") || 
+                                     errorMsg.contains("Connection"))) {
+                detailedMsg += "\n\nVui lòng kiểm tra:\n" +
+                              "- Kết nối database\n" +
+                              "- File config.properties\n" +
+                              "Hoặc liên hệ admin để được hỗ trợ.";
+            }
+            
+            showError(detailedMsg);
             e.printStackTrace();
         }
     }
@@ -116,8 +127,8 @@ public class GroupManagementPanel extends JPanel {
         for (ChatGroup group : groups) {
             Object[] row = {
                     group.getId(),
-                    group.getGroupName(),
-                    group.getCreatorName(),
+                    group.getGroupName() != null ? group.getGroupName() : "",
+                    group.getCreatorName() != null ? group.getCreatorName() : "N/A",
                     group.getMemberCount(),
                     group.getCreatedAt() != null ? group.getCreatedAt().format(dateFormatter) : ""
             };
@@ -151,7 +162,15 @@ public class GroupManagementPanel extends JPanel {
                 BorderFactory.createLineBorder(Color.LIGHT_GRAY),
                 new EmptyBorder(15, 15, 15, 15)));
 
-        JLabel titleLabel = new JLabel("🔍 Tìm kiếm & Lọc nhóm chat");
+        // Title with search icon (PNG, not emoji)
+        ImageIcon searchIconTitle = loadIcon("search", 18, 18);
+        JLabel titleLabel;
+        if (searchIconTitle != null) {
+            titleLabel = new JLabel("Tìm kiếm & Lọc nhóm chat", searchIconTitle, JLabel.LEFT);
+            titleLabel.setIconTextGap(6);
+        } else {
+            titleLabel = new JLabel("Tìm kiếm & Lọc nhóm chat");
+        }
         titleLabel.setFont(new Font("Arial", Font.BOLD, 14));
         titleLabel.setForeground(ZALO_BLUE);
         titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -183,11 +202,16 @@ public class GroupManagementPanel extends JPanel {
         sortCombo.setPreferredSize(new Dimension(280, 30));
         sortRow.add(sortCombo);
 
-        // Nút duy nhất để tìm kiếm và lọc
-        JButton searchFilterBtn = createStyledButton("Tìm kiếm + Lọc", ZALO_BLUE);
+        // Nút tìm kiếm và lọc với icon
+        ImageIcon searchIcon = loadIcon("search", 16, 16);
+        JButton searchFilterBtn = createStyledButtonWithIcon("Tìm kiếm + Lọc", ZALO_BLUE, searchIcon);
+        searchFilterBtn.addActionListener(e -> handleSearchAndFilter());
         sortRow.add(searchFilterBtn);
 
-        JButton resetBtn = createStyledButton("↺ Đặt lại", ZALO_BLUE);
+        // Nút đặt lại với icon
+        ImageIcon resetIcon = loadIcon("reset", 16, 16);
+        JButton resetBtn = createStyledButtonWithIcon("Đặt lại", ZALO_BLUE, resetIcon);
+        resetBtn.addActionListener(e -> handleReset());
         sortRow.add(resetBtn);
 
         panel.add(sortRow);
@@ -206,7 +230,15 @@ public class GroupManagementPanel extends JPanel {
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setOpaque(false);
 
-        JLabel titleLabel = new JLabel("👥 Danh sách nhóm chat");
+        // Title with icon
+        ImageIcon chatIcon = loadIcon("chat", 20, 20);
+        JLabel titleLabel;
+        if (chatIcon != null) {
+            titleLabel = new JLabel("Danh sách nhóm chat", chatIcon, JLabel.LEFT);
+            titleLabel.setIconTextGap(8);
+        } else {
+            titleLabel = new JLabel("Danh sách nhóm chat");
+        }
         titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
         titleLabel.setForeground(ZALO_BLUE);
 
@@ -234,12 +266,23 @@ public class GroupManagementPanel extends JPanel {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 10));
         panel.setOpaque(false);
 
-        // Yêu cầu c: Xem danh sách thành viên
-        JButton viewMembersBtn = createStyledButton("👥 Xem thành viên", INFO_CYAN);
+        // Yêu cầu c: Xem danh sách thành viên - với icon
+        ImageIcon membersIcon = loadIcon("user", 16, 16);
+        JButton viewMembersBtn = createStyledButtonWithIcon("Xem thành viên", INFO_CYAN, membersIcon);
 
-        // Yêu cầu d: Xem danh sách admin
-        JButton viewAdminsBtn = createStyledButton("👑 Xem danh sách admin", INFO_CYAN);
-        JButton exportBtn = createStyledButton("📊 Xuất CSV", INFO_CYAN);
+        // Yêu cầu d: Xem danh sách admin - với icon
+        ImageIcon adminIcon = loadIcon("admin", 16, 16);
+        if (adminIcon == null) {
+            adminIcon = loadIcon("crown", 16, 16);
+        }
+        JButton viewAdminsBtn = createStyledButtonWithIcon("Danh sách admin", INFO_CYAN, adminIcon);
+
+        // Xuất CSV - với icon
+        ImageIcon exportIcon = loadIcon("export", 16, 16);
+        if (exportIcon == null) {
+            exportIcon = loadIcon("download", 16, 16);
+        }
+        JButton exportBtn = createStyledButtonWithIcon("Xuất CSV", INFO_CYAN, exportIcon);
 
         panel.add(viewMembersBtn);
         panel.add(viewAdminsBtn);
@@ -253,16 +296,16 @@ public class GroupManagementPanel extends JPanel {
         addActionToButton("Tìm kiếm + Lọc", e -> handleSearchAndFilter());
 
         // Đặt lại
-        addActionToButton("↺ Đặt lại", e -> handleReset());
+        addActionToButton("Đặt lại", e -> handleReset());
 
         // Yêu cầu c: Xem thành viên
-        addActionToButton("👥 Xem thành viên", e -> showMembersDialog());
+        addActionToButton("Xem thành viên", e -> showMembersDialog());
 
         // Yêu cầu d: Xem admin
-        addActionToButton("👑 Xem danh sách admin", e -> showAdminsDialog());
+        addActionToButton("Danh sách admin", e -> showAdminsDialog());
 
         // Xuất CSV
-        addActionToButton("📊 Xuất CSV", e -> handleExportCSV());
+        addActionToButton("Xuất CSV", e -> handleExportCSV());
     }
 
     // Cache danh sách nhóm để sắp xếp
@@ -311,7 +354,19 @@ public class GroupManagementPanel extends JPanel {
             JOptionPane.showMessageDialog(this, message,
                     "Kết quả", JOptionPane.INFORMATION_MESSAGE);
         } catch (SQLException e) {
-            showError("Lỗi: " + e.getMessage());
+            String errorMsg = e.getMessage();
+            String detailedMsg = "Lỗi tìm kiếm/lọc nhóm chat: " + errorMsg;
+            
+            if (errorMsg != null && (errorMsg.contains("connection") || 
+                                     errorMsg.contains("Connection"))) {
+                detailedMsg += "\n\nVui lòng kiểm tra:\n" +
+                              "- Kết nối database\n" +
+                              "- Thông tin tìm kiếm\n" +
+                              "Hoặc liên hệ admin để được hỗ trợ.";
+            }
+            
+            showError(detailedMsg);
+            e.printStackTrace();
         }
     }
 
@@ -426,7 +481,7 @@ public class GroupManagementPanel extends JPanel {
             contentPanel.add(new JScrollPane(memberTable), BorderLayout.CENTER);
 
             JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-            JButton closeBtn = createStyledButton("❌ Đóng", DANGER_RED);
+            JButton closeBtn = createStyledButton("Đóng", DANGER_RED);
             closeBtn.addActionListener(e -> dialog.dispose());
             buttonPanel.add(closeBtn);
 
@@ -511,7 +566,7 @@ public class GroupManagementPanel extends JPanel {
             contentPanel.add(new JScrollPane(adminTable), BorderLayout.CENTER);
 
             JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-            JButton closeBtn = createStyledButton("❌ Đóng", DANGER_RED);
+            JButton closeBtn = createStyledButton("Đóng", DANGER_RED);
             closeBtn.addActionListener(e -> dialog.dispose());
             buttonPanel.add(closeBtn);
 
@@ -536,6 +591,71 @@ public class GroupManagementPanel extends JPanel {
         button.setMargin(new Insets(5, 12, 5, 12));
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
         return button;
+    }
+
+    /**
+     * Tạo button với icon và text - Đã tối ưu độ rộng để không bị cắt chữ
+     */
+    private JButton createStyledButtonWithIcon(String text, Color color, ImageIcon icon) {
+        JButton button;
+        if (icon != null) {
+            button = new JButton(text, icon);
+            button.setIconTextGap(10); // Khoảng cách giữa icon và chữ
+        } else {
+            button = new JButton(text);
+        }
+
+        button.setBackground(color);
+        button.setForeground(Color.WHITE);
+        button.setFont(new Font("Arial", Font.BOLD, 12));
+        button.setOpaque(true);
+        button.setBorderPainted(false);
+        button.setFocusPainted(false);
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        // Margin bên trong nút (Top, Left, Bottom, Right)
+        button.setMargin(new Insets(8, 20, 8, 20));
+
+        // --- TÍNH TOÁN ĐỘ RỘNG ---
+
+        // 1. Tính độ rộng lý thuyết của nội dung
+        java.awt.FontMetrics fm = button.getFontMetrics(button.getFont());
+        int textWidth = fm.stringWidth(text);
+        int iconWidth = (icon != null) ? icon.getIconWidth() : 0;
+        int iconGap = (icon != null) ? 10 : 0;
+
+        // 2. Tính tổng độ rộng cần thiết
+        // QUAN TRỌNG: +120px padding để bù cho margin và bo góc của giao diện Mac
+        int calculatedWidth = textWidth + iconWidth + iconGap + 120;
+
+        // 3. Quy định độ rộng tối thiểu là 160px để các nút ngắn (như "Đặt lại") không
+        // bị quá bé
+        int finalWidth = Math.max(calculatedWidth, 160);
+
+        // 4. Áp dụng kích thước
+        Dimension dim = new Dimension(finalWidth, 38);
+        button.setPreferredSize(dim);
+        button.setMinimumSize(dim);
+        button.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
+
+        return button;
+    }
+
+    /**
+     * Load icon từ file PNG
+     */
+    private ImageIcon loadIcon(String iconName, int width, int height) {
+        try {
+            String path = "icons/" + iconName + ".png";
+            ImageIcon icon = new ImageIcon(path);
+            if (icon.getImageLoadStatus() == java.awt.MediaTracker.COMPLETE) {
+                Image img = icon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
+                return new ImageIcon(img);
+            }
+        } catch (Exception e) {
+            // Icon không tồn tại, trả về null
+        }
+        return null;
     }
 
     /**

@@ -276,6 +276,79 @@ public class UserDAO {
     }
     
     /**
+     * Kiểm tra username đã tồn tại chưa
+     */
+    public boolean usernameExists(String username) throws SQLException {
+        if (username == null || username.trim().isEmpty()) {
+            return false;
+        }
+        
+        String sql = "SELECT COUNT(*) FROM users WHERE username = ?";
+        
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setString(1, username.trim());
+            
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * Kiểm tra email đã tồn tại chưa
+     */
+    public boolean emailExists(String email) throws SQLException {
+        if (email == null || email.trim().isEmpty()) {
+            return false;
+        }
+        
+        String sql = "SELECT COUNT(*) FROM users WHERE email = ?";
+        
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setString(1, email.trim());
+            
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * Kiểm tra email đã tồn tại chưa (trừ user hiện tại - dùng khi update)
+     */
+    public boolean emailExists(String email, int excludeUserId) throws SQLException {
+        if (email == null || email.trim().isEmpty()) {
+            return false;
+        }
+        
+        String sql = "SELECT COUNT(*) FROM users WHERE email = ? AND user_id != ?";
+        
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setString(1, email.trim());
+            pstmt.setInt(2, excludeUserId);
+            
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        }
+        return false;
+    }
+    
+    /**
      * Helper method: Extract User object from ResultSet
      */
     private User extractUserFromResultSet(ResultSet rs) throws SQLException {

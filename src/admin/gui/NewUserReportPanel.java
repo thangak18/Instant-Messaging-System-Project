@@ -28,6 +28,7 @@ public class NewUserReportPanel extends JPanel {
     private DefaultTableModel tableModel;
     private JTextField dateFromField, dateToField;
     private JTextField searchNameField;
+    private JComboBox<String> searchTypeCombo;
     private JComboBox<String> sortCombo;
     private JButton filterButton, resetButton, refreshButton, exportButton;
     private JLabel totalLabel;
@@ -42,20 +43,21 @@ public class NewUserReportPanel extends JPanel {
         initComponents();
         setupLayout();
         setupEventHandlers();
-        // Mặc định hiển thị dữ liệu năm 2025
-        dateFromField.setText("2025-01-01");
-        dateToField.setText("2025-12-31");
+        // Mặc định hiển thị tất cả dữ liệu (tất cả các năm)
+        // Để trống date fields để load tất cả users
+        dateFromField.setText("");
+        dateToField.setText("");
         loadDefaultData();
     }
 
     /**
      * Load dữ liệu mặc định khi mở panel
+     * Load tất cả users từ tất cả các năm
      */
     private void loadDefaultData() {
         try {
-            LocalDate start = LocalDate.of(2025, 1, 1);
-            LocalDate end = LocalDate.of(2025, 12, 31);
-            List<User> users = statisticsDAO.getNewUsers(start, end, "", "Sắp xếp theo thời gian (Mới nhất)");
+            // Lấy tất cả users (không giới hạn năm) - truyền null để load tất cả
+            List<User> users = statisticsDAO.getNewUsers(null, null, null, null, "Sắp xếp theo thời gian (Mới nhất)");
             displayNewUsers(users);
             updateStatistics();
         } catch (SQLException e) {
@@ -94,21 +96,27 @@ public class NewUserReportPanel extends JPanel {
         dateToField = new JTextField(10);
         dateToField.setToolTipText("Định dạng: YYYY-MM-DD");
 
-        // Yêu cầu b: Lọc theo tên
+        // Yêu cầu b: Lọc theo tên/email
         searchNameField = new JTextField(20);
+        searchTypeCombo = new JComboBox<>(new String[] {
+                "Lọc theo tên",
+                "Lọc theo email"
+        });
 
-        // Yêu cầu a: Sắp xếp theo tên/thời gian tạo
+        // Yêu cầu a: Sắp xếp theo tên/thời gian tạo/email
         sortCombo = new JComboBox<>(new String[] {
                 "Sắp xếp theo thời gian (Mới nhất)",
                 "Sắp xếp theo thời gian (Cũ nhất)",
                 "Sắp xếp theo tên (A-Z)",
-                "Sắp xếp theo tên (Z-A)"
+                "Sắp xếp theo tên (Z-A)",
+                "Sắp xếp theo email (A-Z)",
+                "Sắp xếp theo email (Z-A)"
         });
 
-        filterButton = new JButton("🔍 Tìm kiếm và lọc");
-        resetButton = new JButton("↺ Đặt lại");
-        refreshButton = new JButton("🔄 Làm mới");
-        exportButton = new JButton("📊 Xuất CSV");
+        filterButton = createButtonWithIcon("Tìm kiếm và lọc", "search");
+        resetButton = createButtonWithIcon("Đặt lại", "reset");
+        refreshButton = createButtonWithIcon("Làm mới", "refresh");
+        exportButton = createButtonWithIcon("Xuất CSV", "export");
 
         stylePrimaryButton(filterButton);
         stylePrimaryButton(resetButton);
@@ -142,7 +150,13 @@ public class NewUserReportPanel extends JPanel {
                 BorderFactory.createLineBorder(Color.LIGHT_GRAY),
                 new EmptyBorder(15, 15, 15, 15)));
 
-        JLabel titleLabel = new JLabel("📅 Tùy chọn báo cáo người dùng mới");
+        ImageIcon calendarIcon = loadIcon("calendar", 20, 20);
+        JLabel titleLabel = new JLabel("Tùy chọn báo cáo người dùng mới");
+        if (calendarIcon != null) {
+            titleLabel.setIcon(calendarIcon);
+            titleLabel.setHorizontalTextPosition(JLabel.RIGHT);
+            titleLabel.setIconTextGap(8);
+        }
         titleLabel.setFont(new Font("Arial", Font.BOLD, 14));
         titleLabel.setForeground(ZALO_BLUE);
         titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -171,12 +185,16 @@ public class NewUserReportPanel extends JPanel {
         panel.add(dateRow);
         panel.add(Box.createVerticalStrut(5));
 
-        // Row 2: Lọc theo tên và Sắp xếp
+        // Row 2: Lọc theo tên/email và Sắp xếp
         JPanel filterRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
         filterRow.setOpaque(false);
         filterRow.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        filterRow.add(new JLabel("Lọc theo tên:"));
+        filterRow.add(new JLabel("Loại lọc:"));
+        searchTypeCombo.setPreferredSize(new Dimension(120, 30));
+        filterRow.add(searchTypeCombo);
+
+        filterRow.add(new JLabel("Từ khóa:"));
         searchNameField.setPreferredSize(new Dimension(200, 30));
         filterRow.add(searchNameField);
 
@@ -212,7 +230,13 @@ public class NewUserReportPanel extends JPanel {
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setOpaque(false);
 
-        JLabel titleLabel = new JLabel("📋 Danh sách người dùng đăng ký mới");
+        ImageIcon listIcon = loadIcon("list", 20, 20);
+        JLabel titleLabel = new JLabel("Danh sách người dùng đăng ký mới");
+        if (listIcon != null) {
+            titleLabel.setIcon(listIcon);
+            titleLabel.setHorizontalTextPosition(JLabel.RIGHT);
+            titleLabel.setIconTextGap(8);
+        }
         titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
         titleLabel.setForeground(ZALO_BLUE);
 
@@ -221,7 +245,7 @@ public class NewUserReportPanel extends JPanel {
 
         // Khởi tạo instance variable nếu chưa có
         if (this.totalLabel == null) {
-            this.totalLabel = new JLabel("📊 Tổng số: 0");
+            this.totalLabel = new JLabel("Tổng số: 0");
         }
         this.totalLabel.setFont(new Font("Arial", Font.BOLD, 12));
 
@@ -269,49 +293,88 @@ public class NewUserReportPanel extends JPanel {
         String fromDate = dateFromField.getText().trim();
         String toDate = dateToField.getText().trim();
 
-        // Kiểm tra đầu vào
-        if (fromDate.isEmpty() || toDate.isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                    "Vui lòng nhập đầy đủ khoảng thời gian!\n" +
-                            "Định dạng: YYYY-MM-DD\n" +
-                            "Ví dụ: 2024-01-01",
-                    "Cảnh báo", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
+        // Nếu cả 2 date fields đều trống, load tất cả users
+        boolean loadAll = fromDate.isEmpty() && toDate.isEmpty();
+        
+        LocalDate startDate = null;
+        LocalDate endDate = null;
+        
+        if (!loadAll) {
+            // Kiểm tra đầu vào - nếu có 1 trong 2 thì phải có cả 2
+            if (fromDate.isEmpty() || toDate.isEmpty()) {
+                JOptionPane.showMessageDialog(this,
+                        "Vui lòng nhập đầy đủ khoảng thời gian!\n" +
+                                "Định dạng: YYYY-MM-DD\n" +
+                                "Ví dụ: 2024-01-01\n\n" +
+                                "Hoặc để trống cả 2 để xem tất cả",
+                        "Cảnh báo", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
 
-        // Validate định dạng ngày
-        if (!isValidDateFormat(fromDate) || !isValidDateFormat(toDate)) {
-            JOptionPane.showMessageDialog(this,
-                    "Định dạng ngày không hợp lệ!\n" +
-                            "Vui lòng nhập theo định dạng: YYYY-MM-DD\n" +
-                            "Ví dụ: 2024-01-01",
-                    "Lỗi", JOptionPane.ERROR_MESSAGE);
-            return;
+            // Validate định dạng ngày
+            if (!isValidDateFormat(fromDate) || !isValidDateFormat(toDate)) {
+                JOptionPane.showMessageDialog(this,
+                        "Định dạng ngày không hợp lệ!\n" +
+                                "Vui lòng nhập theo định dạng: YYYY-MM-DD\n" +
+                                "Ví dụ: 2024-01-01",
+                        "Lỗi", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            
+            startDate = LocalDate.parse(fromDate, inputFormatter);
+            endDate = LocalDate.parse(toDate, inputFormatter);
         }
 
         // Load dữ liệu từ database
         try {
-            LocalDate startDate = LocalDate.parse(fromDate, inputFormatter);
-            LocalDate endDate = LocalDate.parse(toDate, inputFormatter);
-            String nameFilter = searchNameField.getText().trim();
+            String keyword = searchNameField.getText().trim();
+            String searchType = (String) searchTypeCombo.getSelectedItem();
             String sortOption = (String) sortCombo.getSelectedItem();
 
-            // Get new users by date range
-            List<User> newUsers = statisticsDAO.getNewUsers(startDate, endDate, nameFilter, sortOption);
+            // Xác định filter type: "Lọc theo tên" hoặc "Lọc theo email"
+            String nameFilter = null;
+            String emailFilter = null;
+            if (!keyword.isEmpty()) {
+                if ("Lọc theo email".equals(searchType)) {
+                    emailFilter = keyword;
+                } else {
+                    nameFilter = keyword;
+                }
+            }
+
+            // Get new users by date range với filter
+            List<User> newUsers = statisticsDAO.getNewUsers(startDate, endDate, nameFilter, emailFilter, sortOption);
 
             // Display users
             displayNewUsers(newUsers);
             updateStatistics();
 
-            JOptionPane.showMessageDialog(this,
-                    "Đã tải " + newUsers.size() + " người dùng mới\n" +
-                            "Từ: " + fromDate + " đến: " + toDate,
+            String message;
+            if (loadAll) {
+                message = "Đã tải " + newUsers.size() + " người dùng (tất cả các năm)";
+            } else {
+                message = "Đã tải " + newUsers.size() + " người dùng mới\n" +
+                        "Từ: " + fromDate + " đến: " + toDate;
+            }
+            JOptionPane.showMessageDialog(this, message,
                     "Thành công", JOptionPane.INFORMATION_MESSAGE);
 
         } catch (DateTimeParseException e) {
             showError("Lỗi định dạng ngày: " + e.getMessage());
         } catch (SQLException e) {
-            showError("Lỗi load dữ liệu: " + e.getMessage());
+            String errorMsg = e.getMessage();
+            String detailedMsg = "Lỗi load dữ liệu người dùng mới: " + errorMsg;
+            
+            if (errorMsg != null && (errorMsg.contains("connection") || 
+                                     errorMsg.contains("Connection"))) {
+                detailedMsg += "\n\nVui lòng kiểm tra:\n" +
+                              "- Kết nối database\n" +
+                              "- Khoảng thời gian đã chọn\n" +
+                              "- File config.properties\n" +
+                              "Hoặc liên hệ admin để được hỗ trợ.";
+            }
+            
+            showError(detailedMsg);
             e.printStackTrace();
         }
     }
@@ -391,6 +454,7 @@ public class NewUserReportPanel extends JPanel {
         dateFromField.setText("");
         dateToField.setText("");
         searchNameField.setText("");
+        searchTypeCombo.setSelectedIndex(0);
         sortCombo.setSelectedIndex(0);
         tableModel.setRowCount(0);
         updateStatistics();
@@ -415,9 +479,31 @@ public class NewUserReportPanel extends JPanel {
         String toDate = dateToField.getText().trim();
 
         if (!fromDate.isEmpty() && !toDate.isEmpty()) {
-            String nameFilter = searchNameField.getText().trim();
+            String keyword = searchNameField.getText().trim();
+            String searchType = (String) searchTypeCombo.getSelectedItem();
             String sortOption = (String) sortCombo.getSelectedItem();
-            loadFilteredData(fromDate, toDate, nameFilter, sortOption);
+            
+            // Xác định filter type
+            String nameFilter = null;
+            String emailFilter = null;
+            if (!keyword.isEmpty()) {
+                if ("Lọc theo email".equals(searchType)) {
+                    emailFilter = keyword;
+                } else {
+                    nameFilter = keyword;
+                }
+            }
+            
+            // Gọi lại handleFilterReport với filter mới
+            try {
+                LocalDate startDate = LocalDate.parse(fromDate, inputFormatter);
+                LocalDate endDate = LocalDate.parse(toDate, inputFormatter);
+                List<User> newUsers = statisticsDAO.getNewUsers(startDate, endDate, nameFilter, emailFilter, sortOption);
+                displayNewUsers(newUsers);
+                updateStatistics();
+            } catch (Exception e) {
+                showError("Lỗi làm mới dữ liệu: " + e.getMessage());
+            }
             JOptionPane.showMessageDialog(this,
                     "Đã làm mới dữ liệu!",
                     "Thông báo", JOptionPane.INFORMATION_MESSAGE);
@@ -570,4 +656,37 @@ public class NewUserReportPanel extends JPanel {
         }
         return list.toArray(new Component[0]);
     }
+
+    /**
+     * Load icon from icons directory
+     */
+    private ImageIcon loadIcon(String iconName, int width, int height) {
+        try {
+            String path = "icons/" + iconName + ".png";
+            ImageIcon icon = new ImageIcon(path);
+            if (icon.getImageLoadStatus() == java.awt.MediaTracker.COMPLETE) {
+                Image img = icon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
+                return new ImageIcon(img);
+            }
+        } catch (Exception e) {
+            System.err.println("Could not load icon: " + iconName);
+        }
+        return null;
+    }
+
+    /**
+     * Create button with icon
+     */
+    private JButton createButtonWithIcon(String text, String iconName) {
+        JButton button = new JButton(text);
+        ImageIcon icon = loadIcon(iconName, 16, 16);
+        if (icon != null) {
+            button.setIcon(icon);
+            button.setHorizontalTextPosition(JButton.RIGHT);
+            button.setIconTextGap(8);
+        }
+        button.setPreferredSize(new java.awt.Dimension(200, 35));
+        return button;
+    }
+
 }

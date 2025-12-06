@@ -45,8 +45,8 @@ public class ActiveUserChartPanel extends JPanel {
         yearSelector = new JComboBox<>(years);
         yearSelector.setPreferredSize(new Dimension(100, 30));
 
-        viewButton = new JButton("📊 Xem biểu đồ");
-        refreshButton = new JButton("🔄 Làm mới");
+        viewButton = createButtonWithIcon("Xem biểu đồ", "chart");
+        refreshButton = createButtonWithIcon("Làm mới", "refresh");
         stylePrimaryButton(viewButton);
         stylePrimaryButton(refreshButton);
 
@@ -83,7 +83,13 @@ public class ActiveUserChartPanel extends JPanel {
                 BorderFactory.createLineBorder(TEAL, 2),
                 new EmptyBorder(15, 15, 15, 15)));
 
-        JLabel titleLabel = new JLabel("📈 Tùy chọn biểu đồ");
+        ImageIcon chartIcon = loadIcon("chart", 20, 20);
+        JLabel titleLabel = new JLabel("Tùy chọn biểu đồ");
+        if (chartIcon != null) {
+            titleLabel.setIcon(chartIcon);
+            titleLabel.setHorizontalTextPosition(JLabel.RIGHT);
+            titleLabel.setIconTextGap(8);
+        }
         titleLabel.setFont(new Font("Arial", Font.BOLD, 14));
         titleLabel.setForeground(ZALO_BLUE);
 
@@ -112,7 +118,13 @@ public class ActiveUserChartPanel extends JPanel {
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setOpaque(false);
 
-        JLabel titleLabel = new JLabel("📊 Biểu đồ số lượng người dùng hoạt động");
+        ImageIcon activityChartIcon = loadIcon("activity", 20, 20);
+        JLabel titleLabel = new JLabel("Biểu đồ số lượng người dùng hoạt động");
+        if (activityChartIcon != null) {
+            titleLabel.setIcon(activityChartIcon);
+            titleLabel.setHorizontalTextPosition(JLabel.RIGHT);
+            titleLabel.setIconTextGap(8);
+        }
         titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
         titleLabel.setForeground(ZALO_BLUE);
 
@@ -174,7 +186,19 @@ public class ActiveUserChartPanel extends JPanel {
             totalActiveLabel.setText("Tổng số người dùng hoạt động: " + totalActive);
 
         } catch (SQLException e) {
-            showError("Lỗi load dữ liệu người dùng hoạt động: " + e.getMessage());
+            String errorMsg = e.getMessage();
+            String detailedMsg = "Lỗi load dữ liệu người dùng hoạt động: " + errorMsg;
+            
+            if (errorMsg != null && (errorMsg.contains("connection") || 
+                                     errorMsg.contains("Connection"))) {
+                detailedMsg += "\n\nVui lòng kiểm tra:\n" +
+                              "- Kết nối database\n" +
+                              "- Năm đã chọn\n" +
+                              "- File config.properties\n" +
+                              "Hoặc liên hệ admin để được hỗ trợ.";
+            }
+            
+            showError(detailedMsg);
             e.printStackTrace();
 
             // Fallback: hiển thị dữ liệu rỗng
@@ -336,4 +360,31 @@ public class ActiveUserChartPanel extends JPanel {
         button.setMargin(new Insets(5, 12, 5, 12));
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
     }
+
+    private ImageIcon loadIcon(String iconName, int width, int height) {
+        try {
+            String path = "icons/" + iconName + ".png";
+            ImageIcon icon = new ImageIcon(path);
+            if (icon.getImageLoadStatus() == java.awt.MediaTracker.COMPLETE) {
+                Image img = icon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
+                return new ImageIcon(img);
+            }
+        } catch (Exception e) {
+            System.err.println("Could not load icon: " + iconName);
+        }
+        return null;
+    }
+
+    private JButton createButtonWithIcon(String text, String iconName) {
+        JButton button = new JButton(text);
+        ImageIcon icon = loadIcon(iconName, 16, 16);
+        if (icon != null) {
+            button.setIcon(icon);
+            button.setHorizontalTextPosition(JButton.RIGHT);
+            button.setIconTextGap(8);
+        }
+        button.setPreferredSize(new java.awt.Dimension(200, 35));
+        return button;
+    }
+
 }

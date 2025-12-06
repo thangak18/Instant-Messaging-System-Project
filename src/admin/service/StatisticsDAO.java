@@ -302,23 +302,38 @@ public class StatisticsDAO {
      * Lấy danh sách người dùng mới theo khoảng thời gian và bộ lọc
      */
     public List<User> getNewUsers(LocalDate startDate, LocalDate endDate,
-            String nameFilter, String sortOption) throws SQLException {
+            String nameFilter, String emailFilter, String sortOption) throws SQLException {
         List<User> users = new ArrayList<>();
-        if (startDate == null || endDate == null) {
+        
+        // Nếu cả startDate và endDate đều null, load tất cả users
+        boolean loadAll = (startDate == null && endDate == null);
+        
+        if (!loadAll && (startDate == null || endDate == null)) {
             return users;
         }
 
-        if (endDate.isBefore(startDate)) {
+        if (!loadAll && endDate.isBefore(startDate)) {
             LocalDate tmp = startDate;
             startDate = endDate;
             endDate = tmp;
         }
 
         StringBuilder sql = new StringBuilder("SELECT user_id, username, full_name, email, status, created_at " +
-                "FROM users WHERE DATE(created_at) BETWEEN ? AND ?");
+                "FROM users");
+        
+        // Chỉ thêm WHERE nếu có date filter
+        if (!loadAll) {
+            sql.append(" WHERE DATE(created_at) BETWEEN ? AND ?");
+        } else {
+            sql.append(" WHERE 1=1"); // Load tất cả
+        }
 
         if (nameFilter != null && !nameFilter.isEmpty()) {
             sql.append(" AND (username LIKE ? OR full_name LIKE ?)");
+        }
+        
+        if (emailFilter != null && !emailFilter.isEmpty()) {
+            sql.append(" AND email LIKE ?");
         }
 
         sql.append(resolveSortClause(sortOption));
@@ -327,12 +342,20 @@ public class StatisticsDAO {
                 PreparedStatement pstmt = conn.prepareStatement(sql.toString())) {
 
             int paramIndex = 1;
-            pstmt.setDate(paramIndex++, Date.valueOf(startDate));
-            pstmt.setDate(paramIndex++, Date.valueOf(endDate));
+            // Chỉ set date parameters nếu không phải load all
+            if (!loadAll) {
+                pstmt.setDate(paramIndex++, Date.valueOf(startDate));
+                pstmt.setDate(paramIndex++, Date.valueOf(endDate));
+            }
 
             if (nameFilter != null && !nameFilter.isEmpty()) {
                 String pattern = "%" + nameFilter + "%";
                 pstmt.setString(paramIndex++, pattern);
+                pstmt.setString(paramIndex++, pattern);
+            }
+            
+            if (emailFilter != null && !emailFilter.isEmpty()) {
+                String pattern = "%" + emailFilter + "%";
                 pstmt.setString(paramIndex++, pattern);
             }
 
@@ -358,6 +381,10 @@ public class StatisticsDAO {
                 return " ORDER BY full_name ASC";
             case "Sắp xếp theo tên (Z-A)":
                 return " ORDER BY full_name DESC";
+            case "Sắp xếp theo email (A-Z)":
+                return " ORDER BY email ASC";
+            case "Sắp xếp theo email (Z-A)":
+                return " ORDER BY email DESC";
             default:
                 return " ORDER BY created_at DESC";
         }
@@ -744,11 +771,15 @@ public class StatisticsDAO {
             String nameFilter, String comparison,
             Integer totalActivityCount, String sortOption) throws SQLException {
         List<UserActivity> activities = new ArrayList<>();
-        if (startDate == null || endDate == null) {
+        
+        // Nếu cả startDate và endDate đều null, load tất cả users
+        boolean loadAll = (startDate == null && endDate == null);
+        
+        if (!loadAll && (startDate == null || endDate == null)) {
             return activities;
         }
 
-        if (endDate.isBefore(startDate)) {
+        if (!loadAll && endDate.isBefore(startDate)) {
             LocalDate tmp = startDate;
             startDate = endDate;
             endDate = tmp;
@@ -783,15 +814,23 @@ public class StatisticsDAO {
                         "LEFT JOIN user_logins ul ON u.user_id = ul.user_id " +
                         "LEFT JOIN user_private_chats upc ON u.user_id = upc.user_id " +
                         "LEFT JOIN user_group_chats ugc ON u.user_id = ugc.user_id " +
-                        "WHERE u.created_at >= ? AND u.created_at < ? " +
-                        "AND (ul.login_count IS NOT NULL OR upc.chat_count IS NOT NULL OR ugc.group_count IS NOT NULL)");
+                        "WHERE 1=1");
+        
+        // Chỉ thêm date filter nếu không phải load all
+        if (!loadAll) {
+            sql.append(" AND u.created_at >= ? AND u.created_at < ?");
+        }
+        
+        sql.append(" AND (ul.login_count IS NOT NULL OR upc.chat_count IS NOT NULL OR ugc.group_count IS NOT NULL)");
 
         List<Object> params = new ArrayList<>();
-        // Parameters for date filtering on user creation
-        Timestamp startTs = Timestamp.valueOf(startDate.atStartOfDay());
-        Timestamp endTs = Timestamp.valueOf(endDate.plusDays(1).atStartOfDay());
-        params.add(startTs); // user created_at >= start
-        params.add(endTs); // user created_at < end
+        // Parameters for date filtering on user creation - chỉ thêm nếu không phải load all
+        if (!loadAll) {
+            Timestamp startTs = Timestamp.valueOf(startDate.atStartOfDay());
+            Timestamp endTs = Timestamp.valueOf(endDate.plusDays(1).atStartOfDay());
+            params.add(startTs); // user created_at >= start
+            params.add(endTs); // user created_at < end
+        }
 
         // Name filter
         if (nameFilter != null && !nameFilter.isEmpty()) {
@@ -895,14 +934,18 @@ public class StatisticsDAO {
     }
 
     /**
-     * Dashboard Statistics - Get online users count (mock - would need real-time
-     * tracking)
+     * Dashboard Statistics - Get online users count
+     * Xác định user online dựa trên last_login trong bảng users
+     * User được coi là online nếu last_login trong vòng 5 phút gần nhất
+     * và status = 'active'
      */
     public int getOnlineUsers() throws SQLException {
-        // TODO: Implement real-time online tracking
-        // For now, return users active in last 15 minutes
-        String sql = "SELECT COUNT(DISTINCT user_id) as total FROM login_history " +
-                "WHERE login_time >= NOW() - INTERVAL '15 minutes'";
+        // Sử dụng last_login từ bảng users để xác định user online
+        // User online nếu: last_login trong 5 phút gần nhất VÀ status = 'active'
+        String sql = "SELECT COUNT(*) as total FROM users " +
+                "WHERE status = 'active' " +
+                "AND last_login IS NOT NULL " +
+                "AND last_login >= NOW() - INTERVAL '5 minutes'";
         try (Connection conn = dbConnection.getConnection();
                 Statement stmt = conn.createStatement();
                 ResultSet rs = stmt.executeQuery(sql)) {

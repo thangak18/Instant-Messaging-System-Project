@@ -17,10 +17,12 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.text.Collator;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -90,8 +92,12 @@ public class UserManagementPanel extends JPanel {
         statusFilter = new JComboBox<>(new String[] { "Tất cả", "Hoạt động", "Bị khóa", "Đã xóa" });
 
         // Yêu cầu a: Sắp xếp theo tên/ngày tạo
-        sortCombo = new JComboBox<>(new String[] { "Sắp xếp theo tên", "Sắp xếp theo ngày tạo (Mới nhất)",
-                "Sắp xếp theo ngày tạo (Cũ nhất)" });
+        sortCombo = new JComboBox<>(new String[] { 
+                "Sắp xếp theo tên (A-Z)", 
+                "Sắp xếp theo tên (Z-A)", 
+                "Sắp xếp theo ngày tạo (Mới nhất)",
+                "Sắp xếp theo ngày tạo (Cũ nhất)" 
+        });
 
         // Adjust column widths
         TableColumnModel columnModel = userTable.getColumnModel();
@@ -176,8 +182,14 @@ public class UserManagementPanel extends JPanel {
                 BorderFactory.createLineBorder(Color.LIGHT_GRAY),
                 new EmptyBorder(10, 10, 10, 10)));
 
-        JLabel titleLabel = new JLabel("👤 Danh sách người dùng");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        ImageIcon userIcon = loadIcon("user", 20, 20);
+        JLabel titleLabel = new JLabel("Danh sách người dùng");
+        if (userIcon != null) {
+            titleLabel.setIcon(userIcon);
+            titleLabel.setHorizontalTextPosition(JLabel.RIGHT);
+            titleLabel.setIconTextGap(8);
+        }
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 14));
         titleLabel.setForeground(ZALO_BLUE);
         titleLabel.setBorder(new EmptyBorder(0, 0, 10, 0));
 
@@ -197,7 +209,13 @@ public class UserManagementPanel extends JPanel {
                 BorderFactory.createLineBorder(Color.LIGHT_GRAY),
                 new EmptyBorder(15, 15, 15, 15)));
 
-        JLabel titleLabel = new JLabel("🔍 Tìm kiếm & Lọc người dùng");
+        ImageIcon searchTitleIcon = loadIcon("search", 20, 20);
+        JLabel titleLabel = new JLabel("Tìm kiếm & Lọc người dùng");
+        if (searchTitleIcon != null) {
+            titleLabel.setIcon(searchTitleIcon);
+            titleLabel.setHorizontalTextPosition(JLabel.RIGHT);
+            titleLabel.setIconTextGap(8);
+        }
         titleLabel.setFont(new Font("Arial", Font.BOLD, 14));
         titleLabel.setForeground(ZALO_BLUE);
 
@@ -247,11 +265,20 @@ public class UserManagementPanel extends JPanel {
         JPanel row1 = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 5));
         row1.setOpaque(false);
 
-        JButton addBtn = createStyledButton("➕ Thêm người dùng", INFO_CYAN);
-        JButton editBtn = createStyledButton("✏️ Sửa thông tin", INFO_CYAN);
-        JButton deleteBtn = createStyledButton("🗑️ Xóa người dùng", INFO_CYAN);
-        JButton lockBtn = createStyledButton("🔒 Khóa tài khoản", INFO_CYAN);
-        JButton unlockBtn = createStyledButton("🔓 Mở khóa", INFO_CYAN);
+        JButton addBtn = createButtonWithIcon("Thêm người dùng", "add.png", INFO_CYAN);
+        addBtn.addActionListener(e -> showAddUserDialog());
+
+        JButton editBtn = createButtonWithIcon("Sửa thông tin", "edit.png", INFO_CYAN);
+        editBtn.addActionListener(e -> showEditUserDialog());
+
+        JButton deleteBtn = createButtonWithIcon("Xóa người dùng", "delete.png", INFO_CYAN);
+        deleteBtn.addActionListener(e -> showDeleteUserDialog());
+
+        JButton lockBtn = createButtonWithIcon("Khóa tài khoản", "lock.png", INFO_CYAN);
+        lockBtn.addActionListener(e -> showLockAccountDialog());
+
+        JButton unlockBtn = createButtonWithIcon("Mở khóa", "unlock.png", INFO_CYAN);
+        unlockBtn.addActionListener(e -> showUnlockAccountDialog());
 
         row1.add(addBtn);
         row1.add(editBtn);
@@ -263,12 +290,23 @@ public class UserManagementPanel extends JPanel {
         JPanel row2 = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 5));
         row2.setOpaque(false);
 
-        JButton passwordBtn = createStyledButton("🔑 Đổi mật khẩu", INFO_CYAN);
-        JButton historyBtn = createStyledButton("📜 Lịch sử đăng nhập", INFO_CYAN);
-        JButton friendsBtn = createStyledButton("👥 Danh sách bạn bè", INFO_CYAN);
-        JButton exportBtn = createStyledButton("📊 Xuất CSV", INFO_CYAN);
+        JButton passwordBtn = createButtonWithIcon("Đổi mật khẩu", "password.png", INFO_CYAN);
+        passwordBtn.addActionListener(e -> showChangePasswordDialog());
+
+        JButton resetPwdBtn = createButtonWithIcon("Reset mật khẩu", "reset.png", INFO_CYAN);
+        resetPwdBtn.addActionListener(e -> showResetPasswordDialog());
+
+        JButton historyBtn = createButtonWithIcon("Lịch sử", "history.png", INFO_CYAN);
+        historyBtn.addActionListener(e -> showLoginHistoryDialog());
+
+        JButton friendsBtn = createButtonWithIcon("Danh sách bạn", "contact.png", INFO_CYAN);
+        friendsBtn.addActionListener(e -> showFriendsListDialog());
+
+        JButton exportBtn = createButtonWithIcon("Xuất CSV", "export.png", INFO_CYAN);
+        exportBtn.addActionListener(e -> exportUsersToCSV());
 
         row2.add(passwordBtn);
+        row2.add(resetPwdBtn);
         row2.add(historyBtn);
         row2.add(friendsBtn);
         row2.add(exportBtn);
@@ -299,6 +337,9 @@ public class UserManagementPanel extends JPanel {
 
         // Yêu cầu d: Cập nhật mật khẩu
         addActionToButton("🔑 Đổi mật khẩu", e -> showChangePasswordDialog());
+
+        // Yêu cầu 1.5: Reset mật khẩu (random)
+        addActionToButton("🔄 Reset mật khẩu", e -> showResetPasswordDialog());
 
         addActionToButton("📜 Lịch sử đăng nhập", e -> showLoginHistoryDialog());
         addActionToButton("👥 Danh sách bạn bè", e -> showFriendsListDialog());
@@ -400,22 +441,77 @@ public class UserManagementPanel extends JPanel {
                     showWarning("Tên đăng nhập không được để trống!");
                     return;
                 }
+                
+                // Validate username length
+                if (username.length() < 3 || username.length() > 50) {
+                    showWarning("Tên đăng nhập phải từ 3 đến 50 ký tự!");
+                    return;
+                }
+                
+                // Validate username format (chỉ cho phép chữ, số, dấu gạch dưới)
+                if (!username.matches("^[a-zA-Z0-9_]+$")) {
+                    showWarning("Tên đăng nhập chỉ được chứa chữ cái, số và dấu gạch dưới!");
+                    return;
+                }
+                
+                // Check duplicate username
+                try {
+                    if (userDAO.usernameExists(username)) {
+                        showWarning("Tên đăng nhập đã tồn tại! Vui lòng chọn tên khác.");
+                        return;
+                    }
+                } catch (SQLException ex) {
+                    showError("Lỗi kiểm tra tên đăng nhập: " + ex.getMessage());
+                    return;
+                }
+                
                 if (password.isEmpty()) {
                     showWarning("Mật khẩu không được để trống!");
                     return;
                 }
+                
+                // Validate password strength
+                if (password.length() < 6) {
+                    showWarning("Mật khẩu phải có ít nhất 6 ký tự!");
+                    return;
+                }
+                
                 if (fullName.isEmpty()) {
                     showWarning("Họ tên không được để trống!");
                     return;
                 }
+                
+                // Validate full name length
+                if (fullName.length() > 100) {
+                    showWarning("Họ tên không được vượt quá 100 ký tự!");
+                    return;
+                }
+                
                 if (email.isEmpty()) {
                     showWarning("Email không được để trống!");
+                    return;
+                }
+                
+                // Validate email length
+                if (email.length() > 255) {
+                    showWarning("Email không được vượt quá 255 ký tự!");
                     return;
                 }
 
                 // Validate email format
                 if (!email.matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
-                    showWarning("Email không đúng định dạng!");
+                    showWarning("Email không đúng định dạng!\nVí dụ: user@example.com");
+                    return;
+                }
+                
+                // Check duplicate email
+                try {
+                    if (userDAO.emailExists(email)) {
+                        showWarning("Email đã tồn tại! Vui lòng sử dụng email khác.");
+                        return;
+                    }
+                } catch (SQLException ex) {
+                    showError("Lỗi kiểm tra email: " + ex.getMessage());
                     return;
                 }
 
@@ -463,10 +559,30 @@ public class UserManagementPanel extends JPanel {
                     loadUsersFromDatabase(); // Reload danh sách
                     dialog.dispose();
                 } else {
-                    showError("Không thể thêm người dùng!");
+                    showError("Không thể thêm người dùng!\n\n" +
+                            "Có thể do:\n" +
+                            "- Lỗi kết nối database\n" +
+                            "- Dữ liệu không hợp lệ\n" +
+                            "Vui lòng thử lại hoặc liên hệ admin.");
                 }
             } catch (SQLException ex) {
-                showError("Lỗi khi thêm người dùng: " + ex.getMessage());
+                String errorMsg = ex.getMessage();
+                String detailedMsg = "Lỗi khi thêm người dùng: " + errorMsg;
+                
+                // Kiểm tra lỗi duplicate (nếu có)
+                if (errorMsg != null && (errorMsg.contains("duplicate") || 
+                                         errorMsg.contains("unique") ||
+                                         errorMsg.contains("UNIQUE"))) {
+                    detailedMsg = "Tên đăng nhập hoặc email đã tồn tại!\n" +
+                                 "Vui lòng chọn tên đăng nhập hoặc email khác.";
+                } else {
+                    detailedMsg += "\n\nVui lòng kiểm tra:\n" +
+                                  "- Kết nối database\n" +
+                                  "- Thông tin nhập vào\n" +
+                                  "Hoặc liên hệ admin để được hỗ trợ.";
+                }
+                
+                showError(detailedMsg);
                 ex.printStackTrace();
             }
         });
@@ -607,14 +723,38 @@ public class UserManagementPanel extends JPanel {
                         showWarning("Họ tên không được để trống!");
                         return;
                     }
+                    
+                    // Validate full name length
+                    if (fullName.length() > 100) {
+                        showWarning("Họ tên không được vượt quá 100 ký tự!");
+                        return;
+                    }
+                    
                     if (email.isEmpty()) {
                         showWarning("Email không được để trống!");
+                        return;
+                    }
+                    
+                    // Validate email length
+                    if (email.length() > 255) {
+                        showWarning("Email không được vượt quá 255 ký tự!");
                         return;
                     }
 
                     // Validate email format
                     if (!email.matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
-                        showWarning("Email không đúng định dạng!");
+                        showWarning("Email không đúng định dạng!\nVí dụ: user@example.com");
+                        return;
+                    }
+                    
+                    // Check duplicate email (trừ user hiện tại)
+                    try {
+                        if (userDAO.emailExists(email, user.getId())) {
+                            showWarning("Email đã được sử dụng bởi người dùng khác!\nVui lòng sử dụng email khác.");
+                            return;
+                        }
+                    } catch (SQLException ex) {
+                        showError("Lỗi kiểm tra email: " + ex.getMessage());
                         return;
                     }
 
@@ -657,10 +797,30 @@ public class UserManagementPanel extends JPanel {
                         loadUsersFromDatabase(); // Reload danh sách
                         dialog.dispose();
                     } else {
-                        showError("Không thể cập nhật thông tin!");
+                        showError("Không thể cập nhật thông tin!\n\n" +
+                                "Có thể do:\n" +
+                                "- Lỗi kết nối database\n" +
+                                "- Dữ liệu không hợp lệ\n" +
+                                "Vui lòng thử lại hoặc liên hệ admin.");
                     }
                 } catch (SQLException ex) {
-                    showError("Lỗi khi cập nhật thông tin: " + ex.getMessage());
+                    String errorMsg = ex.getMessage();
+                    String detailedMsg = "Lỗi khi cập nhật thông tin: " + errorMsg;
+                    
+                    // Kiểm tra lỗi duplicate (nếu có)
+                    if (errorMsg != null && (errorMsg.contains("duplicate") || 
+                                             errorMsg.contains("unique") ||
+                                             errorMsg.contains("UNIQUE"))) {
+                        detailedMsg = "Email đã được sử dụng bởi người dùng khác!\n" +
+                                     "Vui lòng chọn email khác.";
+                    } else {
+                        detailedMsg += "\n\nVui lòng kiểm tra:\n" +
+                                      "- Kết nối database\n" +
+                                      "- Thông tin nhập vào\n" +
+                                      "Hoặc liên hệ admin để được hỗ trợ.";
+                    }
+                    
+                    showError(detailedMsg);
                     ex.printStackTrace();
                 }
             });
@@ -922,6 +1082,88 @@ public class UserManagementPanel extends JPanel {
         }
     }
 
+    // Yêu cầu 1.5: Reset mật khẩu (random)
+    private void showResetPasswordDialog() {
+        int selectedRow = userTable.getSelectedRow();
+        if (selectedRow == -1) {
+            showWarning("Vui lòng chọn người dùng cần reset mật khẩu!");
+            return;
+        }
+
+        int userId = (int) userTable.getValueAt(selectedRow, 0);
+        String username = userTable.getValueAt(selectedRow, 1).toString();
+
+        int confirm = showStyledConfirmDialog(this,
+                "Reset mật khẩu cho user: " + username + "?\nMật khẩu mới sẽ được tự động tạo.",
+                "Xác nhận Reset");
+
+        if (confirm != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        try {
+            String newPassword = generateRandomPassword();
+            boolean success = userDAO.updatePassword(userId, newPassword);
+
+            if (success) {
+                JPanel panel = new JPanel(new BorderLayout(10, 10));
+                JLabel messageLabel = new JLabel("<html><b>Mật khẩu mới cho " + username + ":</b></html>");
+                JTextField passwordField = new JTextField(newPassword);
+                passwordField.setEditable(false);
+                passwordField.setFont(new java.awt.Font("Monospaced", java.awt.Font.BOLD, 14));
+
+                JButton copyBtn = new JButton("📋 Copy");
+                copyBtn.addActionListener(e -> {
+                    java.awt.datatransfer.StringSelection stringSelection = new java.awt.datatransfer.StringSelection(
+                            newPassword);
+                    java.awt.Toolkit.getDefaultToolkit().getSystemClipboard()
+                            .setContents(stringSelection, null);
+                    JOptionPane.showMessageDialog(this, "Đã copy vào clipboard!",
+                            "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+                });
+
+                panel.add(messageLabel, BorderLayout.NORTH);
+                panel.add(passwordField, BorderLayout.CENTER);
+                panel.add(copyBtn, BorderLayout.SOUTH);
+
+                JOptionPane.showMessageDialog(this, panel, "Reset Mật Khẩu Thành Công!",
+                        JOptionPane.INFORMATION_MESSAGE);
+                showSuccess("Reset mật khẩu thành công!");
+            } else {
+                showError("Không thể reset mật khẩu");
+            }
+        } catch (SQLException e) {
+            showError("Lỗi reset mật khẩu: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private String generateRandomPassword() {
+        String upperCase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        String lowerCase = "abcdefghijklmnopqrstuvwxyz";
+        String digits = "0123456789";
+        String special = "!@#$%^&*";
+        String allChars = upperCase + lowerCase + digits + special;
+        java.util.Random random = new java.util.Random();
+        int length = 10;
+        StringBuilder password = new StringBuilder();
+        password.append(upperCase.charAt(random.nextInt(upperCase.length())));
+        password.append(lowerCase.charAt(random.nextInt(lowerCase.length())));
+        password.append(digits.charAt(random.nextInt(digits.length())));
+        password.append(special.charAt(random.nextInt(special.length())));
+        for (int i = 4; i < length; i++) {
+            password.append(allChars.charAt(random.nextInt(allChars.length())));
+        }
+        char[] passwordArray = password.toString().toCharArray();
+        for (int i = passwordArray.length - 1; i > 0; i--) {
+            int j = random.nextInt(i + 1);
+            char temp = passwordArray[i];
+            passwordArray[i] = passwordArray[j];
+            passwordArray[j] = temp;
+        }
+        return new String(passwordArray);
+    }
+
     // Helper methods for showing messages
     private void showSuccess(String message) {
         JOptionPane.showMessageDialog(this, message, "Thành công",
@@ -1127,6 +1369,39 @@ public class UserManagementPanel extends JPanel {
         return button;
     }
 
+    private ImageIcon loadIcon(String iconName, int width, int height) {
+        try {
+            String path = "icons/" + iconName + ".png";
+            ImageIcon icon = new ImageIcon(path);
+            if (icon.getImageLoadStatus() == java.awt.MediaTracker.COMPLETE) {
+                Image img = icon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
+                return new ImageIcon(img);
+            }
+        } catch (Exception e) {
+            System.err.println("Could not load icon: " + iconName);
+        }
+        return null;
+    }
+
+    private JButton createButtonWithIcon(String text, String iconName, Color color) {
+        ImageIcon icon = loadIcon(iconName, 16, 16);
+        JButton button;
+        if (icon != null) {
+            button = new JButton(text, icon);
+        } else {
+            button = new JButton(text);
+        }
+        button.setFont(new Font("Arial", Font.BOLD, 12));
+        button.setBackground(color);
+        button.setForeground(Color.WHITE);
+        button.setOpaque(true);
+        button.setBorderPainted(false);
+        button.setFocusPainted(false);
+        button.setMargin(new Insets(5, 12, 5, 12));
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        return button;
+    }
+
     private void addActionToButton(String buttonText, ActionListener action) {
         Component[] components = getAllComponents(this);
         for (Component comp : components) {
@@ -1147,14 +1422,21 @@ public class UserManagementPanel extends JPanel {
 
         Comparator<User> comparator;
         switch (sortOption) {
-            case "Sắp xếp theo tên":
             case "Sắp xếp theo tên (A-Z)":
+                // Sử dụng Collator cho tiếng Việt để sắp xếp chính xác theo bảng chữ cái
+                Collator viCollatorAZ = Collator.getInstance(new Locale("vi", "VN"));
+                viCollatorAZ.setStrength(Collator.SECONDARY); // Phân biệt dấu nhưng không phân biệt hoa/thường
                 comparator = Comparator
-                        .comparing(user -> user.getFullName() != null ? user.getFullName().toLowerCase() : "");
+                        .comparing((User user) -> user.getFullName() != null ? user.getFullName() : "",
+                                Comparator.nullsLast(viCollatorAZ));
                 break;
             case "Sắp xếp theo tên (Z-A)":
+                // Sử dụng Collator cho tiếng Việt và đảo ngược
+                Collator viCollatorZA = Collator.getInstance(new Locale("vi", "VN"));
+                viCollatorZA.setStrength(Collator.SECONDARY);
                 comparator = Comparator
-                        .comparing((User user) -> user.getFullName() != null ? user.getFullName().toLowerCase() : "")
+                        .comparing((User user) -> user.getFullName() != null ? user.getFullName() : "",
+                                Comparator.nullsFirst(viCollatorZA))
                         .reversed();
                 break;
             case "Sắp xếp theo ngày tạo (Cũ nhất)":
@@ -1394,4 +1676,64 @@ public class UserManagementPanel extends JPanel {
 
         return result[0];
     }
+
+    /**
+     * Export users to CSV
+     */
+    private void exportUsersToCSV() {
+        try {
+            if (userTable.getRowCount() == 0) {
+                JOptionPane.showMessageDialog(this, "Không có dữ liệu để xuất!",
+                        "Cảnh báo", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Lưu file CSV");
+            fileChooser.setSelectedFile(new java.io.File("DanhSachNguoiDung.csv"));
+
+            if (fileChooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) {
+                return;
+            }
+
+            String filePath = fileChooser.getSelectedFile().getAbsolutePath();
+            if (!filePath.toLowerCase().endsWith(".csv")) {
+                filePath += ".csv";
+            }
+
+            try (java.io.PrintWriter writer = new java.io.PrintWriter(
+                    new java.io.OutputStreamWriter(
+                            new java.io.FileOutputStream(filePath),
+                            java.nio.charset.StandardCharsets.UTF_8))) {
+
+                writer.write('\ufeff');
+                writer.println(
+                        "ID,Username,Họ tên,Email,Số điện thoại,Giới tính,Ngày sinh,Địa chỉ,Trạng thái,Ngày tạo");
+
+                for (int row = 0; row < userTable.getRowCount(); row++) {
+                    writer.printf("%s,\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"\n",
+                            userTable.getValueAt(row, 0),
+                            userTable.getValueAt(row, 1),
+                            userTable.getValueAt(row, 2),
+                            userTable.getValueAt(row, 3),
+                            userTable.getValueAt(row, 4),
+                            userTable.getValueAt(row, 5),
+                            userTable.getValueAt(row, 6),
+                            userTable.getValueAt(row, 7),
+                            userTable.getValueAt(row, 8),
+                            userTable.getValueAt(row, 9));
+                }
+            }
+
+            JOptionPane.showMessageDialog(this,
+                    "Đã xuất " + userTable.getRowCount() + " người dùng vào:\n" + filePath,
+                    "Thành công", JOptionPane.INFORMATION_MESSAGE);
+
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Lỗi xuất file: " + ex.getMessage(),
+                    "Lỗi", JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
+        }
+    }
+
 }
