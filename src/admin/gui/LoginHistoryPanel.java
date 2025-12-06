@@ -70,15 +70,15 @@ public class LoginHistoryPanel extends JPanel {
         columnModel.getColumn(2).setPreferredWidth(150); // Tên đăng nhập
         columnModel.getColumn(3).setPreferredWidth(200); // Họ tên
 
-        // Các nút chức năng
-        refreshButton = new JButton("🔄 Làm mới");
-        exportButton = new JButton("📊 Xuất CSV");
+        // Các nút chức năng with icons
+        refreshButton = createButtonWithIcon("Làm mới", "refresh");
+        exportButton = createButtonWithIcon("Xuất CSV", "export");
 
         styleAddUserButtonSimple(refreshButton);
         styleAddUserButtonSimple(exportButton);
 
         // Label thống kê
-        totalLabel = new JLabel("📊 Tổng số lượt: 0");
+        totalLabel = new JLabel("Tổng số lượt: 0");
         totalLabel.setFont(new Font("Arial", Font.BOLD, 12));
     }
 
@@ -89,9 +89,20 @@ public class LoginHistoryPanel extends JPanel {
         try {
             List<LoginHistory> histories = loginHistoryDAO.getAllLoginHistory();
             displayLoginHistories(histories);
-            totalLabel.setText("📊 Tổng số lượt: " + histories.size());
+            totalLabel.setText("Tổng số lượt: " + histories.size());
         } catch (SQLException e) {
-            showError("Lỗi load dữ liệu: " + e.getMessage());
+            String errorMsg = e.getMessage();
+            String detailedMsg = "Lỗi load dữ liệu lịch sử đăng nhập: " + errorMsg;
+            
+            if (errorMsg != null && (errorMsg.contains("connection") || 
+                                     errorMsg.contains("Connection"))) {
+                detailedMsg += "\n\nVui lòng kiểm tra:\n" +
+                              "- Kết nối database\n" +
+                              "- File config.properties\n" +
+                              "Hoặc liên hệ admin để được hỗ trợ.";
+            }
+            
+            showError(detailedMsg);
             e.printStackTrace();
         }
     }
@@ -139,9 +150,17 @@ public class LoginHistoryPanel extends JPanel {
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setOpaque(false);
 
-        JLabel tableTitle = new JLabel("📋 Lịch sử đăng nhập");
+        // Title with icon - đảm bảo text hiển thị đầy đủ
+        ImageIcon historyIcon = loadIcon("history", 20, 20);
+        JLabel tableTitle = new JLabel("Lịch sử đăng nhập");
+        if (historyIcon != null) {
+            tableTitle.setIcon(historyIcon);
+            tableTitle.setIconTextGap(10);
+            tableTitle.setHorizontalTextPosition(SwingConstants.RIGHT); // Text ở bên phải icon
+        }
         tableTitle.setFont(new Font("Arial", Font.BOLD, 16));
         tableTitle.setForeground(ZALO_BLUE);
+        tableTitle.setHorizontalAlignment(SwingConstants.LEFT); // Căn trái toàn bộ (icon + text)
 
         JPanel statsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 0));
         statsPanel.setOpaque(false);
@@ -165,6 +184,7 @@ public class LoginHistoryPanel extends JPanel {
     }
 
     private JPanel createButtonPanel() {
+        // Sử dụng FlowLayout giống UserManagementPanel
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
         panel.setOpaque(false);
         panel.add(refreshButton);
@@ -278,17 +298,49 @@ public class LoginHistoryPanel extends JPanel {
         button.setBackground(tealColor);
         button.setForeground(Color.WHITE); // Màu chữ trắng
 
-        // Phông chữ và kích thước (dựa trên ảnh, chữ có vẻ lớn và đậm)
-        button.setFont(new Font("Arial", Font.BOLD, 14));
+        // Phông chữ giống UserManagementPanel
+        button.setFont(new Font("Arial", Font.BOLD, 12));
 
         button.setOpaque(true);
         button.setBorderPainted(false); // Bỏ viền
         button.setFocusPainted(false);
 
-        // Căn lề để tạo khoảng đệm (padding) lớn hơn
-        button.setMargin(new Insets(10, 20, 10, 20));
+        // Căn lề giống UserManagementPanel
+        button.setMargin(new Insets(5, 12, 5, 12));
 
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+    }
+
+    /**
+     * Create button with icon and text
+     */
+    private JButton createButtonWithIcon(String text, String iconName) {
+        JButton button = new JButton(text);
+        ImageIcon icon = loadIcon(iconName, 16, 16);
+        if (icon != null) {
+            button.setIcon(icon);
+            button.setHorizontalTextPosition(JButton.RIGHT);
+            button.setIconTextGap(8);
+        }
+        return button;
+    }
+
+    /**
+     * Load icon from icons directory
+     */
+
+    private ImageIcon loadIcon(String iconName, int width, int height) {
+        try {
+            String path = "icons/" + iconName + ".png";
+            ImageIcon icon = new ImageIcon(path);
+            if (icon.getImageLoadStatus() == java.awt.MediaTracker.COMPLETE) {
+                Image img = icon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
+                return new ImageIcon(img);
+            }
+        } catch (Exception e) {
+            System.err.println("Could not load icon: " + iconName);
+        }
+        return null;
     }
 
     /**

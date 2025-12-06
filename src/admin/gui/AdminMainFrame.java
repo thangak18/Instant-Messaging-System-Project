@@ -84,7 +84,15 @@ public class AdminMainFrame extends JFrame {
         JPanel titlePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         titlePanel.setOpaque(false);
 
-        JLabel titleLabel = new JLabel("🏠 Trang chủ quản trị");
+        // Title with icon
+        ImageIcon homeIcon = loadIcon("home", 24, 24);
+        JLabel titleLabel;
+        if (homeIcon != null) {
+            titleLabel = new JLabel("Trang chủ quản trị", homeIcon, JLabel.LEFT);
+            titleLabel.setIconTextGap(8);
+        } else {
+            titleLabel = new JLabel("Trang chủ quản trị");
+        }
         titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
         titleLabel.setForeground(ZALO_BLUE);
         titlePanel.add(titleLabel);
@@ -93,7 +101,7 @@ public class AdminMainFrame extends JFrame {
         JPanel timePanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         timePanel.setOpaque(false);
 
-        JLabel timeLabel = new JLabel("🕐 " + java.time.LocalDateTime.now().format(
+        JLabel timeLabel = new JLabel(java.time.LocalDateTime.now().format(
                 java.time.format.DateTimeFormatter.ofPattern("HH:mm - dd/MM/yyyy")));
         timeLabel.setFont(new Font("Arial", Font.PLAIN, 13));
         timeLabel.setForeground(Color.GRAY);
@@ -108,13 +116,13 @@ public class AdminMainFrame extends JFrame {
     private JPanel createStatisticsPanel() {
         JPanel panel = new JPanel(new GridLayout(1, 4, 12, 0));
         panel.setOpaque(false);
-        panel.setPreferredSize(new Dimension(1160, 140));
+        panel.setPreferredSize(new Dimension(1160, 180));
 
         // Create cards with loading state
-        JPanel userCard = createStatCard("Người dùng", "...", ZALO_BLUE, "👥");
-        JPanel onlineCard = createStatCard("Đang online", "...", ZALO_BLUE, "🟢");
-        JPanel groupCard = createStatCard("Nhóm chat", "...", ZALO_BLUE, "💬");
-        JPanel messageCard = createStatCard("Tin nhắn", "...", ZALO_BLUE, "📨");
+        JPanel userCard = createStatCard("Người dùng", "...", ZALO_BLUE, "user");
+        JPanel onlineCard = createStatCard("Đang online", "...", ZALO_BLUE, "dashboard");
+        JPanel groupCard = createStatCard("Nhóm chat", "...", ZALO_BLUE, "chat");
+        JPanel messageCard = createStatCard("Tin nhắn", "...", ZALO_BLUE, "message");
 
         panel.add(userCard);
         panel.add(onlineCard);
@@ -194,7 +202,22 @@ public class AdminMainFrame extends JFrame {
         return String.format("%,d", number);
     }
 
-    private JPanel createStatCard(String title, String value, Color color, String icon) {
+    // Icon loader method
+    private ImageIcon loadIcon(String iconName, int width, int height) {
+        try {
+            String path = "icons/" + iconName + ".png";
+            ImageIcon icon = new ImageIcon(path);
+            if (icon.getImageLoadStatus() == java.awt.MediaTracker.COMPLETE) {
+                Image img = icon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
+                return new ImageIcon(img);
+            }
+        } catch (Exception e) {
+            System.err.println("Could not load icon: " + iconName);
+        }
+        return null;
+    }
+
+    private JPanel createStatCard(String title, String value, Color color, String iconName) {
         JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBackground(Color.WHITE);
@@ -202,12 +225,15 @@ public class AdminMainFrame extends JFrame {
                 BorderFactory.createLineBorder(color, 2),
                 new EmptyBorder(12, 12, 12, 12)));
 
-        // Icon
-        JLabel iconLabel = new JLabel(icon);
-        try {
-            iconLabel.setFont(new Font("Apple Color Emoji", Font.PLAIN, 32));
-        } catch (Exception e) {
-            iconLabel.setFont(new Font("Dialog", Font.PLAIN, 32));
+        // Icon - load from PNG file
+        ImageIcon icon = loadIcon(iconName, 32, 32);
+        JLabel iconLabel;
+        if (icon != null) {
+            iconLabel = new JLabel(icon);
+        } else {
+            // Fallback if icon not found
+            iconLabel = new JLabel(iconName.toUpperCase().substring(0, 1));
+            iconLabel.setFont(new Font("Arial", Font.BOLD, 32));
         }
         iconLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
@@ -247,24 +273,24 @@ public class AdminMainFrame extends JFrame {
         JPanel gridPanel = new JPanel(new GridLayout(3, 3, 10, 10));
         gridPanel.setOpaque(false);
 
-        gridPanel.add(createActionCard("👤 Quản lý người dùng",
-                "Quản lý danh sách người dùng", ZALO_BLUE, e -> openUserManagement()));
-        gridPanel.add(createActionCard("📜 Lịch sử đăng nhập",
-                "Xem danh sách đăng nhập theo thứ tự thời gian", ZALO_BLUE, e -> openLoginHistory()));
-        gridPanel.add(createActionCard("👥 Danh sách nhóm",
-                "Xem danh sách các nhóm chat", ZALO_BLUE, e -> openGroupManagement()));
-        gridPanel.add(createActionCard("🔔 Báo cáo spam",
-                "Xem danh sách báo cáo spam", ZALO_BLUE, e -> openSpamReport()));
-        gridPanel.add(createActionCard("🆕 Người dùng mới",
-                "Xem danh sách người dùng đăng ký mới", ZALO_BLUE, e -> openNewUserReport()));
-        gridPanel.add(createActionCard("📊 Thống kê",
-                "Biểu đồ số lượng người đăng ký mới theo năm", ZALO_BLUE, e -> openStatistics()));
-        gridPanel.add(createActionCard("💝 Bạn bè",
-                "Xem danh sách người dùng và số lượng bạn bè", ZALO_BLUE, e -> openFriendStats()));
-        gridPanel.add(createActionCard("📈 Người hoạt động",
-                "Xem danh sách người dùng hoạt động", ZALO_BLUE, e -> openActiveUserReport()));
-        gridPanel.add(createActionCard("📉 Biểu đồ",
-                "Biểu đồ số lượng người hoạt động theo năm", ZALO_BLUE, e -> openActiveUserChart()));
+        gridPanel.add(createActionCard("Quản lý người dùng",
+                "Quản lý danh sách người dùng", ZALO_BLUE, "user", e -> openUserManagement()));
+        gridPanel.add(createActionCard("Lịch sử đăng nhập",
+                "Xem danh sách đăng nhập theo thứ tự thời gian", ZALO_BLUE, "history", e -> openLoginHistory()));
+        gridPanel.add(createActionCard("Danh sách nhóm",
+                "Xem danh sách các nhóm chat", ZALO_BLUE, "chat", e -> openGroupManagement()));
+        gridPanel.add(createActionCard("Báo cáo spam",
+                "Xem danh sách báo cáo spam", ZALO_BLUE, "notification", e -> openSpamReport()));
+        gridPanel.add(createActionCard("Người dùng mới",
+                "Xem danh sách người dùng đăng ký mới", ZALO_BLUE, "add", e -> openNewUserReport()));
+        gridPanel.add(createActionCard("Thống kê",
+                "Biểu đồ số lượng người đăng ký mới theo năm", ZALO_BLUE, "chart", e -> openStatistics()));
+        gridPanel.add(createActionCard("Bạn bè",
+                "Xem danh sách người dùng và số lượng bạn bè", ZALO_BLUE, "friends", e -> openFriendStats()));
+        gridPanel.add(createActionCard("Người hoạt động",
+                "Xem danh sách người dùng hoạt động", ZALO_BLUE, "dashboard", e -> openActiveUserReport()));
+        gridPanel.add(createActionCard("Biểu đồ",
+                "Biểu đồ số lượng người hoạt động theo năm", ZALO_BLUE, "chart", e -> openActiveUserChart()));
 
         panel.add(titleLabel, BorderLayout.NORTH);
         panel.add(gridPanel, BorderLayout.CENTER);
@@ -273,7 +299,7 @@ public class AdminMainFrame extends JFrame {
     }
 
     private JPanel createActionCard(String title, String description, Color color,
-            java.awt.event.ActionListener action) {
+            String iconName, java.awt.event.ActionListener action) {
         JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBackground(Color.WHITE);
@@ -282,17 +308,50 @@ public class AdminMainFrame extends JFrame {
                 new EmptyBorder(18, 15, 18, 15)));
         card.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
+        // Icon and title in horizontal layout - đảm bảo text và icon hiển thị đầy đủ
+        JPanel headerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        headerPanel.setOpaque(false);
+        headerPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        // Load icon
+        ImageIcon icon = loadIcon(iconName, 20, 20);
+        int iconWidth = 0;
+        if (icon != null) {
+            JLabel iconLabel = new JLabel(icon);
+            iconWidth = icon.getIconWidth();
+            headerPanel.add(iconLabel);
+        }
+
+        // Title label với size constraints để đảm bảo text không bị cắt
         JLabel titleLabel = new JLabel(title);
         titleLabel.setFont(new Font("Arial", Font.BOLD, 15));
         titleLabel.setForeground(color);
-        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        // Tính toán kích thước text để đảm bảo không bị cắt
+        java.awt.FontMetrics fm = titleLabel.getFontMetrics(titleLabel.getFont());
+        int textWidth = fm.stringWidth(title);
+        // Thêm padding để đảm bảo text không bị cắt do font rendering
+        int padding = 30;
+        int totalWidth = textWidth + padding;
+        // Set minimum và preferred size để đảm bảo text hiển thị đầy đủ
+        titleLabel.setMinimumSize(new Dimension(totalWidth, 25));
+        titleLabel.setPreferredSize(new Dimension(totalWidth, 25));
+        titleLabel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 25));
+        // Đảm bảo text alignment
+        titleLabel.setHorizontalAlignment(SwingConstants.LEFT);
+        titleLabel.setVerticalAlignment(SwingConstants.CENTER);
+        headerPanel.add(titleLabel);
+        
+        // Đảm bảo headerPanel có đủ không gian để hiển thị text và icon đầy đủ
+        int headerMinWidth = iconWidth + 8 + totalWidth; // icon + gap + text
+        headerPanel.setMinimumSize(new Dimension(headerMinWidth, 30));
+        headerPanel.setPreferredSize(new Dimension(Integer.MAX_VALUE, 30));
 
         JLabel descLabel = new JLabel(description);
         descLabel.setFont(new Font("Arial", Font.PLAIN, 12));
         descLabel.setForeground(Color.GRAY);
         descLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        card.add(titleLabel);
+        card.add(headerPanel);
         card.add(Box.createVerticalStrut(6));
         card.add(descLabel);
 
@@ -344,7 +403,11 @@ public class AdminMainFrame extends JFrame {
     }
 
     private void setupMenu() {
+        ImageIcon menuIcon = loadIcon("settings", 16, 16);
         JMenu userMenu = new JMenu("Lựa chọn chức năng");
+        if (menuIcon != null) {
+            userMenu.setIcon(menuIcon);
+        }
 
         addMenuItem(userMenu, "Quản lý người dùng", e -> openUserManagement());
         addMenuItem(userMenu, "Lịch sử đăng nhập", e -> openLoginHistory());
@@ -425,25 +488,90 @@ public class AdminMainFrame extends JFrame {
         contentPanel.removeAll();
         JPanel wrapper = new JPanel(new BorderLayout());
 
-        // Tiêu đề với emoji
-        String emojiTitle = getEmojiForTitle(title) + " " + title;
-        JLabel titleLabel = new JLabel(emojiTitle);
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 22));
-        titleLabel.setForeground(new Color(0, 102, 255));
-        titleLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        wrapper.add(titleLabel, BorderLayout.NORTH);
+        // 1. HEADER PANEL TỔNG
+        JPanel titleHeaderPanel = new JPanel(new BorderLayout());
+        titleHeaderPanel.setBackground(Color.WHITE);
+        titleHeaderPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 3, 0, ZALO_BLUE),
+                new EmptyBorder(15, 20, 15, 20)));
 
-        // Nội dung
+        // 2. CONTAINER CHỨA TITLE (Dùng BoxLayout để xếp Icon và Text nằm ngang)
+        JPanel titleContainer = new JPanel();
+        titleContainer.setLayout(new BoxLayout(titleContainer, BoxLayout.X_AXIS));
+        titleContainer.setOpaque(false);
+
+        // --- XỬ LÝ ICON (LABEL RIÊNG) ---
+        String iconName = getIconNameForTitle(title);
+        ImageIcon titleIcon = loadIcon(iconName, 24, 24);
+        int iconWidth = (titleIcon != null) ? titleIcon.getIconWidth() : 0;
+        int gap = (titleIcon != null) ? 15 : 10;
+        
+        if (titleIcon != null) {
+            JLabel iconLabel = new JLabel(titleIcon);
+            titleContainer.add(iconLabel);
+            // Tạo khoảng cách giữa Icon và Text
+            titleContainer.add(Box.createRigidArea(new Dimension(gap, 0)));
+        } else {
+             // Fallback emoji nếu không có icon
+            JLabel emojiLabel = new JLabel(getEmojiForTitle(title));
+            emojiLabel.setFont(new Font("Arial", Font.BOLD, 24));
+            titleContainer.add(emojiLabel);
+            titleContainer.add(Box.createRigidArea(new Dimension(gap, 0)));
+        }
+
+        // --- XỬ LÝ TEXT (LABEL RIÊNG) ---
+        JLabel textLabel = new JLabel(title);
+        textLabel.setFont(new Font("Arial", Font.BOLD, 24));
+        textLabel.setForeground(ZALO_BLUE);
+        // Đảm bảo text không bị cắt - tính toán kích thước dựa trên text
+        java.awt.FontMetrics fm = textLabel.getFontMetrics(textLabel.getFont());
+        int textWidth = fm.stringWidth(title);
+        // Thêm padding để đảm bảo text không bị cắt do font rendering
+        int padding = 50;
+        int totalWidth = textWidth + padding;
+        // Set minimum và preferred size để đảm bảo text hiển thị đầy đủ
+        textLabel.setMinimumSize(new Dimension(totalWidth, 35));
+        textLabel.setPreferredSize(new Dimension(totalWidth, 35));
+        textLabel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
+        // Đảm bảo text alignment
+        textLabel.setHorizontalAlignment(SwingConstants.LEFT);
+        textLabel.setVerticalAlignment(SwingConstants.CENTER);
+        
+        titleContainer.add(textLabel);
+        
+        // Đẩy toàn bộ nội dung sang trái, phần thừa bên phải lấp đầy bằng Glue
+        titleContainer.add(Box.createHorizontalGlue());
+        
+        // Đảm bảo titleContainer có đủ không gian để hiển thị text đầy đủ
+        // Tính toán tổng width cần thiết: icon + gap + text + padding
+        int containerMinWidth = iconWidth + gap + totalWidth;
+        titleContainer.setMinimumSize(new Dimension(containerMinWidth, 45));
+        titleContainer.setPreferredSize(new Dimension(Integer.MAX_VALUE, 45));
+
+        // Add container vào Header
+        titleHeaderPanel.add(titleContainer, BorderLayout.CENTER);
+        wrapper.add(titleHeaderPanel, BorderLayout.NORTH);
+
+        // 3. NỘI DUNG CHÍNH (GIỮ NGUYÊN)
         wrapper.add(panel, BorderLayout.CENTER);
 
-        // Nút quay lại
-        JButton backBtn = new JButton("🏠 Quay lại trang chủ");
+        // 4. NÚT QUAY LẠI (GIỮ NGUYÊN)
+        ImageIcon homeIcon = loadIcon("home", 16, 16);
+        JButton backBtn;
+        if (homeIcon != null) {
+            backBtn = new JButton("Quay lại trang chủ", homeIcon);
+            backBtn.setHorizontalTextPosition(SwingConstants.RIGHT);
+            backBtn.setIconTextGap(8);
+        } else {
+            backBtn = new JButton("Quay lại trang chủ");
+        }
         backBtn.setFont(new Font("Arial", Font.BOLD, 14));
         backBtn.setBackground(new Color(108, 117, 125));
         backBtn.setForeground(Color.WHITE);
         backBtn.setFocusPainted(false);
         backBtn.setBorderPainted(false);
         backBtn.setOpaque(true);
+        backBtn.setMargin(new Insets(8, 15, 8, 15));
         backBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
         backBtn.addActionListener(e -> showHomePage());
 
@@ -454,6 +582,28 @@ public class AdminMainFrame extends JFrame {
         contentPanel.add(wrapper, BorderLayout.CENTER);
         contentPanel.revalidate();
         contentPanel.repaint();
+    }
+
+    private String getIconNameForTitle(String title) {
+        if (title.contains("người dùng"))
+            return "user";
+        if (title.contains("lịch sử"))
+            return "history";
+        if (title.contains("nhóm"))
+            return "chat";
+        if (title.contains("spam"))
+            return "notification";
+        if (title.contains("mới"))
+            return "new";
+        if (title.contains("Thống kê"))
+            return "statistics";
+        if (title.contains("bạn bè"))
+            return "friend";
+        if (title.contains("hoạt động"))
+            return "dashboard";
+        if (title.contains("Biểu đồ"))
+            return "chart";
+        return "default";
     }
 
     private String getEmojiForTitle(String title) {

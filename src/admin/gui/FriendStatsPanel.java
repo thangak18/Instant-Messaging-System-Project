@@ -88,10 +88,10 @@ public class FriendStatsPanel extends JPanel {
         friendFilterCombo = new JComboBox<>(new String[] { "Tất cả", "=", ">", "<" });
         friendCountField = new JTextField(5);
 
-        filterButton = new JButton("🔍 Tìm kiếm và lọc");
-        resetButton = new JButton("↺ Đặt lại");
-        refreshButton = new JButton("🔄 Làm mới");
-        exportButton = new JButton("� Xuất CSV");
+        filterButton = createButtonWithIcon("Tìm kiếm và lọc", "search");
+        resetButton = createButtonWithIcon("Đặt lại", "reset");
+        refreshButton = createButtonWithIcon("Làm mới", "refresh");
+        exportButton = createButtonWithIcon("Xuất CSV", "export");
 
         stylePrimaryButton(filterButton);
         stylePrimaryButton(resetButton);
@@ -125,7 +125,13 @@ public class FriendStatsPanel extends JPanel {
                 BorderFactory.createLineBorder(Color.LIGHT_GRAY),
                 new EmptyBorder(15, 15, 15, 15)));
 
-        JLabel titleLabel = new JLabel("🔍 Lọc thống kê bạn bè");
+        ImageIcon filterIcon = loadIcon("search", 20, 20);
+        JLabel titleLabel = new JLabel("Lọc thống kê bạn bè");
+        if (filterIcon != null) {
+            titleLabel.setIcon(filterIcon);
+            titleLabel.setHorizontalTextPosition(JLabel.RIGHT);
+            titleLabel.setIconTextGap(8);
+        }
         titleLabel.setFont(new Font("Arial", Font.BOLD, 14));
         titleLabel.setForeground(ZALO_BLUE);
         titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -190,7 +196,13 @@ public class FriendStatsPanel extends JPanel {
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setOpaque(false);
 
-        JLabel titleLabel = new JLabel("📊 Thống kê bạn bè");
+        ImageIcon friendsIcon = loadIcon("friends", 20, 20);
+        JLabel titleLabel = new JLabel("Thống kê bạn bè");
+        if (friendsIcon != null) {
+            titleLabel.setIcon(friendsIcon);
+            titleLabel.setHorizontalTextPosition(JLabel.RIGHT);
+            titleLabel.setIconTextGap(8);
+        }
         titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
         titleLabel.setForeground(ZALO_BLUE);
 
@@ -199,7 +211,7 @@ public class FriendStatsPanel extends JPanel {
 
         // Khởi tạo instance variable nếu chưa có
         if (this.totalLabel == null) {
-            this.totalLabel = new JLabel("📈 Tổng số người dùng: 0");
+            this.totalLabel = new JLabel("Tổng số người dùng: 0");
         }
         this.totalLabel.setFont(new Font("Arial", Font.BOLD, 12));
 
@@ -291,7 +303,19 @@ public class FriendStatsPanel extends JPanel {
                     "Kết quả", JOptionPane.INFORMATION_MESSAGE);
 
         } catch (SQLException e) {
-            showError("Lỗi lọc dữ liệu: " + e.getMessage());
+            String errorMsg = e.getMessage();
+            String detailedMsg = "Lỗi lọc dữ liệu thống kê bạn bè: " + errorMsg;
+            
+            if (errorMsg != null && (errorMsg.contains("connection") || 
+                                     errorMsg.contains("Connection"))) {
+                detailedMsg += "\n\nVui lòng kiểm tra:\n" +
+                              "- Kết nối database\n" +
+                              "- Thông tin bộ lọc\n" +
+                              "Hoặc liên hệ admin để được hỗ trợ.";
+            }
+            
+            showError(detailedMsg);
+            e.printStackTrace();
         }
     }
 
@@ -502,4 +526,31 @@ public class FriendStatsPanel extends JPanel {
         }
         return list.toArray(new Component[0]);
     }
+
+    private ImageIcon loadIcon(String iconName, int width, int height) {
+        try {
+            String path = "icons/" + iconName + ".png";
+            ImageIcon icon = new ImageIcon(path);
+            if (icon.getImageLoadStatus() == java.awt.MediaTracker.COMPLETE) {
+                Image img = icon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
+                return new ImageIcon(img);
+            }
+        } catch (Exception e) {
+            System.err.println("Could not load icon: " + iconName);
+        }
+        return null;
+    }
+
+    private JButton createButtonWithIcon(String text, String iconName) {
+        JButton button = new JButton(text);
+        ImageIcon icon = loadIcon(iconName, 16, 16);
+        if (icon != null) {
+            button.setIcon(icon);
+            button.setHorizontalTextPosition(JButton.RIGHT);
+            button.setIconTextGap(8);
+        }
+        button.setPreferredSize(new java.awt.Dimension(200, 35));
+        return button;
+    }
+
 }

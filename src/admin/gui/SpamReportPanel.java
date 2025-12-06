@@ -41,10 +41,13 @@ public class SpamReportPanel extends JPanel {
 
     // Backend
     private SpamReportDAO spamReportDAO;
+    private admin.service.UserDAO userDAO;
+    private java.util.Map<Integer, SpamReport> reportsMap = new java.util.HashMap<>();
     private DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     public SpamReportPanel() {
         this.spamReportDAO = new SpamReportDAO();
+        this.userDAO = new admin.service.UserDAO();
         initComponents();
         setupLayout();
         loadSpamReportsFromDatabase();
@@ -120,7 +123,18 @@ public class SpamReportPanel extends JPanel {
             displaySpamReports(reports);
             updateStatistics(reports);
         } catch (SQLException e) {
-            showError("Lỗi load dữ liệu báo cáo spam: " + e.getMessage());
+            String errorMsg = e.getMessage();
+            String detailedMsg = "Lỗi load dữ liệu báo cáo spam: " + errorMsg;
+            
+            if (errorMsg != null && (errorMsg.contains("connection") || 
+                                     errorMsg.contains("Connection"))) {
+                detailedMsg += "\n\nVui lòng kiểm tra:\n" +
+                              "- Kết nối database\n" +
+                              "- File config.properties\n" +
+                              "Hoặc liên hệ admin để được hỗ trợ.";
+            }
+            
+            showError(detailedMsg);
             e.printStackTrace();
         }
     }
@@ -130,6 +144,7 @@ public class SpamReportPanel extends JPanel {
      */
     private void displaySpamReports(List<SpamReport> reports) {
         tableModel.setRowCount(0); // Clear table
+        reportsMap.clear(); // Clear map
 
         for (SpamReport report : reports) {
             Object[] row = {
@@ -141,6 +156,7 @@ public class SpamReportPanel extends JPanel {
                     report.getCreatedAt() != null ? report.getCreatedAt().format(dateTimeFormatter) : ""
             };
             tableModel.addRow(row);
+            reportsMap.put(report.getId(), report); // Store in map for later use
         }
     }
 
@@ -170,7 +186,15 @@ public class SpamReportPanel extends JPanel {
                 BorderFactory.createLineBorder(Color.LIGHT_GRAY),
                 new EmptyBorder(15, 15, 15, 15)));
 
-        JLabel titleLabel = new JLabel("🔍 Tìm kiếm & Lọc báo cáo spam");
+        // Title with search icon
+        ImageIcon searchIconTitle = loadIcon("search", 18, 18);
+        JLabel titleLabel;
+        if (searchIconTitle != null) {
+            titleLabel = new JLabel("Tìm kiếm & Lọc báo cáo spam", searchIconTitle, JLabel.LEFT);
+            titleLabel.setIconTextGap(6);
+        } else {
+            titleLabel = new JLabel("Tìm kiếm & Lọc báo cáo spam");
+        }
         titleLabel.setFont(new Font("Arial", Font.BOLD, 14));
         titleLabel.setForeground(ZALO_BLUE);
         titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -223,7 +247,7 @@ public class SpamReportPanel extends JPanel {
         JButton searchFilterBtn = createStyledButton("Tìm kiếm + Lọc", ZALO_BLUE);
         actionRow.add(searchFilterBtn);
 
-        JButton resetBtn = createStyledButton("↺ Đặt lại", ZALO_BLUE);
+        JButton resetBtn = createStyledButton("Đặt lại", ZALO_BLUE);
         actionRow.add(resetBtn);
 
         panel.add(actionRow);
@@ -242,7 +266,15 @@ public class SpamReportPanel extends JPanel {
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setOpaque(false);
 
-        JLabel titleLabel = new JLabel("🔔 Danh sách báo cáo spam");
+        // Title with spam icon
+        ImageIcon spamIconTitle = loadIcon("spam", 18, 18);
+        JLabel titleLabel;
+        if (spamIconTitle != null) {
+            titleLabel = new JLabel("Danh sách báo cáo spam", spamIconTitle, JLabel.LEFT);
+            titleLabel.setIconTextGap(6);
+        } else {
+            titleLabel = new JLabel("Danh sách báo cáo spam");
+        }
         titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
         titleLabel.setForeground(ZALO_BLUE);
 
@@ -269,7 +301,7 @@ public class SpamReportPanel extends JPanel {
         this.rejectedLabel.setForeground(DANGER_RED);
 
         if (this.totalLabel == null) {
-            this.totalLabel = new JLabel("📊 Tổng: 0");
+            this.totalLabel = new JLabel("Tổng: 0");
         }
         this.totalLabel.setFont(new Font("Arial", Font.BOLD, 12));
 
@@ -292,11 +324,15 @@ public class SpamReportPanel extends JPanel {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 10));
         panel.setOpaque(false);
 
-        JButton processBtn = createStyledButton("✅ Xử lý báo cáo", INFO_CYAN);
+        JButton processBtn = createStyledButtonWithIcon("Xử lý báo cáo", INFO_CYAN, "process");
+        processBtn.addActionListener(e -> processReport());
 
         // Yêu cầu d: Khóa tài khoản người dùng
-        JButton lockAccountBtn = createStyledButton("🔒 Khóa tài khoản", INFO_CYAN);
-        JButton exportBtn = createStyledButton("📊 Xuất CSV", INFO_CYAN);
+        JButton lockAccountBtn = createStyledButtonWithIcon("Khóa tài khoản", INFO_CYAN, "lock");
+        lockAccountBtn.addActionListener(e -> lockUserAccount());
+
+        JButton exportBtn = createStyledButtonWithIcon("Xuất CSV", INFO_CYAN, "export");
+        exportBtn.addActionListener(e -> exportSpamReportsToCSV());
 
         panel.add(processBtn);
         panel.add(lockAccountBtn);
@@ -352,7 +388,19 @@ public class SpamReportPanel extends JPanel {
             JOptionPane.showMessageDialog(this, message,
                     "Kết quả", JOptionPane.INFORMATION_MESSAGE);
         } catch (SQLException e) {
-            showError("Lỗi: " + e.getMessage());
+            String errorMsg = e.getMessage();
+            String detailedMsg = "Lỗi tìm kiếm/lọc báo cáo spam: " + errorMsg;
+            
+            if (errorMsg != null && (errorMsg.contains("connection") || 
+                                     errorMsg.contains("Connection"))) {
+                detailedMsg += "\n\nVui lòng kiểm tra:\n" +
+                              "- Kết nối database\n" +
+                              "- Thông tin bộ lọc\n" +
+                              "Hoặc liên hệ admin để được hỗ trợ.";
+            }
+            
+            showError(detailedMsg);
+            e.printStackTrace();
         }
     }
 
@@ -412,6 +460,8 @@ public class SpamReportPanel extends JPanel {
             return;
         }
 
+        // Get report ID and user info
+        int reportId = (int) spamTable.getValueAt(selectedRow, 0);
         String reported = spamTable.getValueAt(selectedRow, 2).toString();
 
         int confirm = showStyledConfirmDialog(this,
@@ -419,10 +469,36 @@ public class SpamReportPanel extends JPanel {
                 "Xác nhận xử lý");
 
         if (confirm == JOptionPane.YES_OPTION) {
-            spamTable.setValueAt("Đã xử lý", selectedRow, 4);
-            JOptionPane.showMessageDialog(this,
-                    "Đã xử lý báo cáo thành công!",
-                    "Thành công", JOptionPane.INFORMATION_MESSAGE);
+            try {
+                // Update database status to "resolved"
+                boolean success = spamReportDAO.updateReportStatus(reportId, "resolved");
+
+                if (success) {
+                    // Update UI table
+                    spamTable.setValueAt("resolved", selectedRow, 4);
+
+                    // Refresh data from database to ensure consistency
+                    loadSpamReportsFromDatabase();
+
+                    JOptionPane.showMessageDialog(this,
+                            "Đã xử lý báo cáo thành công!",
+                            "Thành công", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this,
+                            "Không thể cập nhật trạng thái báo cáo trong database!",
+                            "Lỗi", JOptionPane.ERROR_MESSAGE);
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+                JOptionPane.showMessageDialog(this,
+                        "Lỗi database: " + e.getMessage(),
+                        "Lỗi", JOptionPane.ERROR_MESSAGE);
+            } catch (Exception e) {
+                e.printStackTrace();
+                JOptionPane.showMessageDialog(this,
+                        "Lỗi: " + e.getMessage(),
+                        "Lỗi", JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
 
@@ -452,10 +528,10 @@ public class SpamReportPanel extends JPanel {
         JPanel infoPanel = new JPanel(new GridLayout(3, 1, 5, 10));
         infoPanel.setOpaque(false);
 
-        JLabel userLabel = new JLabel("👤 Người dùng: " + reportedUser);
+        JLabel userLabel = new JLabel("Người dùng: " + reportedUser);
         userLabel.setFont(new Font("Arial", Font.BOLD, 13));
 
-        JLabel reasonLabel = new JLabel("📝 Lý do báo cáo: " + reason);
+        JLabel reasonLabel = new JLabel("Lý do báo cáo: " + reason);
         reasonLabel.setFont(new Font("Arial", Font.PLAIN, 12));
 
         JLabel warningLabel = new JLabel("⚠️ Cảnh báo: Hành động này sẽ khóa tài khoản người dùng!");
@@ -487,8 +563,8 @@ public class SpamReportPanel extends JPanel {
         // Buttons
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
 
-        JButton lockBtn = createStyledButton("🔒 Khóa tài khoản", DANGER_RED);
-        JButton cancelBtn = createStyledButton("❌ Hủy", NEUTRAL_GRAY);
+        JButton lockBtn = createStyledButton("Khóa tài khoản", DANGER_RED);
+        JButton cancelBtn = createStyledButton("Hủy", NEUTRAL_GRAY);
 
         lockBtn.addActionListener(e -> {
             String note = noteArea.getText().trim();
@@ -504,13 +580,125 @@ public class SpamReportPanel extends JPanel {
                     "Xác nhận khóa tài khoản");
 
             if (confirm == JOptionPane.YES_OPTION) {
-                // TODO: Cập nhật database - khóa tài khoản và cập nhật trạng thái báo cáo
-                spamTable.setValueAt("Đã xử lý", selectedRow, 4);
-                JOptionPane.showMessageDialog(dialog,
-                        "Đã khóa tài khoản " + reportedUser + " thành công!\n" +
-                                "Ghi chú: " + note,
-                        "Thành công", JOptionPane.INFORMATION_MESSAGE);
-                dialog.dispose();
+                // Sử dụng transaction để đảm bảo atomicity
+                java.sql.Connection conn = null;
+                try {
+                    conn = admin.service.DatabaseConnection.getInstance().getConnection();
+                    conn.setAutoCommit(false); // Bắt đầu transaction
+                    
+                    // Get report ID and find report in map
+                    int reportId = (int) spamTable.getValueAt(selectedRow, 0);
+                    SpamReport report = reportsMap.get(reportId);
+
+                    if (report == null) {
+                        JOptionPane.showMessageDialog(dialog,
+                                "Không tìm thấy thông tin báo cáo!",
+                                "Lỗi", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+
+                    int reportedUserId = report.getReportedUserId();
+
+                    // Lock the reported user (trong transaction)
+                    String lockSql = "UPDATE users SET status = 'locked' WHERE user_id = ?";
+                    try (java.sql.PreparedStatement lockStmt = conn.prepareStatement(lockSql)) {
+                        lockStmt.setInt(1, reportedUserId);
+                        int lockRows = lockStmt.executeUpdate();
+                        
+                        if (lockRows == 0) {
+                            conn.rollback();
+                            JOptionPane.showMessageDialog(dialog,
+                                    "Không thể khóa tài khoản người dùng!\n" +
+                                    "Có thể user không tồn tại hoặc đã bị khóa.",
+                                    "Lỗi", JOptionPane.ERROR_MESSAGE);
+                            return;
+                        }
+                    }
+
+                    // Update spam report status to 'resolved' (trong transaction)
+                    String updateSql = "UPDATE spam_reports SET status = 'resolved' WHERE report_id = ?";
+                    try (java.sql.PreparedStatement updateStmt = conn.prepareStatement(updateSql)) {
+                        updateStmt.setInt(1, reportId);
+                        int updateRows = updateStmt.executeUpdate();
+                        
+                        if (updateRows == 0) {
+                            conn.rollback();
+                            JOptionPane.showMessageDialog(dialog,
+                                    "Không thể cập nhật trạng thái báo cáo!",
+                                    "Lỗi", JOptionPane.ERROR_MESSAGE);
+                            return;
+                        }
+                    }
+
+                    // Commit transaction nếu tất cả thành công
+                    conn.commit();
+                    
+                    // Update table display
+                    spamTable.setValueAt("resolved", selectedRow, 4);
+
+                    // Refresh statistics
+                    loadSpamReportsFromDatabase();
+
+                    JOptionPane.showMessageDialog(dialog,
+                            "Đã khóa tài khoản " + reportedUser + " thành công!\n" +
+                                    "Ghi chú: " + note,
+                            "Thành công", JOptionPane.INFORMATION_MESSAGE);
+                    dialog.dispose();
+                    
+                } catch (java.sql.SQLException ex) {
+                    // Rollback transaction nếu có lỗi
+                    if (conn != null) {
+                        try {
+                            conn.rollback();
+                        } catch (java.sql.SQLException rollbackEx) {
+                            rollbackEx.printStackTrace();
+                        }
+                    }
+                    
+                    String errorMsg = ex.getMessage();
+                    String detailedMsg = "Lỗi khi khóa tài khoản: " + errorMsg;
+                    
+                    if (errorMsg != null && errorMsg.contains("foreign key")) {
+                        detailedMsg = "Không thể khóa tài khoản!\n\n" +
+                                     "Lý do: Có dữ liệu liên quan đến người dùng này.\n" +
+                                     "Vui lòng kiểm tra lại hoặc liên hệ admin.";
+                    } else {
+                        detailedMsg += "\n\nVui lòng kiểm tra:\n" +
+                                      "- Kết nối database\n" +
+                                      "- Quyền truy cập\n" +
+                                      "Hoặc liên hệ admin để được hỗ trợ.";
+                    }
+                    
+                    JOptionPane.showMessageDialog(dialog,
+                            detailedMsg,
+                            "Lỗi", JOptionPane.ERROR_MESSAGE);
+                    ex.printStackTrace();
+                } catch (Exception ex) {
+                    // Rollback transaction nếu có lỗi
+                    if (conn != null) {
+                        try {
+                            conn.rollback();
+                        } catch (java.sql.SQLException rollbackEx) {
+                            rollbackEx.printStackTrace();
+                        }
+                    }
+                    
+                    JOptionPane.showMessageDialog(dialog,
+                            "Lỗi không mong đợi: " + ex.getMessage() + 
+                            "\n\nVui lòng liên hệ admin để được hỗ trợ.",
+                            "Lỗi", JOptionPane.ERROR_MESSAGE);
+                    ex.printStackTrace();
+                } finally {
+                    // Đảm bảo connection được đóng và auto-commit được khôi phục
+                    if (conn != null) {
+                        try {
+                            conn.setAutoCommit(true);
+                            conn.close();
+                        } catch (java.sql.SQLException closeEx) {
+                            closeEx.printStackTrace();
+                        }
+                    }
+                }
             }
         });
 
@@ -707,4 +895,151 @@ public class SpamReportPanel extends JPanel {
 
         return result[0];
     }
+
+    /**
+     * Lock user account in database
+     * NOTE: Method này đã được thay thế bằng transaction trong lockUserAccount()
+     * Giữ lại để tương thích ngược nếu có code khác sử dụng
+     * 
+     * @param userId User ID to lock
+     * @param reason Reason for locking
+     * @return true if successful
+     * @deprecated Sử dụng transaction trong lockUserAccount() thay vì method này
+     */
+    @Deprecated
+    private boolean lockUser(int userId, String reason) {
+        String sql = "UPDATE users SET status = 'locked' WHERE user_id = ?";
+        try (java.sql.Connection conn = admin.service.DatabaseConnection.getInstance().getConnection();
+             java.sql.PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, userId);
+            int rowsAffected = pstmt.executeUpdate();
+            return rowsAffected > 0;
+        } catch (java.sql.SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * Load icon from icons directory
+     */
+    private ImageIcon loadIcon(String iconName, int width, int height) {
+        try {
+            String path = "icons/" + iconName + ".png";
+            ImageIcon icon = new ImageIcon(path);
+            if (icon.getImageLoadStatus() == java.awt.MediaTracker.COMPLETE) {
+                Image img = icon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
+                return new ImageIcon(img);
+            }
+        } catch (Exception e) {
+            System.err.println("Could not load icon: " + iconName);
+        }
+        return null;
+    }
+
+    /**
+     * Create button with icon
+     */
+    private JButton createStyledButtonWithIcon(String text, Color color, String iconName) {
+        JButton button = new JButton(text);
+        ImageIcon icon = loadIcon(iconName, 16, 16);
+        if (icon != null) {
+            button.setIcon(icon);
+            button.setHorizontalTextPosition(JButton.RIGHT);
+            button.setIconTextGap(8);
+        }
+        button.setFont(new Font("Arial", Font.BOLD, 12));
+        button.setBackground(color);
+        button.setForeground(Color.WHITE);
+        button.setOpaque(true);
+        button.setBorderPainted(false);
+        button.setFocusPainted(false);
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        button.setPreferredSize(new Dimension(200, 35));
+        return button;
+    }
+
+    /**
+     * Export spam reports to CSV
+     */
+    private void exportSpamReportsToCSV() {
+        try {
+            if (spamTable.getRowCount() == 0) {
+                JOptionPane.showMessageDialog(this, "Không có dữ liệu để xuất!",
+                        "Cảnh báo", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Lưu file CSV");
+            fileChooser.setSelectedFile(new java.io.File("BaoCaoSpam.csv"));
+
+            if (fileChooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) {
+                return;
+            }
+
+            String filePath = fileChooser.getSelectedFile().getAbsolutePath();
+            if (!filePath.toLowerCase().endsWith(".csv")) {
+                filePath += ".csv";
+            }
+
+            try (java.io.PrintWriter writer = new java.io.PrintWriter(
+                    new java.io.OutputStreamWriter(
+                            new java.io.FileOutputStream(filePath),
+                            java.nio.charset.StandardCharsets.UTF_8))) {
+
+                writer.write('\ufeff'); // BOM for Excel
+                writer.println("ID,Người báo cáo,Người bị báo cáo,Lý do,Trạng thái,Ngày báo cáo");
+
+                for (int row = 0; row < spamTable.getRowCount(); row++) {
+                    writer.printf("%s,\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"\n",
+                            spamTable.getValueAt(row, 0),
+                            spamTable.getValueAt(row, 1),
+                            spamTable.getValueAt(row, 2),
+                            spamTable.getValueAt(row, 3),
+                            spamTable.getValueAt(row, 4),
+                            spamTable.getValueAt(row, 5));
+                }
+            }
+
+            JOptionPane.showMessageDialog(this,
+                    "Đã xuất " + spamTable.getRowCount() + " báo cáo vào:\n" + filePath,
+                    "Thành công", JOptionPane.INFORMATION_MESSAGE);
+
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Lỗi xuất file: " + ex.getMessage(),
+                    "Lỗi", JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
+        }
+    }
+
 }
+
+    
+                        
+
+            
+
+            
+
+            
+
+            
+
+                
+
+                
+                            
+                            
+                            
+                            
+                            
+                            
+
+            
+                    
+                    
+
+        
+                    
+

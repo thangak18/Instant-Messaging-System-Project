@@ -151,14 +151,15 @@ public class SpamReportDAO {
 
         List<Object> params = new ArrayList<>();
 
-        // Lọc theo từ khóa
+        // Lọc theo từ khóa (tên đăng nhập hoặc email)
         if (keyword != null && !keyword.trim().isEmpty()) {
             if ("reporter".equals(searchType)) {
-                sql.append(" AND (u1.full_name LIKE ? OR u1.username LIKE ?)");
+                sql.append(" AND (u1.full_name LIKE ? OR u1.username LIKE ? OR u1.email LIKE ?)");
             } else {
-                sql.append(" AND (u2.full_name LIKE ? OR u2.username LIKE ?)");
+                sql.append(" AND (u2.full_name LIKE ? OR u2.username LIKE ? OR u2.email LIKE ?)");
             }
             String pattern = "%" + keyword.trim() + "%";
+            params.add(pattern);
             params.add(pattern);
             params.add(pattern);
         }
