@@ -184,9 +184,17 @@ public class FriendRequestPanel extends JPanel {
             JPanel leftPanel = new JPanel(new BorderLayout(10, 0));
             leftPanel.setOpaque(false);
             
-            JLabel avatarLabel = new JLabel("👤");
-            avatarLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 40));
+            JLabel avatarLabel = new JLabel();
             avatarLabel.setPreferredSize(new Dimension(50, 50));
+            avatarLabel.setHorizontalAlignment(SwingConstants.CENTER);
+            try {
+                ImageIcon icon = new ImageIcon("icons/user.png");
+                Image scaled = icon.getImage().getScaledInstance(40, 40, Image.SCALE_SMOOTH);
+                avatarLabel.setIcon(new ImageIcon(scaled));
+            } catch (Exception ex) {
+                avatarLabel.setText("[A]");
+                avatarLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+            }
             
             JPanel infoPanel = new JPanel();
             infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
@@ -252,9 +260,17 @@ public class FriendRequestPanel extends JPanel {
             JPanel leftPanel = new JPanel(new BorderLayout(10, 0));
             leftPanel.setOpaque(false);
             
-            JLabel avatarLabel = new JLabel("👤");
-            avatarLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 40));
+            JLabel avatarLabel = new JLabel();
             avatarLabel.setPreferredSize(new Dimension(50, 50));
+            avatarLabel.setHorizontalAlignment(SwingConstants.CENTER);
+            try {
+                ImageIcon icon = new ImageIcon("icons/user.png");
+                Image scaled = icon.getImage().getScaledInstance(40, 40, Image.SCALE_SMOOTH);
+                avatarLabel.setIcon(new ImageIcon(scaled));
+            } catch (Exception ex) {
+                avatarLabel.setText("[A]");
+                avatarLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+            }
             
             JPanel infoPanel = new JPanel();
             infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));

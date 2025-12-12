@@ -64,10 +64,19 @@ public class ViewProfileDialog extends JDialog {
         headerPanel.setBorder(BorderFactory.createEmptyBorder(25, 20, 25, 20));
         
         // Avatar
-        JLabel avatarLabel = new JLabel("👤", SwingConstants.CENTER);
-        avatarLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 70));
-        avatarLabel.setForeground(Color.WHITE);
+        JLabel avatarLabel = new JLabel();
+        avatarLabel.setHorizontalAlignment(SwingConstants.CENTER);
         avatarLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        avatarLabel.setPreferredSize(new Dimension(80, 80));
+        try {
+            ImageIcon icon = new ImageIcon("icons/user.png");
+            Image scaled = icon.getImage().getScaledInstance(60, 60, Image.SCALE_SMOOTH);
+            avatarLabel.setIcon(new ImageIcon(scaled));
+        } catch (Exception ex) {
+            avatarLabel.setText("[Avatar]");
+            avatarLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
+            avatarLabel.setForeground(Color.WHITE);
+        }
         
         // Username label (sẽ update sau)
         JLabel usernameLabel = new JLabel(mainFrame.getUsername(), SwingConstants.CENTER);
@@ -87,7 +96,7 @@ public class ViewProfileDialog extends JDialog {
         buttonPanel.setBackground(Color.WHITE);
         buttonPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(230, 230, 230)));
         
-        JButton editButton = new JButton("✏️  Chỉnh sửa");
+        JButton editButton = new JButton("Chỉnh sửa");
         editButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
         editButton.setBackground(PRIMARY_COLOR);
         editButton.setForeground(Color.WHITE);
@@ -139,8 +148,8 @@ public class ViewProfileDialog extends JDialog {
                         // Personal Info Section
                         addSectionTitle("Thông tin cá nhân");
                         
-                        addInfoCard("👤 Tên đăng nhập", username != null ? username : "N/A");
-                        addInfoCard("✨ Họ và tên", fullName != null && !fullName.isEmpty() ? fullName : "Chưa cập nhật");
+                        addInfoCard("Tên đăng nhập", username != null ? username : "N/A");
+                        addInfoCard("Họ và tên", fullName != null && !fullName.isEmpty() ? fullName : "Chưa cập nhật");
                         
                         // Birth date
                         String birthDateStr = "Chưa cập nhật";
@@ -148,16 +157,16 @@ public class ViewProfileDialog extends JDialog {
                             SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
                             birthDateStr = sdf.format(dob);
                         }
-                        addInfoCard("🎂 Ngày sinh", birthDateStr);
+                        addInfoCard("Ngày sinh", birthDateStr);
                         
-                        addInfoCard("⚧ Giới tính", gender != null && !gender.isEmpty() ? gender : "Chưa cập nhật");
+                        addInfoCard("Giới tính", gender != null && !gender.isEmpty() ? gender : "Chưa cập nhật");
                         
                         // Contact Info Section
                         infoContainer.add(Box.createVerticalStrut(15));
                         addSectionTitle("Thông tin liên hệ");
                         
-                        addInfoCard("📧 Email", email != null && !email.isEmpty() ? email : "Chưa cập nhật");
-                        addInfoCard("🏠 Địa chỉ", address != null && !address.isEmpty() ? address : "Chưa cập nhật");
+                        addInfoCard("Email", email != null && !email.isEmpty() ? email : "Chưa cập nhật");
+                        addInfoCard("Địa chỉ", address != null && !address.isEmpty() ? address : "Chưa cập nhật");
                         
                         // Account Info Section
                         infoContainer.add(Box.createVerticalStrut(15));
@@ -169,7 +178,7 @@ public class ViewProfileDialog extends JDialog {
                             SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm");
                             createdAtStr = sdf.format(createdAt);
                         }
-                        addInfoCard("📅 Ngày tạo tài khoản", createdAtStr);
+                        addInfoCard("Ngày tạo tài khoản", createdAtStr);
                         
                         infoContainer.revalidate();
                         infoContainer.repaint();

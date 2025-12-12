@@ -158,7 +158,7 @@ public class AddFriendDialog extends JDialog {
         resultsPanel.removeAll();
         
         JLabel messageLabel = new JLabel("<html><center>" +
-            "🔍<br><br>" +
+            "<b>[?]</b><br><br>" +
             "Nhập tên đăng nhập hoặc email<br>" +
             "để tìm kiếm bạn bè" +
             "</center></html>");
@@ -263,10 +263,18 @@ public class AddFriendDialog extends JDialog {
             setMaximumSize(new Dimension(Integer.MAX_VALUE, 70));
             
             // Avatar
-            JLabel avatarLabel = new JLabel("👤");
-            avatarLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 36));
+            JLabel avatarLabel = new JLabel();
             avatarLabel.setPreferredSize(new Dimension(50, 50));
             avatarLabel.setHorizontalAlignment(SwingConstants.CENTER);
+            try {
+                ImageIcon icon = new ImageIcon("icons/user.png");
+                Image scaled = icon.getImage().getScaledInstance(40, 40, Image.SCALE_SMOOTH);
+                avatarLabel.setIcon(new ImageIcon(scaled));
+            } catch (Exception ex) {
+                avatarLabel.setText("[A]");
+                avatarLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+                avatarLabel.setForeground(new Color(0, 132, 255));
+            }
             
             // User info
             JPanel infoPanel = new JPanel();

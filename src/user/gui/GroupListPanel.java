@@ -108,9 +108,9 @@ public class GroupListPanel extends JPanel {
             JLabel iconLabel = new JLabel(new ImageIcon(scaledImage));
             iconPanel.add(iconLabel);
         } catch (Exception e) {
-            // Fallback emoji
-            JLabel iconLabel = new JLabel("🔍");
-            iconLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 14));
+            // Fallback text
+            JLabel iconLabel = new JLabel("Tim");
+            iconLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
             iconPanel.add(iconLabel);
         }
         
@@ -202,7 +202,7 @@ public class GroupListPanel extends JPanel {
             
             if (!searchText.isEmpty()) {
                 // Đang tìm kiếm nhưng không có kết quả
-                emptyLabel = new JLabel("<html><center>🔍<br><br>Không tìm thấy nhóm<br>cho '" + searchText + "'</center></html>");
+                emptyLabel = new JLabel("<html><center>Không tìm thấy nhóm<br>cho '" + searchText + "'</center></html>");
             } else {
                 // Chưa có nhóm nào
                 emptyLabel = new JLabel("Chưa có nhóm nào");
@@ -267,9 +267,8 @@ public class GroupListPanel extends JPanel {
             infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
             infoPanel.setBackground(Color.WHITE);
             
-            // Tên nhóm với badge mã hóa (nếu có)
-            String displayName = isEncrypted ? groupName + " 🔒" : groupName;
-            JLabel nameLabel = new JLabel(displayName);
+            // Tên nhóm (không cần badge mã hóa vì đã có màu xanh)
+            JLabel nameLabel = new JLabel(groupName);
             nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
             nameLabel.setForeground(isEncrypted ? ENCRYPTED_COLOR : new Color(50, 50, 50));
             if (isEncrypted) {
@@ -283,7 +282,7 @@ public class GroupListPanel extends JPanel {
                 subtitle = "Quản trị viên • " + subtitle;
             }
             if (isEncrypted) {
-                subtitle = "🔐 E2E • " + subtitle;
+                subtitle = "E2E • " + subtitle;
             }
             
             JLabel subtitleLabel = new JLabel(subtitle);

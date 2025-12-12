@@ -175,17 +175,9 @@ public class ChatContentPanel extends JPanel {
             BorderFactory.createEmptyBorder(12, 15, 12, 15)
         ));
         
-        // Left buttons - emoji, attachment
-        JPanel leftButtonsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        // Left buttons - đã bỏ để giao diện gọn gàng hơn
+        JPanel leftButtonsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         leftButtonsPanel.setOpaque(false);
-        
-        JButton emojiButton = createInputButton("😊", "Emoji");
-        JButton attachButton = createInputButton("📎", "Đính kèm");
-        JButton galleryButton = createInputButton("🖼️", "Hình ảnh");
-        
-        leftButtonsPanel.add(emojiButton);
-        leftButtonsPanel.add(attachButton);
-        leftButtonsPanel.add(galleryButton);
         
         // Message input
         messageInput = new JTextArea();
@@ -348,6 +340,9 @@ public class ChatContentPanel extends JPanel {
                             addMessageBubble(messageId, content, isSent, time);
                         }
                         
+                        // Thêm glue ở cuối để không bị stretch
+                        messageListPanel.add(Box.createVerticalGlue());
+                        
                         scrollToBottom();
                     }
                     
@@ -396,69 +391,70 @@ public class ChatContentPanel extends JPanel {
     }
     
     private void addMessageBubble(int messageId, String content, boolean isSent, LocalDateTime time) {
-        JPanel bubbleContainer = new JPanel();
-        // Mỗi tin nhắn chỉ chiếm đúng chiều cao nội dung, không giãn full dọc
-        bubbleContainer.setLayout(new BoxLayout(bubbleContainer, BoxLayout.X_AXIS));
-        bubbleContainer.setOpaque(false);
-        bubbleContainer.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
-        bubbleContainer.setAlignmentX(Component.LEFT_ALIGNMENT);
+        // Outer wrapper để không bị stretch theo chiều dọc
+        JPanel outerWrapper = new JPanel(new FlowLayout(isSent ? FlowLayout.RIGHT : FlowLayout.LEFT, 10, 3));
+        outerWrapper.setOpaque(false);
+        outerWrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
+        
+        // Panel chứa bubble và menu button
+        JPanel innerPanel = new JPanel();
+        innerPanel.setLayout(new BoxLayout(innerPanel, BoxLayout.X_AXIS));
+        innerPanel.setOpaque(false);
         
         // Nút menu "..." bên ngoài bubble
-        JButton menuButton = new JButton("⋯");
-        menuButton.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        JButton menuButton = new JButton("...");
+        menuButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
         menuButton.setForeground(new Color(150, 150, 150));
         menuButton.setContentAreaFilled(false);
         menuButton.setBorderPainted(false);
         menuButton.setFocusPainted(false);
         menuButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        menuButton.setPreferredSize(new Dimension(30, 30));
-        menuButton.setMaximumSize(new Dimension(30, 30));
+        menuButton.setPreferredSize(new Dimension(25, 25));
+        menuButton.setMaximumSize(new Dimension(25, 25));
         menuButton.setVisible(false); // Ẩn mặc định
         
-        if (isSent) {
-            // Tin nhắn của mình (bên phải): nút ... ở bên trái
-            bubbleContainer.add(Box.createHorizontalGlue());
-            bubbleContainer.add(menuButton);
-            bubbleContainer.add(Box.createHorizontalStrut(5));
-        }
-        
-        // Bubble panel (giới hạn chiều rộng, không cho full màn hình)
-        JPanel bubble = new JPanel(new BorderLayout());
+        // Bubble panel
+        JPanel bubble = new JPanel();
+        bubble.setLayout(new BoxLayout(bubble, BoxLayout.Y_AXIS));
         bubble.setBackground(isSent ? SENT_BUBBLE_COLOR : RECEIVED_BUBBLE_COLOR);
-        bubble.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
-        bubble.setMaximumSize(new Dimension(400, Integer.MAX_VALUE));
+        bubble.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
         
-        // Bo tròn góc bubble
-        bubble.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createEmptyBorder(0, 0, 0, 0),
-            BorderFactory.createEmptyBorder(10, 15, 10, 15)
-        ));
-        
-        // Nội dung tin nhắn wrap trong khung ~260px
-        JLabel messageLabel = new JLabel("<html><div style='width: 260px;'>" + content + "</div></html>");
-        messageLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        messageLabel.setForeground(isSent ? Color.WHITE : new Color(51, 51, 51));
+        // Nội dung tin nhắn - sử dụng JTextArea để wrap text tự nhiên
+        JTextArea messageArea = new JTextArea(content);
+        messageArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        messageArea.setForeground(isSent ? Color.WHITE : new Color(51, 51, 51));
+        messageArea.setBackground(isSent ? SENT_BUBBLE_COLOR : RECEIVED_BUBBLE_COLOR);
+        messageArea.setEditable(false);
+        messageArea.setLineWrap(true);
+        messageArea.setWrapStyleWord(true);
+        messageArea.setOpaque(false);
+        // Giới hạn chiều rộng tối đa
+        messageArea.setSize(new Dimension(280, Short.MAX_VALUE));
+        Dimension prefSize = messageArea.getPreferredSize();
+        messageArea.setPreferredSize(new Dimension(Math.min(280, prefSize.width), prefSize.height));
         
         JLabel timeLabel = new JLabel(time.format(DateTimeFormatter.ofPattern("HH:mm")));
         timeLabel.setFont(new Font("Segoe UI", Font.PLAIN, 10));
-        timeLabel.setForeground(isSent ? new Color(230, 240, 255) : new Color(120, 120, 120));
-        timeLabel.setBorder(BorderFactory.createEmptyBorder(3, 0, 0, 0));
+        timeLabel.setForeground(isSent ? new Color(220, 235, 255) : new Color(120, 120, 120));
+        timeLabel.setBorder(BorderFactory.createEmptyBorder(4, 0, 0, 0));
+        timeLabel.setAlignmentX(isSent ? Component.RIGHT_ALIGNMENT : Component.LEFT_ALIGNMENT);
         
-        JPanel textPanel = new JPanel();
-        textPanel.setLayout(new BoxLayout(textPanel, BoxLayout.Y_AXIS));
-        textPanel.setOpaque(false);
-        textPanel.add(messageLabel);
-        textPanel.add(timeLabel);
+        bubble.add(messageArea);
+        bubble.add(timeLabel);
         
-        bubble.add(textPanel, BorderLayout.CENTER);
-        bubbleContainer.add(bubble);
-        
-        if (!isSent) {
-            // Tin nhắn của bạn (bên trái): nút ... ở bên phải
-            bubbleContainer.add(Box.createHorizontalStrut(5));
-            bubbleContainer.add(menuButton);
-            bubbleContainer.add(Box.createHorizontalGlue());
+        if (isSent) {
+            // Tin nhắn của mình: căn phải
+            innerPanel.add(menuButton);
+            innerPanel.add(Box.createHorizontalStrut(5));
+            innerPanel.add(bubble);
+        } else {
+            // Tin nhắn của người khác: căn trái
+            innerPanel.add(bubble);
+            innerPanel.add(Box.createHorizontalStrut(5));
+            innerPanel.add(menuButton);
         }
+        
+        outerWrapper.add(innerPanel);
         
         // Hiển thị nút menu khi hover vào bubble hoặc menuButton
         java.awt.event.MouseAdapter hoverListener = new java.awt.event.MouseAdapter() {
@@ -487,18 +483,18 @@ public class ChatContentPanel extends JPanel {
         
         bubble.addMouseListener(hoverListener);
         menuButton.addMouseListener(hoverListener);
-        bubbleContainer.addMouseListener(hoverListener);
+        outerWrapper.addMouseListener(hoverListener);
         
         // Menu popup khi click "..."
-        menuButton.addActionListener(e -> showMessageMenu(menuButton, messageId, isSent, bubbleContainer));
+        menuButton.addActionListener(e -> showMessageMenu(menuButton, messageId, isSent, outerWrapper));
         
         // Lưu bubble vào map để hỗ trợ scroll tới tin nhắn
         if (messageId > 0) {
-            messageBubbles.put(messageId, bubbleContainer);
+            messageBubbles.put(messageId, outerWrapper);
         }
         
-        // Thêm bubble vào cuối danh sách, mỗi bubble chỉ chiếm đúng chiều cao của nó
-        messageListPanel.add(bubbleContainer);
+        // Thêm bubble vào cuối danh sách
+        messageListPanel.add(outerWrapper);
         messageListPanel.revalidate();
         messageListPanel.repaint();
     }
@@ -516,44 +512,42 @@ public class ChatContentPanel extends JPanel {
      * Tạo bubble đơn giản không có menu (cho tin nhắn real-time)
      */
     private void addMessageBubbleWithoutMenu(String content, boolean isSent, LocalDateTime time) {
-        JPanel bubbleContainer = new JPanel();
-        bubbleContainer.setLayout(new BoxLayout(bubbleContainer, BoxLayout.X_AXIS));
-        bubbleContainer.setOpaque(false);
-        bubbleContainer.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
-        bubbleContainer.setAlignmentX(Component.LEFT_ALIGNMENT);
+        // Outer wrapper với FlowLayout để không bị stretch
+        JPanel outerWrapper = new JPanel(new FlowLayout(isSent ? FlowLayout.RIGHT : FlowLayout.LEFT, 10, 3));
+        outerWrapper.setOpaque(false);
+        outerWrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
         
-        if (isSent) {
-            bubbleContainer.add(Box.createHorizontalGlue());
-        }
-        
-        JPanel bubble = new JPanel(new BorderLayout());
+        // Bubble panel
+        JPanel bubble = new JPanel();
+        bubble.setLayout(new BoxLayout(bubble, BoxLayout.Y_AXIS));
         bubble.setBackground(isSent ? SENT_BUBBLE_COLOR : RECEIVED_BUBBLE_COLOR);
-        bubble.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
-        bubble.setMaximumSize(new Dimension(400, Integer.MAX_VALUE));
+        bubble.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
         
-        JLabel messageLabel = new JLabel("<html><div style='width: 260px;'>" + content + "</div></html>");
-        messageLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        messageLabel.setForeground(isSent ? Color.WHITE : new Color(51, 51, 51));
+        // Nội dung tin nhắn
+        JTextArea messageArea = new JTextArea(content);
+        messageArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        messageArea.setForeground(isSent ? Color.WHITE : new Color(51, 51, 51));
+        messageArea.setBackground(isSent ? SENT_BUBBLE_COLOR : RECEIVED_BUBBLE_COLOR);
+        messageArea.setEditable(false);
+        messageArea.setLineWrap(true);
+        messageArea.setWrapStyleWord(true);
+        messageArea.setOpaque(false);
+        messageArea.setSize(new Dimension(280, Short.MAX_VALUE));
+        Dimension prefSize = messageArea.getPreferredSize();
+        messageArea.setPreferredSize(new Dimension(Math.min(280, prefSize.width), prefSize.height));
         
         JLabel timeLabel = new JLabel(time.format(DateTimeFormatter.ofPattern("HH:mm")));
         timeLabel.setFont(new Font("Segoe UI", Font.PLAIN, 10));
-        timeLabel.setForeground(isSent ? new Color(230, 240, 255) : new Color(120, 120, 120));
-        timeLabel.setBorder(BorderFactory.createEmptyBorder(3, 0, 0, 0));
+        timeLabel.setForeground(isSent ? new Color(220, 235, 255) : new Color(120, 120, 120));
+        timeLabel.setBorder(BorderFactory.createEmptyBorder(4, 0, 0, 0));
+        timeLabel.setAlignmentX(isSent ? Component.RIGHT_ALIGNMENT : Component.LEFT_ALIGNMENT);
         
-        JPanel textPanel = new JPanel();
-        textPanel.setLayout(new BoxLayout(textPanel, BoxLayout.Y_AXIS));
-        textPanel.setOpaque(false);
-        textPanel.add(messageLabel);
-        textPanel.add(timeLabel);
+        bubble.add(messageArea);
+        bubble.add(timeLabel);
         
-        bubble.add(textPanel, BorderLayout.CENTER);
-        bubbleContainer.add(bubble);
+        outerWrapper.add(bubble);
         
-        if (!isSent) {
-            bubbleContainer.add(Box.createHorizontalGlue());
-        }
-        
-        messageListPanel.add(bubbleContainer);
+        messageListPanel.add(outerWrapper);
         messageListPanel.revalidate();
         messageListPanel.repaint();
     }
@@ -725,7 +719,7 @@ public class ChatContentPanel extends JPanel {
         headerPanel.setBackground(new Color(255, 59, 48));
         headerPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
         
-        JLabel titleLabel = new JLabel("⚠️ Báo cáo spam: " + currentChatUser);
+        JLabel titleLabel = new JLabel("Báo cáo spam: " + currentChatUser);
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
         titleLabel.setForeground(Color.WHITE);
         headerPanel.add(titleLabel, BorderLayout.WEST);
@@ -868,7 +862,7 @@ public class ChatContentPanel extends JPanel {
      */
     private void clearCurrentChatHistory() {
         int confirm = JOptionPane.showConfirmDialog(this,
-            "⚠️ Xóa toàn bộ lịch sử chat với " + currentChatUser + "?\nHành động này không thể hoàn tác!",
+            "Xóa toàn bộ lịch sử chat với " + currentChatUser + "?\nHành động này không thể hoàn tác!",
             "Xác nhận xóa",
             JOptionPane.YES_NO_OPTION,
             JOptionPane.WARNING_MESSAGE);
@@ -924,7 +918,7 @@ public class ChatContentPanel extends JPanel {
         headerPanel.setBackground(PRIMARY_COLOR);
         headerPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
         
-        JLabel titleLabel = new JLabel("🔍 Tìm kiếm với " + currentChatUser);
+        JLabel titleLabel = new JLabel("Tìm kiếm với " + currentChatUser);
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
         titleLabel.setForeground(Color.WHITE);
         headerPanel.add(titleLabel, BorderLayout.WEST);
@@ -1093,7 +1087,7 @@ public class ChatContentPanel extends JPanel {
      */
     private void showLLMAssistant() {
         JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), 
-            "🤖 Trợ lý AI", true);
+            "Trợ lý AI", true);
         dialog.setSize(650, 600);
         dialog.setLocationRelativeTo(this);
         dialog.setLayout(new BorderLayout());
@@ -1103,12 +1097,12 @@ public class ChatContentPanel extends JPanel {
         headerPanel.setBackground(new Color(138, 43, 226));
         headerPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
         
-        JLabel titleLabel = new JLabel("🤖 Trợ lý AI - Gợi ý tin nhắn");
+        JLabel titleLabel = new JLabel("Trợ lý AI - Gợi ý tin nhắn");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
         titleLabel.setForeground(Color.WHITE);
         
         // Status label
-        JLabel statusLabel = new JLabel(aiService.isAPIConfigured() ? "🟢 Online" : "🟡 Offline Mode");
+        JLabel statusLabel = new JLabel(aiService.isAPIConfigured() ? "Online" : "Offline Mode");
         statusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         statusLabel.setForeground(new Color(200, 200, 255));
         
@@ -1123,7 +1117,7 @@ public class ChatContentPanel extends JPanel {
         // Quick suggestions panel
         JPanel quickPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 5));
         quickPanel.setOpaque(false);
-        quickPanel.setBorder(BorderFactory.createTitledBorder("💡 Gợi ý nhanh:"));
+        quickPanel.setBorder(BorderFactory.createTitledBorder("Gợi ý nhanh:"));
         
         String[] quickSuggestions = {"Xin lỗi", "Cảm ơn", "Chúc mừng", "Hẹn gặp", "Hỏi thăm", "Động viên", "Từ chối lịch sự"};
         JTextArea inputArea = new JTextArea(3, 40);
@@ -1151,7 +1145,7 @@ public class ChatContentPanel extends JPanel {
         
         JScrollPane inputScroll = new JScrollPane(inputArea);
         
-        JButton generateButton = new JButton("✨ Tạo gợi ý");
+        JButton generateButton = new JButton("Tạo gợi ý");
         generateButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
         generateButton.setBackground(new Color(138, 43, 226));
         generateButton.setForeground(Color.WHITE);
@@ -1174,17 +1168,17 @@ public class ChatContentPanel extends JPanel {
         resultArea.setForeground(new Color(150, 150, 150));
         
         JScrollPane resultScroll = new JScrollPane(resultArea);
-        resultScroll.setBorder(BorderFactory.createTitledBorder("📝 Gợi ý từ AI:"));
+        resultScroll.setBorder(BorderFactory.createTitledBorder("Gợi ý từ AI:"));
         
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         buttonPanel.setOpaque(false);
         
-        JButton regenerateButton = new JButton("🔄 Tạo lại");
+        JButton regenerateButton = new JButton("Tạo lại");
         regenerateButton.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         regenerateButton.setEnabled(false);
         regenerateButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
-        JButton copyButton = new JButton("📋 Sao chép");
+        JButton copyButton = new JButton("Sao chép");
         copyButton.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         copyButton.setEnabled(false);
         copyButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
@@ -1192,13 +1186,13 @@ public class ChatContentPanel extends JPanel {
             java.awt.datatransfer.StringSelection selection = 
                 new java.awt.datatransfer.StringSelection(resultArea.getText());
             java.awt.Toolkit.getDefaultToolkit().getSystemClipboard().setContents(selection, null);
-            copyButton.setText("✓ Đã sao chép!");
-            Timer timer = new Timer(2000, evt -> copyButton.setText("📋 Sao chép"));
+            copyButton.setText("Đã sao chép!");
+            Timer timer = new Timer(2000, evt -> copyButton.setText("Sao chép"));
             timer.setRepeats(false);
             timer.start();
         });
         
-        JButton useButton = new JButton("✓ Sử dụng");
+        JButton useButton = new JButton("Sử dụng");
         useButton.setFont(new Font("Segoe UI", Font.BOLD, 13));
         useButton.setBackground(PRIMARY_COLOR);
         useButton.setForeground(Color.WHITE);
@@ -1251,13 +1245,13 @@ public class ChatContentPanel extends JPanel {
                         useButton.setEnabled(true);
                         regenerateButton.setEnabled(true);
                         generateButton.setEnabled(true);
-                        generateButton.setText("✨ Tạo gợi ý");
+                        generateButton.setText("Tạo gợi ý");
                     } catch (Exception ex) {
                         ex.printStackTrace();
-                        resultArea.setText("❌ Lỗi: Không thể tạo gợi ý! Vui lòng thử lại.");
+                        resultArea.setText("Lỗi: Không thể tạo gợi ý! Vui lòng thử lại.");
                         resultArea.setForeground(new Color(200, 50, 50));
                         generateButton.setEnabled(true);
-                        generateButton.setText("✨ Tạo gợi ý");
+                        generateButton.setText("Tạo gợi ý");
                     }
                 }
             };
