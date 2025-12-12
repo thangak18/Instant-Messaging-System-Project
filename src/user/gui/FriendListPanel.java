@@ -80,8 +80,8 @@ public class FriendListPanel extends JPanel {
         ));
         searchField.setBackground(new Color(245, 245, 245));
         
-        JLabel searchIcon = new JLabel("🔍");
-        searchIcon.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 16));
+        JLabel searchIcon = new JLabel("Tim");
+        searchIcon.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         searchIcon.setBorder(new EmptyBorder(0, 0, 0, 8));
         
         JPanel searchInputPanel = new JPanel(new BorderLayout(5, 0));
@@ -295,10 +295,17 @@ public class FriendListPanel extends JPanel {
         avatarPanel.setPreferredSize(new Dimension(50, 50));
         avatarPanel.setOpaque(false);
         
-        JLabel avatarLabel = new JLabel("👤");
-        avatarLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 36));
+        JLabel avatarLabel = new JLabel();
         avatarLabel.setBounds(0, 0, 50, 50);
         avatarLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        try {
+            ImageIcon icon = new ImageIcon("icons/user.png");
+            Image scaled = icon.getImage().getScaledInstance(40, 40, Image.SCALE_SMOOTH);
+            avatarLabel.setIcon(new ImageIcon(scaled));
+        } catch (Exception ex) {
+            avatarLabel.setText("[A]");
+            avatarLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        }
         avatarPanel.add(avatarLabel);
         
         // Online status indicator
@@ -380,14 +387,14 @@ public class FriendListPanel extends JPanel {
         menu.setBorder(BorderFactory.createLineBorder(BORDER_COLOR, 1));
         
         // Nhắn tin
-        JMenuItem chatItem = createMenuItem("💬 Nhắn tin", null);
+        JMenuItem chatItem = createMenuItem("Nhắn tin", null);
         chatItem.addActionListener(e -> {
             mainFrame.openChat(username);
             mainFrame.switchToTab("chat");
         });
         
         // Xem trang cá nhân
-        JMenuItem profileItem = createMenuItem("👤 Xem trang cá nhân", null);
+        JMenuItem profileItem = createMenuItem("Xem trang cá nhân", null);
         profileItem.addActionListener(e -> {
             JOptionPane.showMessageDialog(this, 
                 "Chức năng xem trang cá nhân đang được phát triển",
@@ -400,7 +407,7 @@ public class FriendListPanel extends JPanel {
         menu.addSeparator();
         
         // Huỷ kết bạn
-        JMenuItem unfriendItem = createMenuItem("💔 Huỷ kết bạn", new Color(220, 53, 69));
+        JMenuItem unfriendItem = createMenuItem("Huỷ kết bạn", new Color(220, 53, 69));
         unfriendItem.addActionListener(e -> {
             int confirm = JOptionPane.showConfirmDialog(this,
                 "Bạn có chắc muốn huỷ kết bạn với " + displayName + "?",
@@ -414,7 +421,7 @@ public class FriendListPanel extends JPanel {
         });
         
         // Block và huỷ kết bạn
-        JMenuItem blockItem = createMenuItem("🚫 Chặn người này", new Color(220, 53, 69));
+        JMenuItem blockItem = createMenuItem("Chặn người này", new Color(220, 53, 69));
         blockItem.addActionListener(e -> {
             int confirm = JOptionPane.showConfirmDialog(this,
                 "<html>Bạn có chắc muốn chặn " + displayName + "?<br>" +
@@ -549,10 +556,17 @@ public class FriendListPanel extends JPanel {
         String displayName = (fullName != null && !fullName.isEmpty()) ? fullName : username;
         
         // Avatar
-        JLabel avatarLabel = new JLabel("👤");
-        avatarLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 36));
+        JLabel avatarLabel = new JLabel();
         avatarLabel.setPreferredSize(new Dimension(50, 50));
         avatarLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        try {
+            ImageIcon icon = new ImageIcon("icons/user.png");
+            Image scaled = icon.getImage().getScaledInstance(40, 40, Image.SCALE_SMOOTH);
+            avatarLabel.setIcon(new ImageIcon(scaled));
+        } catch (Exception ex) {
+            avatarLabel.setText("[A]");
+            avatarLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        }
         
         // Name
         JLabel nameLabel = new JLabel(displayName);

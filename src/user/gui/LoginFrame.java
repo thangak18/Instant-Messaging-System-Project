@@ -403,7 +403,7 @@ public class LoginFrame extends JFrame {
             
             // Show loading
             JDialog loadingDialog = new JDialog(this, "Đang xử lý...", true);
-            JLabel loadingLabel = new JLabel("⏳ Đang gửi mật khẩu tạm thời...", JLabel.CENTER);
+            JLabel loadingLabel = new JLabel("Đang gửi mật khẩu tạm thời...", JLabel.CENTER);
             loadingLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
             loadingLabel.setBorder(BorderFactory.createEmptyBorder(20, 40, 20, 40));
             loadingDialog.add(loadingLabel);
@@ -432,7 +432,7 @@ public class LoginFrame extends JFrame {
                             String temporaryPassword = (String) result.get("temporary_password");
                             
                             JOptionPane.showMessageDialog(LoginFrame.this,
-                                "✅ Mật khẩu tạm thời đã được gửi đến email!\n\n" +
+                                "Mật khẩu tạm thời đã được gửi đến email!\n\n" +
                                 "Vui lòng kiểm tra email và làm theo hướng dẫn.",
                                 "Thành công",
                                 JOptionPane.INFORMATION_MESSAGE);

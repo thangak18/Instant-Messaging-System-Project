@@ -182,9 +182,10 @@ public class ChatListPanel extends JPanel {
             JLabel iconLabel = new JLabel(new ImageIcon(scaledImage));
             iconPanel.add(iconLabel);
         } catch (Exception e) {
-            // Fallback emoji
-            JLabel iconLabel = new JLabel("🔍");
-            iconLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 14));
+            // Fallback text
+            JLabel iconLabel = new JLabel("Tim");
+            iconLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            iconLabel.setForeground(new Color(150, 150, 150));
             iconPanel.add(iconLabel);
         }
         
@@ -365,7 +366,7 @@ public class ChatListPanel extends JPanel {
     }
     
     private void showEmptyMessage() {
-        JLabel label = new JLabel("<html><center>💬<br><br>Chưa có cuộc trò chuyện nào<br>Hãy thêm bạn bè và bắt đầu chat!</center></html>");
+        JLabel label = new JLabel("<html><center><b>[Chat]</b><br><br>Chưa có cuộc trò chuyện nào<br>Hãy thêm bạn bè và bắt đầu chat!</center></html>");
         label.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         label.setForeground(new Color(150, 150, 150));
         label.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -477,9 +478,18 @@ public class ChatListPanel extends JPanel {
             avatarPanel.setPreferredSize(new Dimension(50, 50));
             avatarPanel.setOpaque(false);
             
-            JLabel avatar = new JLabel("👤");
-            avatar.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 32));
+            JLabel avatar = new JLabel();
+            avatar.setHorizontalAlignment(SwingConstants.CENTER);
             avatar.setBounds(0, 0, 50, 50);
+            try {
+                ImageIcon icon = new ImageIcon("icons/user.png");
+                Image scaled = icon.getImage().getScaledInstance(40, 40, Image.SCALE_SMOOTH);
+                avatar.setIcon(new ImageIcon(scaled));
+            } catch (Exception ex) {
+                avatar.setText("[A]");
+                avatar.setFont(new Font("Segoe UI", Font.BOLD, 18));
+                avatar.setForeground(new Color(0, 132, 255));
+            }
             avatarPanel.add(avatar);
             
             // Online indicator (chấm xanh)
@@ -657,7 +667,7 @@ public class ChatListPanel extends JPanel {
                     java.util.List<Map<String, Object>> friends = get();
                     
                     if (friends == null || friends.isEmpty()) {
-                        JLabel label = new JLabel("<html><center>🔍<br><br>Không tìm thấy kết quả<br>cho '" + searchText + "'</center></html>");
+                        JLabel label = new JLabel("<html><center><b>[?]</b><br><br>Không tìm thấy kết quả<br>cho '" + searchText + "'</center></html>");
                         label.setFont(new Font("Segoe UI", Font.PLAIN, 14));
                         label.setForeground(new Color(150, 150, 150));
                         label.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -795,7 +805,7 @@ public class ChatListPanel extends JPanel {
         headerPanel.setBackground(PRIMARY_COLOR);
         headerPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
         
-        JLabel titleLabel = new JLabel("🔍 Tìm kiếm trong toàn bộ lịch sử chat");
+        JLabel titleLabel = new JLabel("Tìm kiếm trong toàn bộ lịch sử chat");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
         titleLabel.setForeground(Color.WHITE);
         headerPanel.add(titleLabel, BorderLayout.WEST);
@@ -912,7 +922,7 @@ public class ChatListPanel extends JPanel {
                                 
                                 // Header: Chat với ai + thời gian
                                 String timeStr = new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm").format(sentAt);
-                                JLabel headerLabel = new JLabel("💬 Chat với " + chatWith + " - " + timeStr);
+                                JLabel headerLabel = new JLabel("Chat với " + chatWith + " - " + timeStr);
                                 headerLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
                                 headerLabel.setForeground(PRIMARY_COLOR);
                                 

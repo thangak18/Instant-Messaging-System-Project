@@ -173,22 +173,29 @@ public class GroupChatPanel extends JPanel {
         groupNameLabel.setForeground(isEncrypted ? ENCRYPTED_COLOR : Color.BLACK);
         namePanel.add(groupNameLabel);
         
-        // Badge E2E 
+        // Badge E2E (text only, no emoji)
         if (isEncrypted) {
-            encryptionBadge = new JLabel(" 🔐 E2E");
-            encryptionBadge.setFont(new Font("Segoe UI Emoji", Font.BOLD, 11));
+            encryptionBadge = new JLabel(" [E2E]");
+            encryptionBadge.setFont(new Font("Segoe UI", Font.BOLD, 11));
             encryptionBadge.setForeground(ENCRYPTED_COLOR);
             encryptionBadge.setToolTipText("Nhóm được mã hóa đầu cuối - Tin nhắn chỉ có thể đọc bởi thành viên");
             namePanel.add(encryptionBadge);
         }
         
-        // Subtitle
+        // Subtitle - Số thành viên
+        JPanel memberPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        memberPanel.setOpaque(false);
+        
         memberCountLabel = new JLabel("Đang tải...");
         memberCountLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         memberCountLabel.setForeground(new Color(120, 120, 120));
+        memberPanel.add(memberCountLabel);
+        
+        namePanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        memberPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
         
         groupInfoPanel.add(namePanel);
-        groupInfoPanel.add(memberCountLabel);
+        groupInfoPanel.add(memberPanel);
         
         // Right - Action buttons
         JPanel actionsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
@@ -381,8 +388,8 @@ public class GroupChatPanel extends JPanel {
         if (messages == null || messages.isEmpty()) {
             // Hiển thị thông báo riêng cho nhóm mã hóa
             String emptyText = isEncrypted 
-                ? "🔒 Nhóm mã hóa - Chưa có tin nhắn nào" 
-                : "Chưa có tin nhắn nào";
+                ? "Nhom ma hoa - Chua co tin nhan nao" 
+                : "Chua co tin nhan nao";
             JLabel emptyLabel = new JLabel(emptyText);
             emptyLabel.setFont(new Font("Segoe UI", Font.ITALIC, 14));
             emptyLabel.setForeground(isEncrypted ? ENCRYPTED_COLOR : new Color(150, 150, 150));
@@ -412,6 +419,8 @@ public class GroupChatPanel extends JPanel {
                 messageListPanel.add(messagePanel);
                 messageListPanel.add(Box.createVerticalStrut(8));
             }
+            // Thêm vertical glue để đẩy tin nhắn lên trên, không bị stretch
+            messageListPanel.add(Box.createVerticalGlue());
         }
         
         messageListPanel.revalidate();
@@ -435,8 +444,6 @@ public class GroupChatPanel extends JPanel {
         bubble.setLayout(new BoxLayout(bubble, BoxLayout.Y_AXIS));
         bubble.setOpaque(true);
         bubble.setBorder(BorderFactory.createEmptyBorder(10, 12, 10, 12));
-        // Giới hạn tối đa ~400px chiều rộng, cho phép cao nhiều dòng
-        bubble.setMaximumSize(new Dimension(400, Integer.MAX_VALUE));
         
         if (isSentByMe) {
             bubble.setBackground(SENT_BUBBLE_COLOR);
@@ -462,8 +469,6 @@ public class GroupChatPanel extends JPanel {
         contentArea.setLineWrap(true);
         contentArea.setWrapStyleWord(true);
         contentArea.setAlignmentX(Component.LEFT_ALIGNMENT);
-        // Gợi ý width khoảng 30 columns, để Bubble không giãn full
-        contentArea.setColumns(30);
         
         // Timestamp
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
@@ -476,11 +481,18 @@ public class GroupChatPanel extends JPanel {
         bubble.add(Box.createVerticalStrut(4));
         bubble.add(timeLabel);
         
+        // Tính toán kích thước phù hợp cho bubble
+        bubble.setMaximumSize(new Dimension(400, bubble.getPreferredSize().height + 50));
+        
         wrapper.add(bubble);
         
         if (!isSentByMe) {
             wrapper.add(Box.createHorizontalGlue());
         }
+        
+        // Giới hạn chiều cao của wrapper để không bị stretch
+        Dimension wrapperSize = wrapper.getPreferredSize();
+        wrapper.setMaximumSize(new Dimension(Integer.MAX_VALUE, wrapperSize.height + 20));
         
         // Lưu vào map để hỗ trợ scroll đến tin nhắn
         if (messageId > 0) {
@@ -1061,10 +1073,10 @@ public class GroupChatPanel extends JPanel {
         JLabel descLabel = new JLabel("<html><div style='width:400px;'>" +
             "<b>Tạo phiên bản mã hóa của nhóm \"" + groupName + "\"</b><br><br>" +
             "Điều này sẽ tạo một <b>nhóm mới</b> với:<br>" +
-            "• Cùng tên nhóm (có icon 🔒)<br>" +
+            "• Cùng tên nhóm (có icon khóa)<br>" +
             "• Cùng danh sách thành viên<br>" +
             "• Mã hóa đầu cuối AES-256<br><br>" +
-            "<b style='color:orange;'>⚠️ Lưu ý quan trọng:</b><br>" +
+            "<b style='color:orange;'>Lưu ý quan trọng:</b><br>" +
             "• Nhóm mã hóa <b>KHÔNG THỂ TẮT</b> mã hóa<br>" +
             "• Chỉ có thể <b>XÓA</b> nhóm mã hóa nếu không cần<br>" +
             "• Tin nhắn cũ không được chuyển sang nhóm mới" +
@@ -1198,8 +1210,9 @@ public class GroupChatPanel extends JPanel {
         headerPanel.setBackground(new Color(220, 53, 69)); // Màu đỏ cảnh báo
         headerPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         
-        JLabel iconLabel = new JLabel("⚠️");
-        iconLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 40));
+        JLabel iconLabel = new JLabel("!");
+        iconLabel.setFont(new Font("Segoe UI", Font.BOLD, 40));
+        iconLabel.setForeground(Color.WHITE);
         
         JLabel titleLabel = new JLabel("Xóa nhóm \"" + groupName + "\"?");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
@@ -1332,7 +1345,7 @@ public class GroupChatPanel extends JPanel {
         headerPanel.setBackground(PRIMARY_COLOR);
         headerPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
         
-        JLabel titleLabel = new JLabel("🔍 Tìm kiếm trong " + groupName);
+        JLabel titleLabel = new JLabel("Tìm kiếm trong " + groupName);
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
         titleLabel.setForeground(Color.WHITE);
         headerPanel.add(titleLabel, BorderLayout.WEST);
@@ -1537,7 +1550,7 @@ public class GroupChatPanel extends JPanel {
      */
     private void showAIAssistant() {
         JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), 
-            "🤖 Trợ lý AI", true);
+            "Trợ lý AI", true);
         dialog.setSize(650, 600);
         dialog.setLocationRelativeTo(this);
         dialog.setLayout(new BorderLayout());
@@ -1547,11 +1560,11 @@ public class GroupChatPanel extends JPanel {
         headerPanel.setBackground(new Color(138, 43, 226));
         headerPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
         
-        JLabel titleLabel = new JLabel("🤖 Trợ lý AI - Gợi ý tin nhắn");
+        JLabel titleLabel = new JLabel("Trợ lý AI - Gợi ý tin nhắn");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
         titleLabel.setForeground(Color.WHITE);
         
-        JLabel statusLabel = new JLabel(aiService.isAPIConfigured() ? "🟢 Online" : "🟡 Offline Mode");
+        JLabel statusLabel = new JLabel(aiService.isAPIConfigured() ? "Online" : "Offline Mode");
         statusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         statusLabel.setForeground(new Color(200, 200, 255));
         
@@ -1566,7 +1579,7 @@ public class GroupChatPanel extends JPanel {
         // Quick suggestions panel
         JPanel quickPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 5));
         quickPanel.setOpaque(false);
-        quickPanel.setBorder(BorderFactory.createTitledBorder("💡 Gợi ý nhanh:"));
+        quickPanel.setBorder(BorderFactory.createTitledBorder("Gợi ý nhanh:"));
         
         String[] quickSuggestions = {"Xin lỗi", "Cảm ơn", "Chúc mừng", "Hẹn gặp", "Hỏi thăm", "Động viên"};
         JTextArea inputArea = new JTextArea(3, 40);
@@ -1594,7 +1607,7 @@ public class GroupChatPanel extends JPanel {
         
         JScrollPane inputScroll = new JScrollPane(inputArea);
         
-        JButton generateButton = new JButton("✨ Tạo gợi ý");
+        JButton generateButton = new JButton("Tạo gợi ý");
         generateButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
         generateButton.setBackground(new Color(138, 43, 226));
         generateButton.setForeground(Color.WHITE);
@@ -1617,17 +1630,17 @@ public class GroupChatPanel extends JPanel {
         resultArea.setForeground(new Color(150, 150, 150));
         
         JScrollPane resultScroll = new JScrollPane(resultArea);
-        resultScroll.setBorder(BorderFactory.createTitledBorder("📝 Gợi ý từ AI:"));
+        resultScroll.setBorder(BorderFactory.createTitledBorder("Gợi ý từ AI:"));
         
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         buttonPanel.setOpaque(false);
         
-        JButton regenerateButton = new JButton("🔄 Tạo lại");
+        JButton regenerateButton = new JButton("Tạo lại");
         regenerateButton.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         regenerateButton.setEnabled(false);
         regenerateButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
-        JButton copyButton = new JButton("📋 Sao chép");
+        JButton copyButton = new JButton("Sao chép");
         copyButton.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         copyButton.setEnabled(false);
         copyButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
@@ -1635,13 +1648,13 @@ public class GroupChatPanel extends JPanel {
             java.awt.datatransfer.StringSelection selection = 
                 new java.awt.datatransfer.StringSelection(resultArea.getText());
             java.awt.Toolkit.getDefaultToolkit().getSystemClipboard().setContents(selection, null);
-            copyButton.setText("✓ Đã sao chép!");
-            Timer timer = new Timer(2000, evt -> copyButton.setText("📋 Sao chép"));
+            copyButton.setText("Đã sao chép!");
+            Timer timer = new Timer(2000, evt -> copyButton.setText("Sao chép"));
             timer.setRepeats(false);
             timer.start();
         });
         
-        JButton useButton = new JButton("✓ Sử dụng");
+        JButton useButton = new JButton("Sử dụng");
         useButton.setFont(new Font("Segoe UI", Font.BOLD, 13));
         useButton.setBackground(PRIMARY_COLOR);
         useButton.setForeground(Color.WHITE);
@@ -1690,13 +1703,13 @@ public class GroupChatPanel extends JPanel {
                         useButton.setEnabled(true);
                         regenerateButton.setEnabled(true);
                         generateButton.setEnabled(true);
-                        generateButton.setText("✨ Tạo gợi ý");
+                        generateButton.setText("Tạo gợi ý");
                     } catch (Exception ex) {
                         ex.printStackTrace();
-                        resultArea.setText("❌ Lỗi: Không thể tạo gợi ý! Vui lòng thử lại.");
+                        resultArea.setText("Lỗi: Không thể tạo gợi ý! Vui lòng thử lại.");
                         resultArea.setForeground(new Color(200, 50, 50));
                         generateButton.setEnabled(true);
-                        generateButton.setText("✨ Tạo gợi ý");
+                        generateButton.setText("Tạo gợi ý");
                     }
                 }
             };
