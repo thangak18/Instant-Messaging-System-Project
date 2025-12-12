@@ -137,7 +137,7 @@ public class UserService {
                 }
                 
                 // Verify password
-                if (verifyPassword(password, storedPassword)) {
+                if (checkPasswordHash(password, storedPassword)) {
                     System.out.println("✅ Đăng nhập thành công: " + username);
                     
                     // Ghi lại lịch sử đăng nhập
@@ -548,11 +548,69 @@ public class UserService {
     }
     
     /**
-     * Verify password với hash
+     * Verify password với hash (private helper)
      */
-    private boolean verifyPassword(String plainPassword, String hashedPassword) {
+    private boolean checkPasswordHash(String plainPassword, String hashedPassword) {
         String hash = hashPassword(plainPassword);
         return hash.equals(hashedPassword);
+    }
+    
+    /**
+     * Xác thực mật khẩu của user (public method)
+     */
+    public boolean verifyPassword(String username, String password) {
+        String sql = "SELECT password FROM users WHERE username = ?";
+        
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setString(1, username);
+            ResultSet rs = stmt.executeQuery();
+            
+            if (rs.next()) {
+                String storedPassword = rs.getString("password");
+                System.out.println("DEBUG verifyPassword - username: " + username);
+                System.out.println("DEBUG verifyPassword - inputHash: " + hashPassword(password));
+                System.out.println("DEBUG verifyPassword - storedHash: " + storedPassword);
+                boolean result = checkPasswordHash(password, storedPassword);
+                System.out.println("DEBUG verifyPassword - match: " + result);
+                return result;
+            }
+            System.out.println("DEBUG verifyPassword - user not found: " + username);
+            return false;
+            
+        } catch (SQLException e) {
+            System.out.println("DEBUG verifyPassword - SQL error: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    /**
+     * Đổi mật khẩu cho user
+     */
+    public boolean changePassword(String username, String newPassword) {
+        String sql = "UPDATE users SET password = ? WHERE username = ?";
+        
+        try (Connection conn = dbConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            String hashedPassword = hashPassword(newPassword);
+            stmt.setString(1, hashedPassword);
+            stmt.setString(2, username);
+            
+            int rowsAffected = stmt.executeUpdate();
+            
+            if (rowsAffected > 0) {
+                System.out.println("Doi mat khau thanh cong cho user: " + username);
+                return true;
+            }
+            return false;
+            
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
     }
     
     /**
