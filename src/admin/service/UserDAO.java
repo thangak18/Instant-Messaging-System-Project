@@ -2,6 +2,8 @@ package admin.service;
 
 import admin.socket.User;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.sql.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -158,7 +160,7 @@ public class UserDAO {
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
             pstmt.setString(1, user.getUsername());
-            pstmt.setString(2, user.getPassword());
+            pstmt.setString(2, hashPassword(user.getPassword())); // Hash password
             pstmt.setString(3, user.getFullName());
             pstmt.setString(4, user.getEmail());
             pstmt.setString(5, user.getAddress());
@@ -231,10 +233,31 @@ public class UserDAO {
         try (Connection conn = dbConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
-            pstmt.setString(1, newPassword);
+            pstmt.setString(1, hashPassword(newPassword)); // Hash password
             pstmt.setInt(2, userId);
             
             return pstmt.executeUpdate() > 0;
+        }
+    }
+    
+    /**
+     * Hash password bằng SHA-256 (giống với user service)
+     */
+    private String hashPassword(String password) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] hashedBytes = md.digest(password.getBytes());
+            
+            // Convert byte array to hex string
+            StringBuilder sb = new StringBuilder();
+            for (byte b : hashedBytes) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+            
+        } catch (NoSuchAlgorithmException e) {
+            System.err.println("Lỗi hash password: " + e.getMessage());
+            return password; // Fallback (không an toàn)
         }
     }
     
