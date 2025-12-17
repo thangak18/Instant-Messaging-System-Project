@@ -34,7 +34,7 @@ public class AddFriendDialog extends JDialog {
     }
     
     private void initializeUI() {
-        setSize(400, 600);
+        setSize(550, 600);
         setLayout(new BorderLayout());
         getContentPane().setBackground(Color.WHITE);
         
@@ -260,7 +260,7 @@ public class AddFriendDialog extends JDialog {
             setLayout(new BorderLayout(10, 0));
             setBackground(Color.WHITE);
             setBorder(new EmptyBorder(12, 15, 12, 15));
-            setMaximumSize(new Dimension(Integer.MAX_VALUE, 70));
+            setMaximumSize(new Dimension(Integer.MAX_VALUE, 80));
             
             // Avatar
             JLabel avatarLabel = new JLabel();
@@ -300,9 +300,58 @@ public class AddFriendDialog extends JDialog {
             
             // Add friend button - Thay đổi text dựa vào status
             JButton addButton = new JButton();
-            addButton.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 13));
+            addButton.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 12));
             addButton.setFocusPainted(false);
             addButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            
+            // Nút Nhắn tin
+            JButton chatButton = new JButton("Nhắn tin");
+            chatButton.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 12));
+            chatButton.setFocusPainted(false);
+            chatButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            chatButton.setForeground(new Color(0, 150, 80));
+            chatButton.setBackground(Color.WHITE);
+            chatButton.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(0, 150, 80), 1, true),
+                new EmptyBorder(6, 12, 6, 12)
+            ));
+            chatButton.addActionListener(e -> {
+                // Mở chat với người này
+                mainFrame.openChat(username);
+                dispose();
+            });
+            chatButton.addMouseListener(new java.awt.event.MouseAdapter() {
+                public void mouseEntered(java.awt.event.MouseEvent evt) {
+                    chatButton.setBackground(new Color(240, 255, 245));
+                }
+                public void mouseExited(java.awt.event.MouseEvent evt) {
+                    chatButton.setBackground(Color.WHITE);
+                }
+            });
+            
+            // Nút Tạo nhóm
+            JButton groupButton = new JButton("Tạo nhóm");
+            groupButton.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 12));
+            groupButton.setFocusPainted(false);
+            groupButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            groupButton.setForeground(new Color(255, 140, 0));
+            groupButton.setBackground(Color.WHITE);
+            groupButton.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(255, 140, 0), 1, true),
+                new EmptyBorder(6, 12, 6, 12)
+            ));
+            groupButton.addActionListener(e -> {
+                // Mở dialog tạo nhóm với người này được chọn sẵn
+                openCreateGroupWithUser(username, fullName);
+            });
+            groupButton.addMouseListener(new java.awt.event.MouseAdapter() {
+                public void mouseEntered(java.awt.event.MouseEvent evt) {
+                    groupButton.setBackground(new Color(255, 250, 240));
+                }
+                public void mouseExited(java.awt.event.MouseEvent evt) {
+                    groupButton.setBackground(Color.WHITE);
+                }
+            });
             
             switch (friendshipStatus) {
                 case "friends":
@@ -311,7 +360,7 @@ public class AddFriendDialog extends JDialog {
                     addButton.setBackground(Color.WHITE);
                     addButton.setBorder(BorderFactory.createCompoundBorder(
                         BorderFactory.createLineBorder(new Color(67, 220, 96), 1, true),
-                        new EmptyBorder(6, 20, 6, 20)
+                        new EmptyBorder(6, 12, 6, 12)
                     ));
                     addButton.setEnabled(false);
                     break;
@@ -322,7 +371,7 @@ public class AddFriendDialog extends JDialog {
                     addButton.setBackground(Color.WHITE);
                     addButton.setBorder(BorderFactory.createCompoundBorder(
                         BorderFactory.createLineBorder(new Color(200, 200, 200), 1, true),
-                        new EmptyBorder(6, 20, 6, 20)
+                        new EmptyBorder(6, 12, 6, 12)
                     ));
                     addButton.setEnabled(false);
                     break;
@@ -333,7 +382,7 @@ public class AddFriendDialog extends JDialog {
                     addButton.setBackground(Color.WHITE);
                     addButton.setBorder(BorderFactory.createCompoundBorder(
                         BorderFactory.createLineBorder(PRIMARY_COLOR, 1, true),
-                        new EmptyBorder(6, 20, 6, 20)
+                        new EmptyBorder(6, 12, 6, 12)
                     ));
                     addButton.addActionListener(e -> {
                         // Chuyển đến friend request panel
@@ -349,7 +398,7 @@ public class AddFriendDialog extends JDialog {
                     addButton.setBackground(Color.WHITE);
                     addButton.setBorder(BorderFactory.createCompoundBorder(
                         BorderFactory.createLineBorder(PRIMARY_COLOR, 1, true),
-                        new EmptyBorder(6, 20, 6, 20)
+                        new EmptyBorder(6, 12, 6, 12)
                     ));
                     addButton.addActionListener(e -> sendFriendRequest(username, addButton));
                     break;
@@ -367,9 +416,16 @@ public class AddFriendDialog extends JDialog {
                 });
             }
             
+            // Panel chứa các nút
+            JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
+            buttonPanel.setOpaque(false);
+            buttonPanel.add(chatButton);
+            buttonPanel.add(groupButton);
+            buttonPanel.add(addButton);
+            
             add(avatarLabel, BorderLayout.WEST);
             add(infoPanel, BorderLayout.CENTER);
-            add(addButton, BorderLayout.EAST);
+            add(buttonPanel, BorderLayout.EAST);
             
             // Separator
             setBorder(BorderFactory.createCompoundBorder(
@@ -377,6 +433,16 @@ public class AddFriendDialog extends JDialog {
                 BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(240, 240, 240))
             ));
         }
+    }
+    
+    /**
+     * Mở dialog tạo nhóm với một user được chọn sẵn
+     */
+    private void openCreateGroupWithUser(String username, String fullName) {
+        // Tạo dialog tạo nhóm với user được chọn sẵn
+        CreateGroupWithUserDialog dialog = new CreateGroupWithUserDialog(mainFrame, username, fullName);
+        dialog.setVisible(true);
+        dispose();
     }
     
     private void sendFriendRequest(String targetUsername, JButton button) {
