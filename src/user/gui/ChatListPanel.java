@@ -85,11 +85,11 @@ public class ChatListPanel extends JPanel {
             @Override
             public void mouseClicked(java.awt.event.MouseEvent e) {
                 // Update tab styles
-                allTab.setFont(new Font("Segoe UI", Font.BOLD, 14));
+                allTab.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 14));
                 allTab.setForeground(new Color(0, 132, 255));
                 allTab.setBorder(BorderFactory.createMatteBorder(0, 0, 2, 0, new Color(0, 132, 255)));
                 
-                onlineTab.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+                onlineTab.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
                 onlineTab.setForeground(new Color(100, 100, 100));
                 onlineTab.setBorder(null);
                 
@@ -102,11 +102,11 @@ public class ChatListPanel extends JPanel {
             @Override
             public void mouseClicked(java.awt.event.MouseEvent e) {
                 // Update tab styles
-                onlineTab.setFont(new Font("Segoe UI", Font.BOLD, 14));
+                onlineTab.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 14));
                 onlineTab.setForeground(new Color(0, 132, 255));
                 onlineTab.setBorder(BorderFactory.createMatteBorder(0, 0, 2, 0, new Color(0, 132, 255)));
                 
-                allTab.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+                allTab.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
                 allTab.setForeground(new Color(100, 100, 100));
                 allTab.setBorder(null);
                 
@@ -146,7 +146,7 @@ public class ChatListPanel extends JPanel {
         
         // TextField
         searchField = new JTextField();
-        searchField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        searchField.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         searchField.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(new Color(220, 220, 220), 1, true),
             BorderFactory.createEmptyBorder(8, 38, 8, 10)
@@ -184,7 +184,7 @@ public class ChatListPanel extends JPanel {
         } catch (Exception e) {
             // Fallback text
             JLabel iconLabel = new JLabel("Tim");
-            iconLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            iconLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 12));
             iconLabel.setForeground(new Color(150, 150, 150));
             iconPanel.add(iconLabel);
         }
@@ -231,7 +231,7 @@ public class ChatListPanel extends JPanel {
         } catch (Exception e) {
             // Fallback text
             button.setText("?");
-            button.setFont(new Font("Segoe UI", Font.BOLD, 14));
+            button.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 14));
             button.setForeground(new Color(0, 132, 255));
             System.err.println("⚠️ Không tìm thấy icon: " + iconPath);
         }
@@ -260,7 +260,7 @@ public class ChatListPanel extends JPanel {
     
     private JLabel createTab(String text, boolean active) {
         JLabel tab = new JLabel(text);
-        tab.setFont(new Font("Segoe UI", active ? Font.BOLD : Font.PLAIN, 14));
+        tab.setFont(new Font(UIHelper.getDefaultFontName(), active ? Font.BOLD : Font.PLAIN, 14));
         tab.setForeground(active ? new Color(0, 132, 255) : new Color(100, 100, 100));
         tab.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
@@ -367,7 +367,7 @@ public class ChatListPanel extends JPanel {
     
     private void showEmptyMessage() {
         JLabel label = new JLabel("<html><center><b>[Chat]</b><br><br>Chưa có cuộc trò chuyện nào<br>Hãy thêm bạn bè và bắt đầu chat!</center></html>");
-        label.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        label.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         label.setForeground(new Color(150, 150, 150));
         label.setAlignmentX(Component.CENTER_ALIGNMENT);
         label.setBorder(new EmptyBorder(80, 20, 80, 20));
@@ -487,14 +487,14 @@ public class ChatListPanel extends JPanel {
                 avatar.setIcon(new ImageIcon(scaled));
             } catch (Exception ex) {
                 avatar.setText("[A]");
-                avatar.setFont(new Font("Segoe UI", Font.BOLD, 18));
+                avatar.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 18));
                 avatar.setForeground(new Color(0, 132, 255));
             }
             avatarPanel.add(avatar);
             
             // Online indicator (chấm xanh)
             onlineDot = new JLabel("●");
-            onlineDot.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+            onlineDot.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 12));
             onlineDot.setForeground(new Color(67, 220, 96));
             onlineDot.setBounds(35, 35, 15, 15);
             onlineDot.setVisible(online); // Chỉ hiện khi online
@@ -509,10 +509,10 @@ public class ChatListPanel extends JPanel {
             topPanel.setOpaque(false);
             
             nameLabel = new JLabel(displayName);
-            nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 15));
+            nameLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 15));
             
             timeLabel = new JLabel(time);
-            timeLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+            timeLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 12));
             timeLabel.setForeground(new Color(120, 120, 120));
             
             topPanel.add(nameLabel, BorderLayout.WEST);
@@ -528,12 +528,12 @@ public class ChatListPanel extends JPanel {
                 displayMessage = displayMessage.substring(0, 30) + "...";
             }
             messageLabel = new JLabel(displayMessage);
-            messageLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+            messageLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 13));
             messageLabel.setForeground(new Color(100, 100, 100));
             
             if (unreadCount > 0) {
                 badgeLabel = new JLabel(String.valueOf(unreadCount));
-                badgeLabel.setFont(new Font("Segoe UI", Font.BOLD, 11));
+                badgeLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 11));
                 badgeLabel.setForeground(Color.WHITE);
                 badgeLabel.setBackground(new Color(255, 59, 48));
                 badgeLabel.setOpaque(true);
@@ -668,7 +668,7 @@ public class ChatListPanel extends JPanel {
                     
                     if (friends == null || friends.isEmpty()) {
                         JLabel label = new JLabel("<html><center><b>[?]</b><br><br>Không tìm thấy kết quả<br>cho '" + searchText + "'</center></html>");
-                        label.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+                        label.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
                         label.setForeground(new Color(150, 150, 150));
                         label.setAlignmentX(Component.CENTER_ALIGNMENT);
                         label.setBorder(new EmptyBorder(80, 20, 80, 20));
@@ -744,7 +744,7 @@ public class ChatListPanel extends JPanel {
                     
                     if (chats == null || chats.isEmpty()) {
                         JLabel label = new JLabel("<html><center>💤<br><br>Không có bạn bè nào đang online<br>Hãy quay lại sau!</center></html>");
-                        label.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+                        label.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
                         label.setForeground(new Color(150, 150, 150));
                         label.setAlignmentX(Component.CENTER_ALIGNMENT);
                         label.setBorder(new EmptyBorder(80, 20, 80, 20));
@@ -806,7 +806,7 @@ public class ChatListPanel extends JPanel {
         headerPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
         
         JLabel titleLabel = new JLabel("Tìm kiếm trong toàn bộ lịch sử chat");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        titleLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 16));
         titleLabel.setForeground(Color.WHITE);
         headerPanel.add(titleLabel, BorderLayout.WEST);
         
@@ -816,7 +816,7 @@ public class ChatListPanel extends JPanel {
         searchPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 10, 20));
         
         JTextField searchField = new JTextField();
-        searchField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        searchField.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         searchField.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(new Color(200, 200, 200)),
             BorderFactory.createEmptyBorder(10, 12, 10, 12)
@@ -824,7 +824,7 @@ public class ChatListPanel extends JPanel {
         searchField.putClientProperty("JTextField.placeholderText", "Nhập từ khóa tìm kiếm...");
         
         JButton searchButton = new JButton("Tìm kiếm");
-        searchButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        searchButton.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 14));
         searchButton.setBackground(PRIMARY_COLOR);
         searchButton.setForeground(Color.WHITE);
         searchButton.setFocusPainted(false);
@@ -852,7 +852,7 @@ public class ChatListPanel extends JPanel {
         
         // Stats label
         JLabel statsLabel = new JLabel("Nhập từ khóa để tìm kiếm trong toàn bộ lịch sử chat");
-        statsLabel.setFont(new Font("Segoe UI", Font.ITALIC, 12));
+        statsLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.ITALIC, 12));
         statsLabel.setForeground(new Color(120, 120, 120));
         statsLabel.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
         
@@ -891,7 +891,7 @@ public class ChatListPanel extends JPanel {
                         
                         if (results == null || results.isEmpty()) {
                             JLabel label = new JLabel("<html><center>😔 Không tìm thấy kết quả nào<br>Thử từ khóa khác</center></html>");
-                            label.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+                            label.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
                             label.setForeground(new Color(150, 150, 150));
                             label.setAlignmentX(Component.CENTER_ALIGNMENT);
                             label.setBorder(BorderFactory.createEmptyBorder(50, 20, 50, 20));
@@ -923,22 +923,22 @@ public class ChatListPanel extends JPanel {
                                 // Header: Chat với ai + thời gian
                                 String timeStr = new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm").format(sentAt);
                                 JLabel headerLabel = new JLabel("Chat với " + chatWith + " - " + timeStr);
-                                headerLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+                                headerLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 12));
                                 headerLabel.setForeground(PRIMARY_COLOR);
                                 
                                 // Content với highlight
                                 String displayContent = content.length() > 100 ? content.substring(0, 100) + "..." : content;
                                 JLabel contentLabel = new JLabel("<html>" + highlightKeyword(displayContent, keyword) + "</html>");
-                                contentLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+                                contentLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 13));
                                 
                                 // Sender info
                                 JLabel senderLabel = new JLabel(isSentByMe ? "Bạn đã gửi" : senderUsername + " đã gửi");
-                                senderLabel.setFont(new Font("Segoe UI", Font.ITALIC, 11));
+                                senderLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.ITALIC, 11));
                                 senderLabel.setForeground(new Color(120, 120, 120));
                                 
                                 // Arrow icon
                                 JLabel arrowLabel = new JLabel("→");
-                                arrowLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+                                arrowLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 18));
                                 arrowLabel.setForeground(PRIMARY_COLOR);
                                 
                                 JPanel textPanel = new JPanel();

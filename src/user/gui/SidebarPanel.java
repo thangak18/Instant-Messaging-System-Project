@@ -94,7 +94,7 @@ public class SidebarPanel extends JPanel {
         } catch (Exception e) {
             // Nếu không tìm thấy icon, dùng placeholder text
             button.setText("?");
-            button.setFont(new Font("Segoe UI", Font.BOLD, 16));
+            button.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 16));
             button.setForeground(Color.WHITE);
             System.err.println("⚠️ Không tìm thấy icon: " + iconPath);
         }

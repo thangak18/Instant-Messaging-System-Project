@@ -40,11 +40,11 @@ public class LoginFrame extends JFrame {
         
         // Tiêu đề
         titleLabel = new JLabel("InstantChat", JLabel.CENTER);
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 32));
+        titleLabel.setFont(UIHelper.getFont(Font.BOLD, 32));
         titleLabel.setForeground(PRIMARY_COLOR);
         
         welcomeLabel = new JLabel("Đăng nhập để tiếp tục", JLabel.CENTER);
-        welcomeLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        welcomeLabel.setFont(UIHelper.getFont(Font.PLAIN, 14));
         welcomeLabel.setForeground(TEXT_COLOR);
         
         // Các trường nhập liệu với placeholder
@@ -130,7 +130,7 @@ public class LoginFrame extends JFrame {
     
     private JTextField createStyledTextField(String placeholder) {
         JTextField field = new JTextField(20);
-        field.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        field.setFont(UIHelper.getFont(Font.PLAIN, 14));
         field.setForeground(TEXT_COLOR);
         field.setText(placeholder);
         field.setForeground(PLACEHOLDER_COLOR);
@@ -161,7 +161,7 @@ public class LoginFrame extends JFrame {
     
     private JPasswordField createStyledPasswordField(String placeholder) {
         JPasswordField field = new JPasswordField(20);
-        field.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        field.setFont(UIHelper.getFont(Font.PLAIN, 14));
         field.setForeground(TEXT_COLOR);
         field.setEchoChar((char) 0);
         field.setText(placeholder);
@@ -195,40 +195,51 @@ public class LoginFrame extends JFrame {
     
     private JButton createPrimaryButton(String text) {
         JButton button = new JButton(text);
-        button.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        button.setFont(UIHelper.getFont(Font.BOLD, 14));
         button.setForeground(Color.WHITE);
         button.setBackground(PRIMARY_COLOR);
         button.setPreferredSize(new Dimension(300, 45));
+        button.setOpaque(true);
         button.setBorderPainted(false);
         button.setFocusPainted(false);
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
         button.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
+        if (UIHelper.isMac()) {
+            button.putClientProperty("JButton.buttonType", "roundRect");
+        }
         return button;
     }
     
     private JButton createSecondaryButton(String text) {
         JButton button = new JButton(text);
-        button.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        button.setFont(UIHelper.getFont(Font.PLAIN, 14));
         button.setForeground(PRIMARY_COLOR);
         button.setBackground(Color.WHITE);
         button.setPreferredSize(new Dimension(300, 45));
+        button.setOpaque(true);
         button.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(PRIMARY_COLOR, 1),
             BorderFactory.createEmptyBorder(10, 20, 10, 20)
         ));
         button.setFocusPainted(false);
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        if (UIHelper.isMac()) {
+            button.putClientProperty("JButton.buttonType", "roundRect");
+        }
         return button;
     }
     
     private JButton createLinkButton(String text) {
         JButton button = new JButton(text);
-        button.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        button.setFont(UIHelper.getFont(Font.PLAIN, 12));
         button.setForeground(PRIMARY_COLOR);
         button.setBorderPainted(false);
         button.setContentAreaFilled(false);
         button.setFocusPainted(false);
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        if (UIHelper.isMac()) {
+            button.putClientProperty("JButton.buttonType", "text");
+        }
         return button;
     }
     
@@ -247,7 +258,7 @@ public class LoginFrame extends JFrame {
         
         // "hoặc" text
         JLabel orLabel = new JLabel(" hoặc ");
-        orLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        orLabel.setFont(UIHelper.getFont(Font.PLAIN, 12));
         orLabel.setForeground(PLACEHOLDER_COLOR);
         gbc.gridx = 1;
         gbc.weightx = 0;
@@ -404,7 +415,7 @@ public class LoginFrame extends JFrame {
             // Show loading
             JDialog loadingDialog = new JDialog(this, "Đang xử lý...", true);
             JLabel loadingLabel = new JLabel("Đang gửi mật khẩu tạm thời...", JLabel.CENTER);
-            loadingLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            loadingLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
             loadingLabel.setBorder(BorderFactory.createEmptyBorder(20, 40, 20, 40));
             loadingDialog.add(loadingLabel);
             loadingDialog.setSize(300, 120);
@@ -482,12 +493,8 @@ public class LoginFrame extends JFrame {
         System.out.println("⚠️  Lưu ý: ChatServer phải đã chạy ở Main.java");
         System.out.println("=================================");
         
-        // Set Look and Feel
-        try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        // Set Look and Feel - Cross platform
+        UIHelper.setupLookAndFeel();
         
         // Start GUI trên Event Dispatch Thread
         SwingUtilities.invokeLater(() -> {

@@ -41,11 +41,11 @@ public class RegisterFrame extends JFrame {
         
         // Tiêu đề
         titleLabel = new JLabel("Tạo tài khoản mới", JLabel.CENTER);
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 28));
+        titleLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 28));
         titleLabel.setForeground(PRIMARY_COLOR);
         
         subtitleLabel = new JLabel("Điền thông tin để bắt đầu", JLabel.CENTER);
-        subtitleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        subtitleLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         subtitleLabel.setForeground(TEXT_COLOR);
         
         // Các trường nhập liệu với placeholder
@@ -58,7 +58,7 @@ public class RegisterFrame extends JFrame {
         
         // Gender combo
         genderCombo = new JComboBox<>(new String[]{"Nam", "Nữ", "Khác"});
-        genderCombo.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        genderCombo.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         genderCombo.setPreferredSize(new Dimension(300, 45));
         genderCombo.setBackground(Color.WHITE);
         genderCombo.setBorder(BorderFactory.createCompoundBorder(
@@ -72,7 +72,7 @@ public class RegisterFrame extends JFrame {
         SpinnerDateModel dateModel = new SpinnerDateModel(cal.getTime(), null, null, Calendar.DAY_OF_MONTH);
         birthDateSpinner = new JSpinner(dateModel);
         birthDateSpinner.setEditor(new JSpinner.DateEditor(birthDateSpinner, "dd/MM/yyyy"));
-        birthDateSpinner.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        birthDateSpinner.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         birthDateSpinner.setPreferredSize(new Dimension(300, 45));
         birthDateSpinner.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(new Color(220, 220, 220), 1),
@@ -157,7 +157,7 @@ public class RegisterFrame extends JFrame {
     
     private JTextField createStyledTextField(String placeholder) {
         JTextField field = new JTextField(20);
-        field.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        field.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         field.setForeground(TEXT_COLOR);
         field.setText(placeholder);
         field.setForeground(PLACEHOLDER_COLOR);
@@ -188,7 +188,7 @@ public class RegisterFrame extends JFrame {
     
     private JPasswordField createStyledPasswordField(String placeholder) {
         JPasswordField field = new JPasswordField(20);
-        field.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        field.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         field.setForeground(TEXT_COLOR);
         field.setEchoChar((char) 0);
         field.setText(placeholder);
@@ -222,7 +222,7 @@ public class RegisterFrame extends JFrame {
     
     private JButton createPrimaryButton(String text) {
         JButton button = new JButton(text);
-        button.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        button.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 14));
         button.setForeground(Color.WHITE);
         button.setBackground(PRIMARY_COLOR);
         button.setPreferredSize(new Dimension(300, 45));
@@ -235,7 +235,7 @@ public class RegisterFrame extends JFrame {
     
     private JButton createSecondaryButton(String text) {
         JButton button = new JButton(text);
-        button.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        button.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         button.setForeground(PRIMARY_COLOR);
         button.setBackground(Color.WHITE);
         button.setPreferredSize(new Dimension(300, 45));
@@ -418,12 +418,8 @@ public class RegisterFrame extends JFrame {
     }
     
     public static void main(String[] args) {
+        UIHelper.setupLookAndFeel();
         SwingUtilities.invokeLater(() -> {
-            try {
-                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
             new RegisterFrame().setVisible(true);
         });
     }

@@ -87,10 +87,10 @@ public class ChatContentPanel extends JPanel {
         userInfoPanel.setOpaque(false);
         
         chatUserLabel = new JLabel("Chọn một cuộc trò chuyện");
-        chatUserLabel.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        chatUserLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 15));
         
         statusLabel = new JLabel("Bắt đầu chat ngay!");
-        statusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        statusLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 12));
         statusLabel.setForeground(new Color(120, 120, 120));
         
         userInfoPanel.add(chatUserLabel);
@@ -143,7 +143,7 @@ public class ChatContentPanel extends JPanel {
             button.setIcon(new ImageIcon(scaledImage));
         } catch (Exception e) {
             button.setText("?");
-            button.setFont(new Font("Segoe UI", Font.BOLD, 14));
+            button.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 14));
             System.err.println("⚠️ Không tìm thấy icon: " + iconPath);
         }
         
@@ -181,7 +181,7 @@ public class ChatContentPanel extends JPanel {
         
         // Message input
         messageInput = new JTextArea();
-        messageInput.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        messageInput.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         messageInput.setLineWrap(true);
         messageInput.setWrapStyleWord(true);
         messageInput.setRows(2);
@@ -195,7 +195,7 @@ public class ChatContentPanel extends JPanel {
         
         // Send button
         sendButton = new JButton("Gửi");
-        sendButton.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        sendButton.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 13));
         sendButton.setForeground(Color.WHITE);
         sendButton.setBackground(PRIMARY_COLOR);
         sendButton.setPreferredSize(new Dimension(70, 50));
@@ -228,7 +228,7 @@ public class ChatContentPanel extends JPanel {
     
     private JButton createInputButton(String icon, String tooltip) {
         JButton button = new JButton(icon);
-        button.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 20));
+        button.setFont(new Font(UIHelper.getEmojiFontName(), Font.PLAIN, 20));
         button.setPreferredSize(new Dimension(40, 40));
         button.setBorderPainted(false);
         button.setContentAreaFilled(false);
@@ -251,12 +251,12 @@ public class ChatContentPanel extends JPanel {
     
     private void showWelcomeMessage() {
         JLabel welcomeLabel = new JLabel("Chào mừng đến với Zalo Chat!");
-        welcomeLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        welcomeLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 24));
         welcomeLabel.setForeground(new Color(150, 150, 150));
         welcomeLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         
         JLabel subLabel = new JLabel("Chọn một cuộc trò chuyện để bắt đầu nhắn tin");
-        subLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        subLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         subLabel.setForeground(new Color(180, 180, 180));
         subLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         
@@ -403,7 +403,7 @@ public class ChatContentPanel extends JPanel {
         
         // Nút menu "..." bên ngoài bubble
         JButton menuButton = new JButton("...");
-        menuButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        menuButton.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 14));
         menuButton.setForeground(new Color(150, 150, 150));
         menuButton.setContentAreaFilled(false);
         menuButton.setBorderPainted(false);
@@ -421,7 +421,7 @@ public class ChatContentPanel extends JPanel {
         
         // Nội dung tin nhắn - sử dụng JTextArea để wrap text tự nhiên
         JTextArea messageArea = new JTextArea(content);
-        messageArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        messageArea.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         messageArea.setForeground(isSent ? Color.WHITE : new Color(51, 51, 51));
         messageArea.setBackground(isSent ? SENT_BUBBLE_COLOR : RECEIVED_BUBBLE_COLOR);
         messageArea.setEditable(false);
@@ -434,7 +434,7 @@ public class ChatContentPanel extends JPanel {
         messageArea.setPreferredSize(new Dimension(Math.min(280, prefSize.width), prefSize.height));
         
         JLabel timeLabel = new JLabel(time.format(DateTimeFormatter.ofPattern("HH:mm")));
-        timeLabel.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+        timeLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 10));
         timeLabel.setForeground(isSent ? new Color(220, 235, 255) : new Color(120, 120, 120));
         timeLabel.setBorder(BorderFactory.createEmptyBorder(4, 0, 0, 0));
         timeLabel.setAlignmentX(isSent ? Component.RIGHT_ALIGNMENT : Component.LEFT_ALIGNMENT);
@@ -525,7 +525,7 @@ public class ChatContentPanel extends JPanel {
         
         // Nội dung tin nhắn
         JTextArea messageArea = new JTextArea(content);
-        messageArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        messageArea.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         messageArea.setForeground(isSent ? Color.WHITE : new Color(51, 51, 51));
         messageArea.setBackground(isSent ? SENT_BUBBLE_COLOR : RECEIVED_BUBBLE_COLOR);
         messageArea.setEditable(false);
@@ -537,7 +537,7 @@ public class ChatContentPanel extends JPanel {
         messageArea.setPreferredSize(new Dimension(Math.min(280, prefSize.width), prefSize.height));
         
         JLabel timeLabel = new JLabel(time.format(DateTimeFormatter.ofPattern("HH:mm")));
-        timeLabel.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+        timeLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 10));
         timeLabel.setForeground(isSent ? new Color(220, 235, 255) : new Color(120, 120, 120));
         timeLabel.setBorder(BorderFactory.createEmptyBorder(4, 0, 0, 0));
         timeLabel.setAlignmentX(isSent ? Component.RIGHT_ALIGNMENT : Component.LEFT_ALIGNMENT);
@@ -561,7 +561,7 @@ public class ChatContentPanel extends JPanel {
         
         // Option 1: Xóa chỉ mình tôi
         JMenuItem deleteForMeItem = new JMenuItem("Xóa chỉ mình tôi");
-        deleteForMeItem.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        deleteForMeItem.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 13));
         deleteForMeItem.addActionListener(e -> {
             int confirm = JOptionPane.showConfirmDialog(
                 this,
@@ -590,7 +590,7 @@ public class ChatContentPanel extends JPanel {
         // Option 2: Thu hồi tin nhắn (chỉ cho tin nhắn của mình)
         if (isSent) {
             JMenuItem recallItem = new JMenuItem("Thu hồi tin nhắn");
-            recallItem.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+            recallItem.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 13));
             recallItem.setForeground(new Color(220, 53, 69)); // Màu đỏ
             recallItem.addActionListener(e -> {
                 int confirm = JOptionPane.showConfirmDialog(
@@ -720,7 +720,7 @@ public class ChatContentPanel extends JPanel {
         headerPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
         
         JLabel titleLabel = new JLabel("Báo cáo spam: " + currentChatUser);
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        titleLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 16));
         titleLabel.setForeground(Color.WHITE);
         headerPanel.add(titleLabel, BorderLayout.WEST);
         
@@ -731,7 +731,7 @@ public class ChatContentPanel extends JPanel {
         contentPanel.setBackground(Color.WHITE);
         
         JLabel instructionLabel = new JLabel("Vui lòng chọn lý do báo cáo:");
-        instructionLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        instructionLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 13));
         instructionLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         contentPanel.add(instructionLabel);
         contentPanel.add(Box.createVerticalStrut(10));
@@ -744,11 +744,11 @@ public class ChatContentPanel extends JPanel {
         JRadioButton scamBtn = new JRadioButton("Lừa đảo");
         JRadioButton otherBtn = new JRadioButton("Khác");
         
-        spamMessagesBtn.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        harassmentBtn.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        inappropriateBtn.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        scamBtn.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        otherBtn.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        spamMessagesBtn.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 13));
+        harassmentBtn.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 13));
+        inappropriateBtn.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 13));
+        scamBtn.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 13));
+        otherBtn.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 13));
         
         spamMessagesBtn.setBackground(Color.WHITE);
         harassmentBtn.setBackground(Color.WHITE);
@@ -783,12 +783,12 @@ public class ChatContentPanel extends JPanel {
         buttonPanel.setBackground(Color.WHITE);
         
         JButton cancelButton = new JButton("Hủy");
-        cancelButton.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        cancelButton.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 13));
         cancelButton.setPreferredSize(new Dimension(100, 35));
         cancelButton.addActionListener(e -> dialog.dispose());
         
         JButton submitButton = new JButton("Gửi báo cáo");
-        submitButton.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        submitButton.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 13));
         submitButton.setBackground(new Color(255, 59, 48));
         submitButton.setForeground(Color.WHITE);
         submitButton.setPreferredSize(new Dimension(120, 35));
@@ -919,7 +919,7 @@ public class ChatContentPanel extends JPanel {
         headerPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
         
         JLabel titleLabel = new JLabel("Tìm kiếm với " + currentChatUser);
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        titleLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 16));
         titleLabel.setForeground(Color.WHITE);
         headerPanel.add(titleLabel, BorderLayout.WEST);
         
@@ -929,14 +929,14 @@ public class ChatContentPanel extends JPanel {
         searchPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 10, 20));
         
         JTextField searchField = new JTextField();
-        searchField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        searchField.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         searchField.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(new Color(200, 200, 200)),
             BorderFactory.createEmptyBorder(8, 10, 8, 10)
         ));
         
         JButton searchButton = new JButton("Tìm kiếm");
-        searchButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        searchButton.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 14));
         searchButton.setBackground(PRIMARY_COLOR);
         searchButton.setForeground(Color.WHITE);
         searchButton.setFocusPainted(false);
@@ -988,7 +988,7 @@ public class ChatContentPanel extends JPanel {
                         
                         if (results == null || results.isEmpty()) {
                             JLabel label = new JLabel("Không tìm thấy kết quả");
-                            label.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+                            label.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
                             label.setForeground(new Color(150, 150, 150));
                             resultsPanel.add(label);
                         } else {
@@ -1011,15 +1011,15 @@ public class ChatContentPanel extends JPanel {
                                 String timeStr = new java.text.SimpleDateFormat("dd/MM HH:mm").format(sentAt);
                                 
                                 JLabel nameLabel = new JLabel((isSent ? "Bạn" : sender) + " - " + timeStr);
-                                nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+                                nameLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 12));
                                 nameLabel.setForeground(isSent ? PRIMARY_COLOR : new Color(100, 100, 100));
                                 
                                 JLabel contentLabel = new JLabel("<html>" + highlightKeyword(content, keyword) + "</html>");
-                                contentLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+                                contentLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 13));
                                 
                                 // Icon để chỉ có thể click
                                 JLabel arrowLabel = new JLabel("→");
-                                arrowLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+                                arrowLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 16));
                                 arrowLabel.setForeground(PRIMARY_COLOR);
                                 
                                 JPanel textPanel = new JPanel();
@@ -1098,12 +1098,12 @@ public class ChatContentPanel extends JPanel {
         headerPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
         
         JLabel titleLabel = new JLabel("Trợ lý AI - Gợi ý tin nhắn");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        titleLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 16));
         titleLabel.setForeground(Color.WHITE);
         
         // Status label
         JLabel statusLabel = new JLabel(aiService.isAPIConfigured() ? "Online" : "Offline Mode");
-        statusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        statusLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 12));
         statusLabel.setForeground(new Color(200, 200, 255));
         
         headerPanel.add(titleLabel, BorderLayout.WEST);
@@ -1124,7 +1124,7 @@ public class ChatContentPanel extends JPanel {
         
         for (String suggestion : quickSuggestions) {
             JButton btn = new JButton(suggestion);
-            btn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+            btn.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 11));
             btn.setFocusPainted(false);
             btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
             btn.addActionListener(e -> inputArea.setText(suggestion));
@@ -1133,9 +1133,9 @@ public class ChatContentPanel extends JPanel {
         
         JLabel instructionLabel = new JLabel(
             "<html>Mô tả tình huống hoặc nhập yêu cầu, AI sẽ gợi ý tin nhắn phù hợp:</html>");
-        instructionLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        instructionLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 13));
         
-        inputArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        inputArea.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         inputArea.setLineWrap(true);
         inputArea.setWrapStyleWord(true);
         inputArea.setBorder(BorderFactory.createCompoundBorder(
@@ -1146,7 +1146,7 @@ public class ChatContentPanel extends JPanel {
         JScrollPane inputScroll = new JScrollPane(inputArea);
         
         JButton generateButton = new JButton("Tạo gợi ý");
-        generateButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        generateButton.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 14));
         generateButton.setBackground(new Color(138, 43, 226));
         generateButton.setForeground(Color.WHITE);
         generateButton.setFocusPainted(false);
@@ -1155,7 +1155,7 @@ public class ChatContentPanel extends JPanel {
         generateButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
         JTextArea resultArea = new JTextArea(8, 40);
-        resultArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        resultArea.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         resultArea.setLineWrap(true);
         resultArea.setWrapStyleWord(true);
         resultArea.setEditable(false);
@@ -1174,12 +1174,12 @@ public class ChatContentPanel extends JPanel {
         buttonPanel.setOpaque(false);
         
         JButton regenerateButton = new JButton("Tạo lại");
-        regenerateButton.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        regenerateButton.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 13));
         regenerateButton.setEnabled(false);
         regenerateButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
         JButton copyButton = new JButton("Sao chép");
-        copyButton.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        copyButton.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 13));
         copyButton.setEnabled(false);
         copyButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         copyButton.addActionListener(e -> {
@@ -1193,7 +1193,7 @@ public class ChatContentPanel extends JPanel {
         });
         
         JButton useButton = new JButton("Sử dụng");
-        useButton.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        useButton.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 13));
         useButton.setBackground(PRIMARY_COLOR);
         useButton.setForeground(Color.WHITE);
         useButton.setFocusPainted(false);

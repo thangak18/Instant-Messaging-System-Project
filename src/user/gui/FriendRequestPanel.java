@@ -38,7 +38,7 @@ public class FriendRequestPanel extends JPanel {
         
         // Tabbed pane
         tabbedPane = new JTabbedPane();
-        tabbedPane.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        tabbedPane.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 13));
         
         // Received requests panel
         receivedPanel = new JPanel();
@@ -152,7 +152,7 @@ public class FriendRequestPanel extends JPanel {
         panel.removeAll();
         
         JLabel label = new JLabel("<html><center>😔<br><br>" + message + "</center></html>");
-        label.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        label.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         label.setForeground(new Color(150, 150, 150));
         label.setAlignmentX(Component.CENTER_ALIGNMENT);
         label.setBorder(new EmptyBorder(80, 20, 80, 20));
@@ -193,7 +193,7 @@ public class FriendRequestPanel extends JPanel {
                 avatarLabel.setIcon(new ImageIcon(scaled));
             } catch (Exception ex) {
                 avatarLabel.setText("[A]");
-                avatarLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+                avatarLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 16));
             }
             
             JPanel infoPanel = new JPanel();
@@ -201,14 +201,14 @@ public class FriendRequestPanel extends JPanel {
             infoPanel.setOpaque(false);
             
             JLabel nameLabel = new JLabel(senderName != null ? senderName : senderUsername);
-            nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 15));
+            nameLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 15));
             
             JLabel timeLabel = new JLabel(createdAt);
-            timeLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+            timeLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 12));
             timeLabel.setForeground(new Color(120, 120, 120));
             
             JLabel messageLabel = new JLabel("Xin chào, mình là " + (senderName != null ? senderName : senderUsername) + ". Kết bạn với mình nhé!");
-            messageLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+            messageLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 12));
             messageLabel.setForeground(new Color(100, 100, 100));
             
             infoPanel.add(nameLabel);
@@ -269,7 +269,7 @@ public class FriendRequestPanel extends JPanel {
                 avatarLabel.setIcon(new ImageIcon(scaled));
             } catch (Exception ex) {
                 avatarLabel.setText("[A]");
-                avatarLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+                avatarLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 16));
             }
             
             JPanel infoPanel = new JPanel();
@@ -277,10 +277,10 @@ public class FriendRequestPanel extends JPanel {
             infoPanel.setOpaque(false);
             
             JLabel nameLabel = new JLabel(receiverName != null ? receiverName : receiverUsername);
-            nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 15));
+            nameLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 15));
             
             JLabel statusLabel = new JLabel("Bạn đã gửi lời mời");
-            statusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+            statusLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 12));
             statusLabel.setForeground(new Color(120, 120, 120));
             
             infoPanel.add(nameLabel);
@@ -301,7 +301,7 @@ public class FriendRequestPanel extends JPanel {
     
     private JButton createActionButton(String text, Color bgColor, Color fgColor) {
         JButton button = new JButton(text);
-        button.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        button.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 13));
         button.setForeground(fgColor);
         button.setBackground(bgColor);
         button.setPreferredSize(new Dimension(100, 36));

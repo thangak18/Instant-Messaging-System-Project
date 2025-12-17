@@ -72,7 +72,7 @@ public class GroupListPanel extends JPanel {
         
         // TextField
         searchField = new JTextField();
-        searchField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        searchField.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         searchField.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(new Color(220, 220, 220), 1, true),
             BorderFactory.createEmptyBorder(8, 38, 8, 10)
@@ -110,7 +110,7 @@ public class GroupListPanel extends JPanel {
         } catch (Exception e) {
             // Fallback text
             JLabel iconLabel = new JLabel("Tim");
-            iconLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+            iconLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 12));
             iconPanel.add(iconLabel);
         }
         
@@ -208,7 +208,7 @@ public class GroupListPanel extends JPanel {
                 emptyLabel = new JLabel("Chưa có nhóm nào");
             }
             
-            emptyLabel.setFont(new Font("Segoe UI", Font.ITALIC, 14));
+            emptyLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.ITALIC, 14));
             emptyLabel.setForeground(new Color(150, 150, 150));
             emptyLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
             emptyLabel.setBorder(new EmptyBorder(50, 0, 0, 0));
@@ -259,7 +259,7 @@ public class GroupListPanel extends JPanel {
             String groupName = (String) groupData.get("group_name");
             String initials = getGroupInitials(groupName);
             iconLabel.setText(initials);
-            iconLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+            iconLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 18));
             iconLabel.setForeground(Color.WHITE);
             
             // Thông tin nhóm
@@ -269,7 +269,7 @@ public class GroupListPanel extends JPanel {
             
             // Tên nhóm (không cần badge mã hóa vì đã có màu xanh)
             JLabel nameLabel = new JLabel(groupName);
-            nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+            nameLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 14));
             nameLabel.setForeground(isEncrypted ? ENCRYPTED_COLOR : new Color(50, 50, 50));
             if (isEncrypted) {
                 nameLabel.setToolTipText("Nhóm mã hóa đầu cuối (E2E)");
@@ -286,7 +286,7 @@ public class GroupListPanel extends JPanel {
             }
             
             JLabel subtitleLabel = new JLabel(subtitle);
-            subtitleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+            subtitleLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 12));
             subtitleLabel.setForeground(new Color(120, 120, 120));
             
             infoPanel.add(nameLabel);
@@ -395,7 +395,7 @@ public class GroupListPanel extends JPanel {
         
         private JMenuItem createMenuItem(String text) {
             JMenuItem item = new JMenuItem(text);
-            item.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+            item.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 13));
             item.setBorder(new EmptyBorder(8, 12, 8, 12));
             return item;
         }

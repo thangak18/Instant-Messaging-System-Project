@@ -506,7 +506,7 @@ public class ZaloMainFrame extends JFrame {
         panel.setBackground(Color.WHITE);
         
         JLabel label = new JLabel(title, SwingConstants.CENTER);
-        label.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        label.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 18));
         label.setForeground(new Color(150, 150, 150));
         
         panel.add(label, BorderLayout.CENTER);
@@ -522,6 +522,7 @@ public class ZaloMainFrame extends JFrame {
     }
     
     public static void main(String[] args) {
+        UIHelper.setupLookAndFeel();
         SwingUtilities.invokeLater(() -> {
             String username = JOptionPane.showInputDialog(
                 null,

@@ -43,11 +43,11 @@ public class ResetPasswordFrame extends JFrame {
         
         // Header
         titleLabel = new JLabel("🔐 Đặt lại mật khẩu", JLabel.CENTER);
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 28));
+        titleLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 28));
         titleLabel.setForeground(PRIMARY_COLOR);
         
         emailLabel = new JLabel("Email: " + email, JLabel.CENTER);
-        emailLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        emailLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 13));
         emailLabel.setForeground(PLACEHOLDER_COLOR);
         
         // Fields
@@ -111,19 +111,19 @@ public class ResetPasswordFrame extends JFrame {
         ));
         
         JLabel icon = new JLabel("ℹ️ Hướng dẫn:");
-        icon.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        icon.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 12));
         icon.setAlignmentX(Component.LEFT_ALIGNMENT);
         
         JLabel step1 = new JLabel("1. Kiểm tra email để lấy mật khẩu tạm thời");
-        step1.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        step1.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 11));
         step1.setAlignmentX(Component.LEFT_ALIGNMENT);
         
         JLabel step2 = new JLabel("2. Nhập mật khẩu tạm vào ô đầu tiên");
-        step2.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        step2.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 11));
         step2.setAlignmentX(Component.LEFT_ALIGNMENT);
         
         JLabel step3 = new JLabel("3. Nhập mật khẩu mới và xác nhận");
-        step3.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        step3.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 11));
         step3.setAlignmentX(Component.LEFT_ALIGNMENT);
         
         panel.add(icon);
@@ -141,7 +141,7 @@ public class ResetPasswordFrame extends JFrame {
         panel.setOpaque(false);
         
         JLabel label = new JLabel(labelText);
-        label.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        label.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 12));
         label.setForeground(TEXT_COLOR);
         label.setAlignmentX(Component.LEFT_ALIGNMENT);
         
@@ -160,7 +160,7 @@ public class ResetPasswordFrame extends JFrame {
     
     private JPasswordField createStyledPasswordField(String placeholder) {
         JPasswordField field = new JPasswordField(20);
-        field.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        field.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         field.setForeground(TEXT_COLOR);
         field.setEchoChar((char) 0);
         field.setText(placeholder);
@@ -195,7 +195,7 @@ public class ResetPasswordFrame extends JFrame {
     
     private JButton createPrimaryButton(String text) {
         JButton button = new JButton(text);
-        button.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        button.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 14));
         button.setForeground(Color.WHITE);
         button.setBackground(PRIMARY_COLOR);
         button.setPreferredSize(new Dimension(300, 45));

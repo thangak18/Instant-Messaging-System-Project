@@ -62,7 +62,7 @@ public class FriendListPanel extends JPanel {
         
         // Title
         titleLabel = new JLabel("Bạn bè");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        titleLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 18));
         titleLabel.setForeground(TEXT_PRIMARY);
         
         headerPanel.add(titleLabel, BorderLayout.NORTH);
@@ -73,7 +73,7 @@ public class FriendListPanel extends JPanel {
         searchPanel.setBorder(new EmptyBorder(12, 0, 0, 0));
         
         searchField = new JTextField();
-        searchField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        searchField.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         searchField.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
             new EmptyBorder(8, 12, 8, 12)
@@ -81,7 +81,7 @@ public class FriendListPanel extends JPanel {
         searchField.setBackground(new Color(245, 245, 245));
         
         JLabel searchIcon = new JLabel("Tim");
-        searchIcon.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        searchIcon.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 12));
         searchIcon.setBorder(new EmptyBorder(0, 0, 0, 8));
         
         JPanel searchInputPanel = new JPanel(new BorderLayout(5, 0));
@@ -92,7 +92,7 @@ public class FriendListPanel extends JPanel {
         ));
         
         searchField = new JTextField("Tìm bạn");
-        searchField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        searchField.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         searchField.setBorder(null);
         searchField.setBackground(new Color(245, 245, 245));
         searchField.setForeground(new Color(150, 150, 150));
@@ -152,7 +152,7 @@ public class FriendListPanel extends JPanel {
     
     private JButton createToolButton(String text) {
         JButton button = new JButton(text);
-        button.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        button.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 13));
         button.setForeground(TEXT_PRIMARY);
         button.setBackground(WHITE);
         button.setBorder(BorderFactory.createCompoundBorder(
@@ -268,7 +268,7 @@ public class FriendListPanel extends JPanel {
         panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
         
         JLabel label = new JLabel(letter);
-        label.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        label.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 14));
         label.setForeground(TEXT_SECONDARY);
         
         panel.add(label, BorderLayout.WEST);
@@ -304,7 +304,7 @@ public class FriendListPanel extends JPanel {
             avatarLabel.setIcon(new ImageIcon(scaled));
         } catch (Exception ex) {
             avatarLabel.setText("[A]");
-            avatarLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+            avatarLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 16));
         }
         avatarPanel.add(avatarLabel);
         
@@ -326,11 +326,11 @@ public class FriendListPanel extends JPanel {
         infoPanel.setOpaque(false);
         
         JLabel nameLabel = new JLabel(displayName);
-        nameLabel.setFont(new Font("Segoe UI", Font.PLAIN, 15));
+        nameLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 15));
         nameLabel.setForeground(TEXT_PRIMARY);
         
         JLabel statusLabel = new JLabel(isOnline ? "🟢 Đang hoạt động" : "⚪ Không hoạt động");
-        statusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        statusLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 12));
         statusLabel.setForeground(TEXT_SECONDARY);
         
         infoPanel.add(nameLabel);
@@ -339,7 +339,7 @@ public class FriendListPanel extends JPanel {
         
         // Menu button
         JButton menuButton = new JButton("⋮");
-        menuButton.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        menuButton.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 18));
         menuButton.setForeground(TEXT_SECONDARY);
         menuButton.setPreferredSize(new Dimension(30, 30));
         menuButton.setBorderPainted(false);
@@ -445,7 +445,7 @@ public class FriendListPanel extends JPanel {
     
     private JMenuItem createMenuItem(String text, Color color) {
         JMenuItem item = new JMenuItem(text);
-        item.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        item.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         item.setForeground(color != null ? color : TEXT_PRIMARY);
         item.setBorder(new EmptyBorder(8, 12, 8, 12));
         item.setCursor(new Cursor(Cursor.HAND_CURSOR));
@@ -565,17 +565,17 @@ public class FriendListPanel extends JPanel {
             avatarLabel.setIcon(new ImageIcon(scaled));
         } catch (Exception ex) {
             avatarLabel.setText("[A]");
-            avatarLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+            avatarLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 16));
         }
         
         // Name
         JLabel nameLabel = new JLabel(displayName);
-        nameLabel.setFont(new Font("Segoe UI", Font.PLAIN, 15));
+        nameLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 15));
         nameLabel.setForeground(TEXT_PRIMARY);
         
         // Menu button
         JButton menuButton = new JButton("⋮");
-        menuButton.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        menuButton.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 18));
         menuButton.setForeground(TEXT_SECONDARY);
         menuButton.setPreferredSize(new Dimension(30, 30));
         menuButton.setBorderPainted(false);
@@ -613,7 +613,7 @@ public class FriendListPanel extends JPanel {
         friendsPanel.removeAll();
         
         JLabel label = new JLabel("<html><center>😔<br><br>Chưa có bạn bè nào</center></html>");
-        label.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        label.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         label.setForeground(TEXT_SECONDARY);
         label.setAlignmentX(Component.CENTER_ALIGNMENT);
         label.setBorder(new EmptyBorder(80, 20, 80, 20));

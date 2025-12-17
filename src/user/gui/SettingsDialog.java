@@ -32,7 +32,7 @@ public class SettingsDialog extends JDialog {
         headerPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
         
         JLabel titleLabel = new JLabel("Cài đặt");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        titleLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 20));
         titleLabel.setForeground(Color.WHITE);
         headerPanel.add(titleLabel, BorderLayout.WEST);
         
@@ -108,7 +108,7 @@ public class SettingsDialog extends JDialog {
         
         // Icon
         JLabel iconLabel = new JLabel(icon);
-        iconLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 28));
+        iconLabel.setFont(new Font(UIHelper.getEmojiFontName(), Font.PLAIN, 28));
         
         // Text panel
         JPanel textPanel = new JPanel();
@@ -116,10 +116,10 @@ public class SettingsDialog extends JDialog {
         textPanel.setOpaque(false);
         
         JLabel titleLabel = new JLabel(title);
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        titleLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 15));
         
         JLabel subtitleLabel = new JLabel(subtitle);
-        subtitleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        subtitleLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 12));
         subtitleLabel.setForeground(new Color(120, 120, 120));
         
         textPanel.add(titleLabel);
@@ -188,7 +188,7 @@ public class SettingsDialog extends JDialog {
         headerPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
         
         JLabel titleLabel = new JLabel("🔑 Đổi mật khẩu");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        titleLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 18));
         titleLabel.setForeground(Color.WHITE);
         headerPanel.add(titleLabel, BorderLayout.WEST);
         
@@ -200,11 +200,11 @@ public class SettingsDialog extends JDialog {
         
         // Mật khẩu hiện tại
         JLabel currentLabel = new JLabel("Mật khẩu hiện tại");
-        currentLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        currentLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 13));
         currentLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         
         JPasswordField currentPasswordField = new JPasswordField();
-        currentPasswordField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        currentPasswordField.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         currentPasswordField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
         currentPasswordField.setAlignmentX(Component.LEFT_ALIGNMENT);
         currentPasswordField.setBorder(BorderFactory.createCompoundBorder(
@@ -214,11 +214,11 @@ public class SettingsDialog extends JDialog {
         
         // Mật khẩu mới
         JLabel newLabel = new JLabel("Mật khẩu mới");
-        newLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        newLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 13));
         newLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         
         JPasswordField newPasswordField = new JPasswordField();
-        newPasswordField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        newPasswordField.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         newPasswordField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
         newPasswordField.setAlignmentX(Component.LEFT_ALIGNMENT);
         newPasswordField.setBorder(BorderFactory.createCompoundBorder(
@@ -228,11 +228,11 @@ public class SettingsDialog extends JDialog {
         
         // Xác nhận mật khẩu mới
         JLabel confirmLabel = new JLabel("Xác nhận mật khẩu mới");
-        confirmLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        confirmLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 13));
         confirmLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         
         JPasswordField confirmPasswordField = new JPasswordField();
-        confirmPasswordField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        confirmPasswordField.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         confirmPasswordField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
         confirmPasswordField.setAlignmentX(Component.LEFT_ALIGNMENT);
         confirmPasswordField.setBorder(BorderFactory.createCompoundBorder(
@@ -258,12 +258,12 @@ public class SettingsDialog extends JDialog {
         buttonPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(230, 230, 230)));
         
         JButton cancelButton = new JButton("Hủy");
-        cancelButton.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        cancelButton.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         cancelButton.setPreferredSize(new Dimension(100, 38));
         cancelButton.addActionListener(e -> dialog.dispose());
         
         JButton saveButton = new JButton("Đổi mật khẩu");
-        saveButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        saveButton.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 14));
         saveButton.setBackground(PRIMARY_COLOR);
         saveButton.setForeground(Color.WHITE);
         saveButton.setPreferredSize(new Dimension(130, 38));

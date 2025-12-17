@@ -71,11 +71,11 @@ public class AddFriendDialog extends JDialog {
         panel.setBorder(new EmptyBorder(15, 15, 15, 15));
         
         JLabel titleLabel = new JLabel("Thêm bạn");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        titleLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 18));
         titleLabel.setForeground(Color.WHITE);
         
         JButton closeButton = new JButton("✕");
-        closeButton.setFont(new Font("Segoe UI", Font.PLAIN, 20));
+        closeButton.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 20));
         closeButton.setForeground(Color.WHITE);
         closeButton.setBorderPainted(false);
         closeButton.setContentAreaFilled(false);
@@ -100,7 +100,7 @@ public class AddFriendDialog extends JDialog {
         
         // Search field
         searchField = new JTextField();
-        searchField.setFont(new Font("Segoe UI", Font.PLAIN, 15));
+        searchField.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 15));
         searchField.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(new Color(220, 220, 220), 1),
             new EmptyBorder(10, 12, 10, 12)
@@ -132,7 +132,7 @@ public class AddFriendDialog extends JDialog {
         
         // Search button
         JButton searchButton = new JButton("Tìm kiếm");
-        searchButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        searchButton.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 14));
         searchButton.setForeground(Color.WHITE);
         searchButton.setBackground(PRIMARY_COLOR);
         searchButton.setBorderPainted(false);
@@ -146,7 +146,7 @@ public class AddFriendDialog extends JDialog {
         
         // Helper text
         JLabel helperLabel = new JLabel("Có thể bạn quen");
-        helperLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        helperLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 12));
         helperLabel.setForeground(new Color(120, 120, 120));
         helperLabel.setIcon(new ImageIcon()); // Placeholder for icon
         panel.add(helperLabel, BorderLayout.SOUTH);
@@ -162,7 +162,7 @@ public class AddFriendDialog extends JDialog {
             "Nhập tên đăng nhập hoặc email<br>" +
             "để tìm kiếm bạn bè" +
             "</center></html>");
-        messageLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        messageLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         messageLabel.setForeground(new Color(150, 150, 150));
         messageLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         messageLabel.setBorder(new EmptyBorder(100, 20, 100, 20));
@@ -185,7 +185,7 @@ public class AddFriendDialog extends JDialog {
         
         // Show loading
         JLabel loadingLabel = new JLabel("Đang tìm kiếm...");
-        loadingLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        loadingLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         loadingLabel.setForeground(new Color(120, 120, 120));
         loadingLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         resultsPanel.add(loadingLabel);
@@ -222,7 +222,7 @@ public class AddFriendDialog extends JDialog {
                 "😔<br><br>" +
                 "Không tìm thấy kết quả" +
                 "</center></html>");
-            noResultLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            noResultLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
             noResultLabel.setForeground(new Color(150, 150, 150));
             noResultLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
             noResultLabel.setBorder(new EmptyBorder(100, 20, 100, 20));
@@ -242,7 +242,7 @@ public class AddFriendDialog extends JDialog {
         resultsPanel.removeAll();
         
         JLabel errorLabel = new JLabel("<html><center>❌<br><br>" + message + "</center></html>");
-        errorLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        errorLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         errorLabel.setForeground(new Color(255, 59, 48));
         errorLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         errorLabel.setBorder(new EmptyBorder(100, 20, 100, 20));
@@ -272,7 +272,7 @@ public class AddFriendDialog extends JDialog {
                 avatarLabel.setIcon(new ImageIcon(scaled));
             } catch (Exception ex) {
                 avatarLabel.setText("[A]");
-                avatarLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+                avatarLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 18));
                 avatarLabel.setForeground(new Color(0, 132, 255));
             }
             
@@ -286,10 +286,10 @@ public class AddFriendDialog extends JDialog {
             String email = (String) userData.get("email");
             
             JLabel nameLabel = new JLabel(fullName != null ? fullName : username);
-            nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 15));
+            nameLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 15));
             
             JLabel usernameLabel = new JLabel("@" + username);
-            usernameLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+            usernameLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 12));
             usernameLabel.setForeground(new Color(120, 120, 120));
             
             infoPanel.add(nameLabel);
@@ -300,7 +300,7 @@ public class AddFriendDialog extends JDialog {
             
             // Add friend button - Thay đổi text dựa vào status
             JButton addButton = new JButton();
-            addButton.setFont(new Font("Segoe UI", Font.BOLD, 13));
+            addButton.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 13));
             addButton.setFocusPainted(false);
             addButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
             
