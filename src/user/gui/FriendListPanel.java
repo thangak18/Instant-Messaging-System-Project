@@ -25,6 +25,10 @@ public class FriendListPanel extends JPanel {
     private JTextField searchField;
     private List<Map<String, Object>> allFriends; // Cache tất cả bạn bè
     private JLabel titleLabel; // Để update số lượng bạn bè
+    private JButton sortButton;
+    private JButton filterButton;
+    private boolean sortAscending = true;
+    private String currentFilter = "all"; // all | online | offline
 
     public FriendListPanel(ZaloMainFrame mainFrame) {
         this.mainFrame = mainFrame;
@@ -78,8 +82,14 @@ public class FriendListPanel extends JPanel {
                 new EmptyBorder(8, 12, 8, 12)));
         searchField.setBackground(new Color(245, 245, 245));
 
-        JLabel searchIcon = new JLabel("Tim");
-        searchIcon.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 12));
+        JLabel searchIcon = new JLabel();
+        try {
+            ImageIcon icon = new ImageIcon("icons/search.png");
+            Image scaled = icon.getImage().getScaledInstance(16, 16, Image.SCALE_SMOOTH);
+            searchIcon.setIcon(new ImageIcon(scaled));
+        } catch (Exception ex) {
+            searchIcon.setText("🔍");
+        }
         searchIcon.setBorder(new EmptyBorder(0, 0, 0, 8));
 
         JPanel searchInputPanel = new JPanel(new BorderLayout(5, 0));
@@ -131,8 +141,47 @@ public class FriendListPanel extends JPanel {
         toolsPanel.setBackground(WHITE);
         toolsPanel.setBorder(new EmptyBorder(12, 0, 0, 0));
 
-        JButton sortButton = createToolButton("⬍ Tên (A-Z)");
-        JButton filterButton = createToolButton("≡ Tất cả");
+        sortButton = createToolButton("Tên (A-Z)");
+        filterButton = createToolButton("Tất cả");
+        
+        // Sort functionality
+        sortButton.addActionListener(e -> {
+            sortAscending = !sortAscending;
+            sortButton.setText(sortAscending ? "Tên (A-Z)" : "Tên (Z-A)");
+            applyFilterAndSort();
+        });
+        
+        // Filter functionality
+        filterButton.addActionListener(e -> {
+            JPopupMenu filterMenu = new JPopupMenu();
+            
+            JMenuItem allItem = new JMenuItem("Tất cả");
+            allItem.addActionListener(ev -> {
+                currentFilter = "all";
+                filterButton.setText("Tất cả");
+                applyFilterAndSort();
+            });
+            
+            JMenuItem onlineItem = new JMenuItem("Đang hoạt động");
+            onlineItem.addActionListener(ev -> {
+                currentFilter = "online";
+                filterButton.setText("Đang hoạt động");
+                applyFilterAndSort();
+            });
+            
+            JMenuItem offlineItem = new JMenuItem("Không hoạt động");
+            offlineItem.addActionListener(ev -> {
+                currentFilter = "offline";
+                filterButton.setText("Không hoạt động");
+                applyFilterAndSort();
+            });
+            
+            filterMenu.add(allItem);
+            filterMenu.add(onlineItem);
+            filterMenu.add(offlineItem);
+            
+            filterMenu.show(filterButton, 0, filterButton.getHeight());
+        });
 
         toolsPanel.add(sortButton);
         toolsPanel.add(filterButton);
@@ -183,7 +232,7 @@ public class FriendListPanel extends JPanel {
                         titleLabel.setText("Bạn bè (0)");
                     }
 
-                    displayFriends(allFriends);
+                    applyFilterAndSort();
 
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -196,27 +245,7 @@ public class FriendListPanel extends JPanel {
     }
 
     private void filterFriends() {
-        if (allFriends == null)
-            return;
-
-        String query = searchField.getText().toLowerCase().trim();
-        if (query.equals("tìm bạn")) {
-            displayFriends(allFriends);
-            return;
-        }
-
-        List<Map<String, Object>> filtered = new java.util.ArrayList<>();
-        for (Map<String, Object> friend : allFriends) {
-            String fullName = (String) friend.get("full_name");
-            String username = (String) friend.get("username");
-
-            String searchText = (fullName != null ? fullName : username).toLowerCase();
-            if (searchText.contains(query)) {
-                filtered.add(friend);
-            }
-        }
-
-        displayFriends(filtered);
+        applyFilterAndSort();
     }
 
     private void displayFriends(List<Map<String, Object>> friends) {
@@ -393,10 +422,11 @@ public class FriendListPanel extends JPanel {
         // Xem trang cá nhân
         JMenuItem profileItem = createMenuItem("Xem trang cá nhân", null);
         profileItem.addActionListener(e -> {
-            JOptionPane.showMessageDialog(this,
-                    "Chức năng xem trang cá nhân đang được phát triển",
-                    "Thông báo",
-                    JOptionPane.INFORMATION_MESSAGE);
+            UserProfileDialog dialog = new UserProfileDialog(
+                (Frame) SwingUtilities.getWindowAncestor(this), 
+                username
+            );
+            dialog.setVisible(true);
         });
 
         menu.add(chatItem);
@@ -624,7 +654,7 @@ public class FriendListPanel extends JPanel {
      */
     public void refreshOnlineStatus() {
         if (allFriends != null && !allFriends.isEmpty()) {
-            displayFriends(allFriends);
+            applyFilterAndSort();
         }
     }
 
@@ -634,5 +664,59 @@ public class FriendListPanel extends JPanel {
     public void refreshFriendList() {
         System.out.println("🔄 Refreshing friend list...");
         loadFriends();
+    }
+    
+    /**
+     * Áp dụng filter và sort
+     */
+    private void applyFilterAndSort() {
+        if (allFriends == null) return;
+        String queryRaw = searchField.getText();
+        String query = queryRaw != null ? queryRaw.trim().toLowerCase() : "";
+        boolean hasQuery = !query.isEmpty() && !"tìm bạn".equals(query);
+
+        List<String> onlineUsers = mainFrame.getSocketClient() != null
+                ? mainFrame.getSocketClient().getOnlineUsers()
+                : new java.util.ArrayList<>();
+
+        List<Map<String, Object>> filtered = new java.util.ArrayList<>();
+
+        for (Map<String, Object> friend : allFriends) {
+            String username = (String) friend.get("username");
+            String fullName = (String) friend.get("full_name");
+            String displayName = (fullName != null && !fullName.isEmpty()) ? fullName : username;
+
+            if (hasQuery) {
+                String searchText = displayName != null ? displayName.toLowerCase() : "";
+                if (!searchText.contains(query)) {
+                    continue;
+                }
+            }
+
+            if ("online".equals(currentFilter) && !onlineUsers.contains(username)) {
+                continue;
+            }
+            if ("offline".equals(currentFilter) && onlineUsers.contains(username)) {
+                continue;
+            }
+
+            filtered.add(friend);
+        }
+
+        java.util.Comparator<Map<String, Object>> comparator = (f1, f2) -> {
+            String name1 = (String) f1.get("full_name");
+            String name2 = (String) f2.get("full_name");
+            if (name1 == null || name1.isEmpty()) name1 = (String) f1.get("username");
+            if (name2 == null || name2.isEmpty()) name2 = (String) f2.get("username");
+
+            if (name1 == null) name1 = "";
+            if (name2 == null) name2 = "";
+
+            return name1.compareToIgnoreCase(name2);
+        };
+
+        filtered.sort(sortAscending ? comparator : comparator.reversed());
+
+        displayFriends(filtered);
     }
 }
