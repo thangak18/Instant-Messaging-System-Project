@@ -90,55 +90,89 @@ public class GroupManagementPanel extends JPanel {
     }
 
     /**
-     * Load danh sách nhóm từ database
+     * Load danh sách nhóm từ database - ASYNC với loading indicator
      */
     private void loadGroupsFromDatabase() {
-        try {
-            currentGroups = groupDAO.getAllGroups();
-            applySorting();
-            // Update label tổng số nhóm
-            if (totalLabel != null) {
-                totalLabel.setText("📊 Tổng số nhóm: " + currentGroups.size());
+        // Clear table và hiển thị loading
+        tableModel.setRowCount(0);
+        tableModel.addRow(new Object[] { "⏳", "Đang tải dữ liệu...", "", "", "" });
+
+        System.out.println("🔍 [GroupManagementPanel] Loading groups from database...");
+
+        SwingWorker<List<ChatGroup>, Void> worker = new SwingWorker<>() {
+            @Override
+            protected List<ChatGroup> doInBackground() {
+                try {
+                    System.out.println("⏳ [GroupManagementPanel] Calling groupDAO.getAllGroups()...");
+                    List<ChatGroup> groups = groupDAO.getAllGroups();
+                    System.out.println("✅ [GroupManagementPanel] Loaded " + groups.size() + " groups");
+                    return groups;
+                } catch (SQLException e) {
+                    System.err.println("❌ [GroupManagementPanel] Database error: " + e.getMessage());
+                    e.printStackTrace();
+                    throw new RuntimeException(e);
+                }
             }
-            displayGroups(currentGroups);
-        } catch (SQLException e) {
-            String errorMsg = e.getMessage();
-            String detailedMsg = "Lỗi load dữ liệu nhóm chat: " + errorMsg;
-            
-            if (errorMsg != null && (errorMsg.contains("connection") || 
-                                     errorMsg.contains("Connection"))) {
-                detailedMsg += "\n\nVui lòng kiểm tra:\n" +
-                              "- Kết nối database\n" +
-                              "- File config.properties\n" +
-                              "Hoặc liên hệ admin để được hỗ trợ.";
+
+            @Override
+            protected void done() {
+                try {
+                    currentGroups = get();
+                    applySorting();
+
+                    // Update label tổng số nhóm
+                    if (totalLabel != null) {
+                        totalLabel.setText("📊 Tổng số nhóm: " + currentGroups.size());
+                    }
+
+                    System.out.println("📊 [GroupManagementPanel] Displaying " + currentGroups.size() + " groups");
+                    displayGroups(currentGroups);
+
+                } catch (Exception e) {
+                    // Clear loading message
+                    tableModel.setRowCount(0);
+
+                    String errorMsg = e.getCause() != null ? e.getCause().getMessage() : e.getMessage();
+                    String detailedMsg = "Lỗi load dữ liệu nhóm chat: " + errorMsg;
+
+                    if (errorMsg != null && (errorMsg.contains("connection") ||
+                            errorMsg.contains("Connection"))) {
+                        detailedMsg += "\n\nVui lòng kiểm tra:\n" +
+                                "- Kết nối database\n" +
+                                "- File config.properties\n" +
+                                "Hoặc liên hệ admin để được hỗ trợ.";
+                    }
+
+                    System.err.println("❌ [GroupManagementPanel] Error in done(): " + errorMsg);
+                    showError(detailedMsg);
+                    e.printStackTrace();
+
+                    // Hiển thị lỗi trong table
+                    tableModel.addRow(new Object[] { "❌", "Lỗi tải dữ liệu", errorMsg, "", "" });
+                }
             }
-            
-            showError(detailedMsg);
-            e.printStackTrace();
-        }
+        };
+
+        worker.execute();
     }
 
     /**
-     * Hiển thị danh sách nhóm lên table
+     * Hiển thị danh sách nhóm lên table - TỐI ƯU (không gọi database trong loop)
      */
     private void displayGroups(List<ChatGroup> groups) {
         tableModel.setRowCount(0); // Clear table
 
         for (ChatGroup group : groups) {
-            // Đếm số admin của nhóm
-            int adminCount = 1;
-            try {
-                adminCount = groupDAO.countGroupAdmins(group.getId());
-            } catch (SQLException e) {
-                System.err.println("Lỗi đếm admin: " + e.getMessage());
-            }
-            
-            String adminDisplay = (group.getCreatorName() != null ? group.getCreatorName() : "N/A") 
+            // Sử dụng adminCount đã được load sẵn từ database (không gọi countGroupAdmins
+            // nữa!)
+            int adminCount = group.getAdminCount();
+
+            String adminDisplay = (group.getCreatorName() != null ? group.getCreatorName() : "N/A")
                     + " (+" + (adminCount - 1) + " admin khác)";
             if (adminCount == 1) {
                 adminDisplay = group.getCreatorName() != null ? group.getCreatorName() : "N/A";
             }
-            
+
             Object[] row = {
                     group.getId(),
                     group.getGroupName() != null ? group.getGroupName() : "",
@@ -370,15 +404,15 @@ public class GroupManagementPanel extends JPanel {
         } catch (SQLException e) {
             String errorMsg = e.getMessage();
             String detailedMsg = "Lỗi tìm kiếm/lọc nhóm chat: " + errorMsg;
-            
-            if (errorMsg != null && (errorMsg.contains("connection") || 
-                                     errorMsg.contains("Connection"))) {
+
+            if (errorMsg != null && (errorMsg.contains("connection") ||
+                    errorMsg.contains("Connection"))) {
                 detailedMsg += "\n\nVui lòng kiểm tra:\n" +
-                              "- Kết nối database\n" +
-                              "- Thông tin tìm kiếm\n" +
-                              "Hoặc liên hệ admin để được hỗ trợ.";
+                        "- Kết nối database\n" +
+                        "- Thông tin tìm kiếm\n" +
+                        "Hoặc liên hệ admin để được hỗ trợ.";
             }
-            
+
             showError(detailedMsg);
             e.printStackTrace();
         }
