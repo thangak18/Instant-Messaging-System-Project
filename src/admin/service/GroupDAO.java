@@ -201,26 +201,51 @@ public class GroupDAO {
     }
 
     /**
-     * Lấy danh sách admin trong nhóm (lấy từ bảng groups - admin_id)
+     * Lấy danh sách tất cả admin trong nhóm (admin chính + co-admin)
      */
     public List<User> getGroupAdmins(int groupId) throws SQLException {
         List<User> admins = new ArrayList<>();
-        // Lấy admin chính từ bảng groups
-        String sql = "SELECT u.* FROM groups g " +
+        
+        // Đầu tiên lấy admin chính từ bảng groups
+        String mainAdminSql = "SELECT u.* FROM groups g " +
                 "JOIN users u ON g.admin_id = u.user_id " +
                 "WHERE g.group_id = ?";
 
         try (Connection conn = dbConnection.getConnection();
-                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                PreparedStatement pstmt = conn.prepareStatement(mainAdminSql)) {
 
             pstmt.setInt(1, groupId);
 
             try (ResultSet rs = pstmt.executeQuery()) {
-                while (rs.next()) {
+                if (rs.next()) {
                     admins.add(extractUserSummary(rs));
                 }
             }
         }
+        
+        // Sau đó lấy thêm co-admin từ group_members.is_admin (nếu column tồn tại)
+        try {
+            String coAdminSql = "SELECT u.* FROM group_members gm " +
+                    "JOIN users u ON gm.user_id = u.user_id " +
+                    "JOIN groups g ON gm.group_id = g.group_id " +
+                    "WHERE gm.group_id = ? AND gm.is_admin = true AND gm.user_id != g.admin_id";
+            
+            try (Connection conn = dbConnection.getConnection();
+                    PreparedStatement pstmt = conn.prepareStatement(coAdminSql)) {
+
+                pstmt.setInt(1, groupId);
+
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    while (rs.next()) {
+                        admins.add(extractUserSummary(rs));
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            // Column is_admin có thể chưa tồn tại, bỏ qua
+            System.out.println("Cột is_admin chưa tồn tại hoặc lỗi: " + e.getMessage());
+        }
+        
         return admins;
     }
 
@@ -238,5 +263,36 @@ public class GroupDAO {
         }
 
         return user;
+    }
+    
+    /**
+     * Đếm số admin của nhóm (admin chính + co-admin)
+     */
+    public int countGroupAdmins(int groupId) throws SQLException {
+        int count = 1; // Admin chính luôn có
+        
+        // Đếm thêm co-admin từ group_members.is_admin (nếu column tồn tại)
+        try {
+            String coAdminSql = "SELECT COUNT(*) as count FROM group_members gm " +
+                    "JOIN groups g ON gm.group_id = g.group_id " +
+                    "WHERE gm.group_id = ? AND gm.is_admin = true AND gm.user_id != g.admin_id";
+            
+            try (Connection conn = dbConnection.getConnection();
+                    PreparedStatement pstmt = conn.prepareStatement(coAdminSql)) {
+
+                pstmt.setInt(1, groupId);
+
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        count += rs.getInt("count");
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            // Column is_admin có thể chưa tồn tại, bỏ qua
+            System.out.println("Cột is_admin chưa tồn tại hoặc lỗi: " + e.getMessage());
+        }
+        
+        return count;
     }
 }

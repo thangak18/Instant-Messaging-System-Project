@@ -436,6 +436,7 @@ public class GroupService {
     public List<Map<String, Object>> getUserGroups(String username) {
         List<Map<String, Object>> groups = new ArrayList<>();
         
+        // Query không dùng is_admin - chỉ dùng admin_id
         String sql = "SELECT g.group_id, g.group_name, g.created_at, g.admin_id, " +
                      "COALESCE(g.is_encrypted, false) as is_encrypted, g.encryption_key, " +
                      "(SELECT COUNT(*) FROM group_members WHERE group_id = g.group_id) as member_count, " +
@@ -467,10 +468,13 @@ public class GroupService {
                 boolean isEncrypted = rs.getBoolean("is_encrypted");
                 String encryptionKey = rs.getString("encryption_key");
                 
+                // Kiểm tra admin: admin chính HOẶC co-admin (nếu có cột is_admin)
+                boolean isAdmin = (adminId == userId) || isCoAdmin(groupId, userId);
+                
                 group.put("id", groupId);
                 group.put("group_name", rs.getString("group_name"));
                 group.put("created_at", rs.getTimestamp("created_at"));
-                group.put("role", (adminId == userId) ? "admin" : "member");
+                group.put("role", isAdmin ? "admin" : "member");
                 group.put("member_count", rs.getInt("member_count"));
                 group.put("is_encrypted", isEncrypted);
                 
@@ -502,6 +506,7 @@ public class GroupService {
     public List<Map<String, Object>> getGroupMembers(int groupId) {
         List<Map<String, Object>> members = new ArrayList<>();
         
+        // Query không dùng is_admin trực tiếp
         String sql = "SELECT u.user_id, u.username, u.full_name, gm.joined_at, g.admin_id " +
                      "FROM group_members gm " +
                      "JOIN users u ON gm.user_id = u.user_id " +
@@ -526,7 +531,8 @@ public class GroupService {
                 Map<String, Object> member = new HashMap<>();
                 int userId = rs.getInt("user_id");
                 int adminId = rs.getInt("admin_id");
-                boolean isAdmin = (userId == adminId);
+                // Kiểm tra admin: admin chính HOẶC co-admin
+                boolean isAdmin = (userId == adminId) || isCoAdmin(groupId, userId);
                 
                 member.put("user_id", userId);
                 member.put("username", rs.getString("username"));
@@ -602,8 +608,10 @@ public class GroupService {
     
     /**
      * Kiểm tra user có phải admin của nhóm không
+     * Kiểm tra groups.admin_id và group_members.is_admin (nếu có)
      */
     public boolean isAdmin(int groupId, String username) {
+        // Kiểm tra admin chính trước
         String sql = "SELECT g.admin_id, u.user_id " +
                      "FROM groups g, users u " +
                      "WHERE g.group_id = ? AND u.username = ?";
@@ -625,11 +633,55 @@ public class GroupService {
             if (rs.next()) {
                 int adminId = rs.getInt("admin_id");
                 int userId = rs.getInt("user_id");
-                return adminId == userId;
+                
+                // Là admin chính?
+                if (adminId == userId) return true;
+                
+                // Kiểm tra co-admin (nếu có cột is_admin)
+                return isCoAdmin(groupId, userId);
             }
             
         } catch (SQLException e) {
             e.printStackTrace();
+        } finally {
+            if (rs != null) try { rs.close(); } catch (SQLException e) { }
+            if (pstmt != null) try { pstmt.close(); } catch (SQLException e) { }
+            if (conn != null) DatabaseConnection.closeConnection(conn);
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Kiểm tra user có phải co-admin (is_admin = true trong group_members)
+     * Trả về false nếu cột is_admin chưa tồn tại
+     */
+    private boolean isCoAdmin(int groupId, int userId) {
+        String sql = "SELECT is_admin FROM group_members WHERE group_id = ? AND user_id = ?";
+        
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        
+        try {
+            conn = dbConnection.getConnection();
+            if (conn == null) return false;
+            
+            pstmt = conn.prepareStatement(sql);
+            pstmt.setInt(1, groupId);
+            pstmt.setInt(2, userId);
+            
+            rs = pstmt.executeQuery();
+            
+            if (rs.next()) {
+                return rs.getBoolean("is_admin");
+            }
+            
+        } catch (SQLException e) {
+            // Cột is_admin chưa tồn tại - bỏ qua lỗi
+            if (!e.getMessage().contains("is_admin")) {
+                e.printStackTrace();
+            }
         } finally {
             if (rs != null) try { rs.close(); } catch (SQLException e) { }
             if (pstmt != null) try { pstmt.close(); } catch (SQLException e) { }
@@ -676,11 +728,44 @@ public class GroupService {
     }
     
     /**
-     * Đếm số admin trong nhóm (chỉ có 1 admin là admin_id)
+     * Đếm số admin trong nhóm (admin chính + co-admin nếu có)
      */
     public int countAdmins(int groupId) {
-        // Với schema hiện tại, chỉ có 1 admin (admin_id)
-        return 1;
+        int count = 1; // Ít nhất 1 admin chính
+        
+        // Thử đếm co-admin (nếu cột is_admin tồn tại)
+        String sql = "SELECT COUNT(*) as co_admin_count FROM group_members " +
+                     "WHERE group_id = ? AND is_admin = true";
+        
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        
+        try {
+            conn = dbConnection.getConnection();
+            if (conn == null) return count;
+            
+            pstmt = conn.prepareStatement(sql);
+            pstmt.setInt(1, groupId);
+            
+            rs = pstmt.executeQuery();
+            
+            if (rs.next()) {
+                count += rs.getInt("co_admin_count");
+            }
+            
+        } catch (SQLException e) {
+            // Cột is_admin chưa tồn tại - bỏ qua, trả về 1
+            if (!e.getMessage().contains("is_admin")) {
+                e.printStackTrace();
+            }
+        } finally {
+            if (rs != null) try { rs.close(); } catch (SQLException e) { }
+            if (pstmt != null) try { pstmt.close(); } catch (SQLException e) { }
+            if (conn != null) DatabaseConnection.closeConnection(conn);
+        }
+        
+        return count;
     }
     
     /**
