@@ -24,6 +24,11 @@ public class FriendRequestPanel extends JPanel {
     private JPanel receivedPanel;
     private JPanel sentPanel;
     private JTabbedPane tabbedPane;
+    private JTextField receivedSearchField;
+    private JTextField sentSearchField;
+    
+    private List<Map<String, Object>> allReceivedRequests;
+    private List<Map<String, Object>> allSentRequests;
 
     public FriendRequestPanel(ZaloMainFrame mainFrame) {
         this.mainFrame = mainFrame;
@@ -40,7 +45,21 @@ public class FriendRequestPanel extends JPanel {
         tabbedPane = new JTabbedPane();
         tabbedPane.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 13));
 
-        // Received requests panel
+        // Received requests panel with search
+        JPanel receivedContainer = new JPanel(new BorderLayout());
+        receivedContainer.setBackground(BG_COLOR);
+        
+        receivedSearchField = createSearchField("Tìm kiếm theo tên...");
+        receivedSearchField.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyReleased(java.awt.event.KeyEvent e) {
+                filterReceivedRequests(receivedSearchField.getText());
+            }
+        });
+        JPanel receivedSearchPanel = new JPanel(new BorderLayout(10, 10));
+        receivedSearchPanel.setBackground(Color.WHITE);
+        receivedSearchPanel.setBorder(new EmptyBorder(10, 15, 10, 15));
+        receivedSearchPanel.add(receivedSearchField, BorderLayout.CENTER);
+        
         receivedPanel = new JPanel();
         receivedPanel.setLayout(new BoxLayout(receivedPanel, BoxLayout.Y_AXIS));
         receivedPanel.setBackground(BG_COLOR);
@@ -48,8 +67,25 @@ public class FriendRequestPanel extends JPanel {
         JScrollPane receivedScroll = new JScrollPane(receivedPanel);
         receivedScroll.setBorder(null);
         receivedScroll.getVerticalScrollBar().setUnitIncrement(16);
+        
+        receivedContainer.add(receivedSearchPanel, BorderLayout.NORTH);
+        receivedContainer.add(receivedScroll, BorderLayout.CENTER);
 
-        // Sent requests panel
+        // Sent requests panel with search
+        JPanel sentContainer = new JPanel(new BorderLayout());
+        sentContainer.setBackground(BG_COLOR);
+        
+        sentSearchField = createSearchField("Tìm kiếm theo tên...");
+        sentSearchField.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyReleased(java.awt.event.KeyEvent e) {
+                filterSentRequests(sentSearchField.getText());
+            }
+        });
+        JPanel sentSearchPanel = new JPanel(new BorderLayout(10, 10));
+        sentSearchPanel.setBackground(Color.WHITE);
+        sentSearchPanel.setBorder(new EmptyBorder(10, 15, 10, 15));
+        sentSearchPanel.add(sentSearchField, BorderLayout.CENTER);
+        
         sentPanel = new JPanel();
         sentPanel.setLayout(new BoxLayout(sentPanel, BoxLayout.Y_AXIS));
         sentPanel.setBackground(BG_COLOR);
@@ -57,11 +93,44 @@ public class FriendRequestPanel extends JPanel {
         JScrollPane sentScroll = new JScrollPane(sentPanel);
         sentScroll.setBorder(null);
         sentScroll.getVerticalScrollBar().setUnitIncrement(16);
+        
+        sentContainer.add(sentSearchPanel, BorderLayout.NORTH);
+        sentContainer.add(sentScroll, BorderLayout.CENTER);
 
-        tabbedPane.addTab("Lời mời đã nhận (2)", receivedScroll);
-        tabbedPane.addTab("Lời mời đã gửi (8)", sentScroll);
+        tabbedPane.addTab("Lời mời đã nhận (0)", receivedContainer);
+        tabbedPane.addTab("Lời mời đã gửi (0)", sentContainer);
 
         add(tabbedPane, BorderLayout.CENTER);
+    }
+    
+    private JTextField createSearchField(String placeholder) {
+        JTextField field = new JTextField();
+        field.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
+        field.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(220, 220, 220), 1),
+            new EmptyBorder(8, 12, 8, 12)
+        ));
+        
+        // Placeholder behavior
+        field.setForeground(new Color(150, 150, 150));
+        field.setText(placeholder);
+        
+        field.addFocusListener(new java.awt.event.FocusAdapter() {
+            public void focusGained(java.awt.event.FocusEvent e) {
+                if (field.getText().equals(placeholder)) {
+                    field.setText("");
+                    field.setForeground(Color.BLACK);
+                }
+            }
+            public void focusLost(java.awt.event.FocusEvent e) {
+                if (field.getText().isEmpty()) {
+                    field.setForeground(new Color(150, 150, 150));
+                    field.setText(placeholder);
+                }
+            }
+        });
+        
+        return field;
     }
 
     private void loadFriendRequests() {
@@ -85,16 +154,13 @@ public class FriendRequestPanel extends JPanel {
             protected void done() {
                 try {
                     List<Map<String, Object>> requests = get();
+                    allReceivedRequests = requests;
 
                     if (requests == null || requests.isEmpty()) {
                         showEmptyMessage(receivedPanel, "Không có lời mời kết bạn");
                         tabbedPane.setTitleAt(0, "Lời mời đã nhận (0)");
                     } else {
-                        for (Map<String, Object> request : requests) {
-                            ReceivedRequestPanel requestPanel = new ReceivedRequestPanel(request);
-                            receivedPanel.add(requestPanel);
-                        }
-                        tabbedPane.setTitleAt(0, "Lời mời đã nhận (" + requests.size() + ")");
+                        displayReceivedRequests(requests);
                     }
 
                     receivedPanel.revalidate();
@@ -108,6 +174,48 @@ public class FriendRequestPanel extends JPanel {
         };
 
         worker.execute();
+    }
+    
+    private void displayReceivedRequests(List<Map<String, Object>> requests) {
+        receivedPanel.removeAll();
+        
+        if (requests == null || requests.isEmpty()) {
+            showEmptyMessage(receivedPanel, "Không tìm thấy kết quả");
+            tabbedPane.setTitleAt(0, "Lời mời đã nhận (0)");
+        } else {
+            for (Map<String, Object> request : requests) {
+                ReceivedRequestPanel requestPanel = new ReceivedRequestPanel(request);
+                receivedPanel.add(requestPanel);
+            }
+            tabbedPane.setTitleAt(0, "Lời mời đã nhận (" + requests.size() + ")");
+        }
+        
+        receivedPanel.revalidate();
+        receivedPanel.repaint();
+    }
+    
+    private void filterReceivedRequests(String query) {
+        if (allReceivedRequests == null) return;
+        
+        if (query.isEmpty() || query.equals("Tìm kiếm theo tên...")) {
+            displayReceivedRequests(allReceivedRequests);
+            return;
+        }
+        
+        List<Map<String, Object>> filtered = new java.util.ArrayList<>();
+        String lowerQuery = query.toLowerCase();
+        
+        for (Map<String, Object> request : allReceivedRequests) {
+            String senderName = (String) request.get("sender_name");
+            String senderUsername = (String) request.get("sender_username");
+            
+            if ((senderName != null && senderName.toLowerCase().contains(lowerQuery)) ||
+                (senderUsername != null && senderUsername.toLowerCase().contains(lowerQuery))) {
+                filtered.add(request);
+            }
+        }
+        
+        displayReceivedRequests(filtered);
     }
 
     private void loadSentRequests() {
@@ -123,16 +231,13 @@ public class FriendRequestPanel extends JPanel {
             protected void done() {
                 try {
                     List<Map<String, Object>> requests = get();
+                    allSentRequests = requests;
 
                     if (requests == null || requests.isEmpty()) {
                         showEmptyMessage(sentPanel, "Bạn chưa gửi lời mời nào");
-                        tabbedPane.setTitleAt(1, "Lời mời đã gửi (0)");
+                        tabbedPane.setTitleAt(1, "Lời mời đá gửi (0)");
                     } else {
-                        for (Map<String, Object> request : requests) {
-                            SentRequestPanel requestPanel = new SentRequestPanel(request);
-                            sentPanel.add(requestPanel);
-                        }
-                        tabbedPane.setTitleAt(1, "Lời mời đã gửi (" + requests.size() + ")");
+                        displaySentRequests(requests);
                     }
 
                     sentPanel.revalidate();
@@ -146,6 +251,48 @@ public class FriendRequestPanel extends JPanel {
         };
 
         worker.execute();
+    }
+    
+    private void displaySentRequests(List<Map<String, Object>> requests) {
+        sentPanel.removeAll();
+        
+        if (requests == null || requests.isEmpty()) {
+            showEmptyMessage(sentPanel, "Không tìm thấy kết quả");
+            tabbedPane.setTitleAt(1, "Lời mời đã gửi (0)");
+        } else {
+            for (Map<String, Object> request : requests) {
+                SentRequestPanel requestPanel = new SentRequestPanel(request);
+                sentPanel.add(requestPanel);
+            }
+            tabbedPane.setTitleAt(1, "Lời mời đã gửi (" + requests.size() + ")");
+        }
+        
+        sentPanel.revalidate();
+        sentPanel.repaint();
+    }
+    
+    private void filterSentRequests(String query) {
+        if (allSentRequests == null) return;
+        
+        if (query.isEmpty() || query.equals("Tìm kiếm theo tên...")) {
+            displaySentRequests(allSentRequests);
+            return;
+        }
+        
+        List<Map<String, Object>> filtered = new java.util.ArrayList<>();
+        String lowerQuery = query.toLowerCase();
+        
+        for (Map<String, Object> request : allSentRequests) {
+            String receiverName = (String) request.get("receiver_name");
+            String receiverUsername = (String) request.get("receiver_username");
+            
+            if ((receiverName != null && receiverName.toLowerCase().contains(lowerQuery)) ||
+                (receiverUsername != null && receiverUsername.toLowerCase().contains(lowerQuery))) {
+                filtered.add(request);
+            }
+        }
+        
+        displaySentRequests(filtered);
     }
 
     private void showEmptyMessage(JPanel panel, String message) {

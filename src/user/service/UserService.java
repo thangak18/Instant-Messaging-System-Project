@@ -681,12 +681,15 @@ public class UserService {
         java.util.List<Map<String, Object>> results = new java.util.ArrayList<>();
         
         // PostgreSQL case-insensitive search với LOWER()
-        String sql = "SELECT user_id, username, full_name, email " +
-                     "FROM users " +
-                     "WHERE (LOWER(username) LIKE LOWER(?) OR LOWER(email) LIKE LOWER(?) OR LOWER(full_name) LIKE LOWER(?)) " +
-                     "AND username != ? " +
-                     "AND status = 'active' " +
-                     "ORDER BY username " +
+        // Loại bỏ những user đã block mình (không hiển thị user mà họ đã block currentUser)
+        String sql = "SELECT u.user_id, u.username, u.full_name, u.email " +
+                     "FROM users u " +
+                     "WHERE (LOWER(u.username) LIKE LOWER(?) OR LOWER(u.email) LIKE LOWER(?) OR LOWER(u.full_name) LIKE LOWER(?)) " +
+                     "AND u.username != ? " +
+                     "AND u.status = 'active' " +
+                     // Loại bỏ user đã block mình
+                     "AND NOT EXISTS (SELECT 1 FROM blocked_users b WHERE b.blocker_id = u.user_id AND b.blocked_id = (SELECT user_id FROM users WHERE username = ?)) " +
+                     "ORDER BY u.username " +
                      "LIMIT 20";
         
         Connection conn = null;
@@ -708,6 +711,7 @@ public class UserService {
             pstmt.setString(2, searchPattern);
             pstmt.setString(3, searchPattern);
             pstmt.setString(4, currentUsername);
+            pstmt.setString(5, currentUsername); // For blocked_users check
             
             System.out.println("📝 SQL: " + sql);
             System.out.println("📝 Pattern: " + searchPattern);
@@ -1903,26 +1907,51 @@ public class UserService {
     }
     
     /**
-     * XÓA TOÀN BỘ LỊCH SỬ CHAT VỚI 1 NGƯỜI
+     * XÓA TOÀN BỘ LỊCH SỬ CHAT VỚI 1 NGƯỜI (CHỈ CHO NGƯỜI XÓA - SOFT DELETE)
      */
     public boolean deleteChatHistory(String username, String friendUsername) {
-        String sql = "DELETE FROM messages WHERE message_id IN (" +
-                     "SELECT m.message_id FROM messages m " +
+        // Sử dụng soft delete - chỉ đánh dấu tin nhắn đã xóa cho user hiện tại
+        String sql = "INSERT INTO deleted_messages (message_id, user_id) " +
+                     "SELECT m.message_id, ? " +
+                     "FROM messages m " +
                      "JOIN users u1 ON m.sender_id = u1.user_id " +
                      "JOIN users u2 ON m.receiver_id = u2.user_id " +
-                     "WHERE (u1.username = ? AND u2.username = ?) OR (u1.username = ? AND u2.username = ?))";
+                     "WHERE ((u1.username = ? AND u2.username = ?) OR (u1.username = ? AND u2.username = ?)) " +
+                     "AND NOT EXISTS (" +
+                     "  SELECT 1 FROM deleted_messages dm " +
+                     "  WHERE dm.message_id = m.message_id AND dm.user_id = ?" +
+                     ")";
         
-        try (Connection conn = dbConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try (Connection conn = dbConnection.getConnection()) {
+            // Get user_id
+            int userId = -1;
+            String getUserIdSql = "SELECT user_id FROM users WHERE username = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(getUserIdSql)) {
+                pstmt.setString(1, username);
+                ResultSet rs = pstmt.executeQuery();
+                if (rs.next()) {
+                    userId = rs.getInt("user_id");
+                }
+            }
             
-            pstmt.setString(1, username);
-            pstmt.setString(2, friendUsername);
-            pstmt.setString(3, friendUsername);
-            pstmt.setString(4, username);
+            if (userId == -1) {
+                System.err.println("❌ Không tìm thấy user: " + username);
+                return false;
+            }
             
-            int rows = pstmt.executeUpdate();
-            System.out.println("✅ Đã xóa " + rows + " tin nhắn với " + friendUsername);
-            return true;
+            // Insert into deleted_messages
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setInt(1, userId);
+                pstmt.setString(2, username);
+                pstmt.setString(3, friendUsername);
+                pstmt.setString(4, friendUsername);
+                pstmt.setString(5, username);
+                pstmt.setInt(6, userId);
+                
+                int rows = pstmt.executeUpdate();
+                System.out.println("✅ Đã đánh dấu xóa " + rows + " tin nhắn với " + friendUsername + " cho user " + username);
+                return true;
+            }
             
         } catch (SQLException e) {
             System.err.println("❌ Lỗi khi xóa lịch sử: " + e.getMessage());

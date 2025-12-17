@@ -481,6 +481,15 @@ public class ZaloMainFrame extends JFrame {
     }
     
     /**
+     * CẬP NHẬT CHATLIST SAU KHI XÓA LỊCH SỬ CHAT
+     */
+    public void updateChatListAfterDelete(String friendUsername) {
+        if (chatListPanel != null) {
+            chatListPanel.updateChatItemAfterDelete(friendUsername);
+        }
+    }
+    
+    /**
      * SWITCH NỘI DUNG BÊN PHẢI KHI CLICK MENU TRONG CONTACT PANEL
      */
     public void showContactContent(String contentKey) {

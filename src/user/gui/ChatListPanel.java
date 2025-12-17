@@ -1033,4 +1033,21 @@ public class ChatListPanel extends JPanel {
         return text.replaceAll("(?i)(" + java.util.regex.Pattern.quote(keyword) + ")",
                 "<span style='background-color: #FFFF00; font-weight: bold;'>$1</span>");
     }
+    
+    /**
+     * Cập nhật chat item sau khi xóa lịch sử - ẩn tin nhắn cuối
+     */
+    public void updateChatItemAfterDelete(String username) {
+        Component[] components = chatListContainer.getComponents();
+        for (Component comp : components) {
+            if (comp instanceof ChatItemPanel) {
+                ChatItemPanel item = (ChatItemPanel) comp;
+                if (item.username.equals(username)) {
+                    // Ẩn tin nhắn cuối
+                    item.updateLastMessage("", "");
+                    break;
+                }
+            }
+        }
+    }
 }
