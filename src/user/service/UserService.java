@@ -681,12 +681,15 @@ public class UserService {
         java.util.List<Map<String, Object>> results = new java.util.ArrayList<>();
         
         // PostgreSQL case-insensitive search với LOWER()
-        String sql = "SELECT user_id, username, full_name, email " +
-                     "FROM users " +
-                     "WHERE (LOWER(username) LIKE LOWER(?) OR LOWER(email) LIKE LOWER(?) OR LOWER(full_name) LIKE LOWER(?)) " +
-                     "AND username != ? " +
-                     "AND status = 'active' " +
-                     "ORDER BY username " +
+        // Loại bỏ những user đã block mình (không hiển thị user mà họ đã block currentUser)
+        String sql = "SELECT u.user_id, u.username, u.full_name, u.email " +
+                     "FROM users u " +
+                     "WHERE (LOWER(u.username) LIKE LOWER(?) OR LOWER(u.email) LIKE LOWER(?) OR LOWER(u.full_name) LIKE LOWER(?)) " +
+                     "AND u.username != ? " +
+                     "AND u.status = 'active' " +
+                     // Loại bỏ user đã block mình
+                     "AND NOT EXISTS (SELECT 1 FROM blocked_users b WHERE b.blocker_id = u.user_id AND b.blocked_id = (SELECT user_id FROM users WHERE username = ?)) " +
+                     "ORDER BY u.username " +
                      "LIMIT 20";
         
         Connection conn = null;
@@ -708,6 +711,7 @@ public class UserService {
             pstmt.setString(2, searchPattern);
             pstmt.setString(3, searchPattern);
             pstmt.setString(4, currentUsername);
+            pstmt.setString(5, currentUsername); // For blocked_users check
             
             System.out.println("📝 SQL: " + sql);
             System.out.println("📝 Pattern: " + searchPattern);
