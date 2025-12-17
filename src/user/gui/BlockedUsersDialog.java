@@ -39,7 +39,7 @@ public class BlockedUsersDialog extends JDialog {
         headerPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
         
         JLabel titleLabel = new JLabel("Danh sách người đã chặn");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        titleLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 18));
         titleLabel.setForeground(Color.WHITE);
         headerPanel.add(titleLabel, BorderLayout.WEST);
         
@@ -58,7 +58,7 @@ public class BlockedUsersDialog extends JDialog {
         buttonPanel.setBackground(Color.WHITE);
         
         JButton closeButton = new JButton("Đóng");
-        closeButton.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        closeButton.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         closeButton.setPreferredSize(new Dimension(100, 35));
         closeButton.addActionListener(e -> dispose());
         buttonPanel.add(closeButton);
@@ -84,7 +84,7 @@ public class BlockedUsersDialog extends JDialog {
                     
                     if (blockedUsers == null || blockedUsers.isEmpty()) {
                         JLabel emptyLabel = new JLabel("Bạn chưa chặn ai");
-                        emptyLabel.setFont(new Font("Segoe UI", Font.ITALIC, 14));
+                        emptyLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.ITALIC, 14));
                         emptyLabel.setForeground(new Color(150, 150, 150));
                         emptyLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
                         
@@ -138,7 +138,7 @@ public class BlockedUsersDialog extends JDialog {
             avatarLabel.setIcon(new ImageIcon(scaled));
         } catch (Exception ex) {
             avatarLabel.setText("[A]");
-            avatarLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+            avatarLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 18));
             avatarLabel.setForeground(new Color(0, 132, 255));
         }
         
@@ -148,10 +148,10 @@ public class BlockedUsersDialog extends JDialog {
         infoPanel.setOpaque(false);
         
         JLabel nameLabel = new JLabel(displayName);
-        nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        nameLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 15));
         
         JLabel usernameLabel = new JLabel("@" + username);
-        usernameLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        usernameLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 12));
         usernameLabel.setForeground(new Color(120, 120, 120));
         
         infoPanel.add(nameLabel);
@@ -160,7 +160,7 @@ public class BlockedUsersDialog extends JDialog {
         
         // Unblock button
         JButton unblockButton = new JButton("Bỏ chặn");
-        unblockButton.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        unblockButton.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 13));
         unblockButton.setBackground(new Color(220, 53, 69));
         unblockButton.setForeground(Color.WHITE);
         unblockButton.setBorderPainted(false);

@@ -74,13 +74,13 @@ public class ViewProfileDialog extends JDialog {
             avatarLabel.setIcon(new ImageIcon(scaled));
         } catch (Exception ex) {
             avatarLabel.setText("[Avatar]");
-            avatarLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
+            avatarLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 24));
             avatarLabel.setForeground(Color.WHITE);
         }
         
         // Username label (sẽ update sau)
         JLabel usernameLabel = new JLabel(mainFrame.getUsername(), SwingConstants.CENTER);
-        usernameLabel.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        usernameLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 22));
         usernameLabel.setForeground(Color.WHITE);
         usernameLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         
@@ -97,7 +97,7 @@ public class ViewProfileDialog extends JDialog {
         buttonPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(230, 230, 230)));
         
         JButton editButton = new JButton("Chỉnh sửa");
-        editButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        editButton.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 14));
         editButton.setBackground(PRIMARY_COLOR);
         editButton.setForeground(Color.WHITE);
         editButton.setPreferredSize(new Dimension(130, 38));
@@ -111,7 +111,7 @@ public class ViewProfileDialog extends JDialog {
         });
         
         JButton closeButton = new JButton("Đóng");
-        closeButton.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        closeButton.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         closeButton.setPreferredSize(new Dimension(100, 38));
         closeButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         closeButton.addActionListener(e -> dispose());
@@ -203,7 +203,7 @@ public class ViewProfileDialog extends JDialog {
     
     private void addSectionTitle(String title) {
         JLabel sectionLabel = new JLabel(title);
-        sectionLabel.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        sectionLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 15));
         sectionLabel.setForeground(new Color(80, 80, 80));
         sectionLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         sectionLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 12, 0));
@@ -223,13 +223,13 @@ public class ViewProfileDialog extends JDialog {
         
         // Label
         JLabel labelComponent = new JLabel(label);
-        labelComponent.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        labelComponent.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 12));
         labelComponent.setForeground(new Color(130, 130, 130));
         labelComponent.setAlignmentX(Component.LEFT_ALIGNMENT);
         
         // Value
         JLabel valueComponent = new JLabel(value);
-        valueComponent.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        valueComponent.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 15));
         valueComponent.setForeground(new Color(30, 30, 30));
         valueComponent.setAlignmentX(Component.LEFT_ALIGNMENT);
         

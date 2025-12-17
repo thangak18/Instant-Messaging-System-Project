@@ -169,14 +169,14 @@ public class GroupChatPanel extends JPanel {
         }
         
         groupNameLabel = new JLabel(groupName);
-        groupNameLabel.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        groupNameLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 15));
         groupNameLabel.setForeground(isEncrypted ? ENCRYPTED_COLOR : Color.BLACK);
         namePanel.add(groupNameLabel);
         
         // Badge E2E (text only, no emoji)
         if (isEncrypted) {
             encryptionBadge = new JLabel(" [E2E]");
-            encryptionBadge.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            encryptionBadge.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 11));
             encryptionBadge.setForeground(ENCRYPTED_COLOR);
             encryptionBadge.setToolTipText("Nhóm được mã hóa đầu cuối - Tin nhắn chỉ có thể đọc bởi thành viên");
             namePanel.add(encryptionBadge);
@@ -187,7 +187,7 @@ public class GroupChatPanel extends JPanel {
         memberPanel.setOpaque(false);
         
         memberCountLabel = new JLabel("Đang tải...");
-        memberCountLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        memberCountLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 12));
         memberCountLabel.setForeground(new Color(120, 120, 120));
         memberPanel.add(memberCountLabel);
         
@@ -255,7 +255,7 @@ public class GroupChatPanel extends JPanel {
             button.setIcon(new ImageIcon(scaledImage));
         } catch (Exception e) {
             button.setText("?");
-            button.setFont(new Font("Segoe UI", Font.BOLD, 14));
+            button.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 14));
             System.err.println("⚠️ Không tìm thấy icon: " + iconPath);
         }
         
@@ -289,7 +289,7 @@ public class GroupChatPanel extends JPanel {
         
         // Message input
         messageInput = new JTextArea(2, 20);
-        messageInput.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        messageInput.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         messageInput.setLineWrap(true);
         messageInput.setWrapStyleWord(true);
         messageInput.setBorder(BorderFactory.createCompoundBorder(
@@ -313,7 +313,7 @@ public class GroupChatPanel extends JPanel {
         
         // Send button
         sendButton = new JButton("Gửi");
-        sendButton.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        sendButton.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 13));
         sendButton.setForeground(Color.WHITE);
         sendButton.setBackground(PRIMARY_COLOR);
         sendButton.setPreferredSize(new Dimension(80, 40));
@@ -391,7 +391,7 @@ public class GroupChatPanel extends JPanel {
                 ? "Nhom ma hoa - Chua co tin nhan nao" 
                 : "Chua co tin nhan nao";
             JLabel emptyLabel = new JLabel(emptyText);
-            emptyLabel.setFont(new Font("Segoe UI", Font.ITALIC, 14));
+            emptyLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.ITALIC, 14));
             emptyLabel.setForeground(isEncrypted ? ENCRYPTED_COLOR : new Color(150, 150, 150));
             emptyLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
             messageListPanel.add(Box.createVerticalGlue());
@@ -453,7 +453,7 @@ public class GroupChatPanel extends JPanel {
             
             // Hiển thị tên người gửi cho tin nhắn nhận
             JLabel senderLabel = new JLabel(senderName);
-            senderLabel.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            senderLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 11));
             senderLabel.setForeground(PRIMARY_COLOR);
             senderLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
             bubble.add(senderLabel);
@@ -462,7 +462,7 @@ public class GroupChatPanel extends JPanel {
         
         // Message content
         JTextArea contentArea = new JTextArea(content);
-        contentArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        contentArea.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         contentArea.setForeground(isSentByMe ? Color.WHITE : Color.BLACK);
         contentArea.setOpaque(false);
         contentArea.setEditable(false);
@@ -473,7 +473,7 @@ public class GroupChatPanel extends JPanel {
         // Timestamp
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
         JLabel timeLabel = new JLabel(sentAt.format(formatter));
-        timeLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        timeLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 11));
         timeLabel.setForeground(isSentByMe ? new Color(220, 230, 255) : new Color(120, 120, 120));
         timeLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         
@@ -628,7 +628,7 @@ public class GroupChatPanel extends JPanel {
     
     private JMenuItem createMenuItem(String text) {
         JMenuItem item = new JMenuItem(text);
-        item.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        item.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 13));
         item.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
         return item;
     }
@@ -787,11 +787,11 @@ public class GroupChatPanel extends JPanel {
         contentPanel.setBackground(Color.WHITE);
         
         JLabel label = new JLabel("Nhập username cần thêm:");
-        label.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        label.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 13));
         label.setAlignmentX(Component.LEFT_ALIGNMENT);
         
         JTextField usernameField = new JTextField();
-        usernameField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        usernameField.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         usernameField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
         usernameField.setAlignmentX(Component.LEFT_ALIGNMENT);
         
@@ -880,7 +880,7 @@ public class GroupChatPanel extends JPanel {
         headerPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
         
         JLabel titleLabel = new JLabel("👥 Thành viên nhóm: " + groupName);
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        titleLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 16));
         titleLabel.setForeground(Color.WHITE);
         headerPanel.add(titleLabel, BorderLayout.WEST);
         
@@ -903,7 +903,7 @@ public class GroupChatPanel extends JPanel {
                     
                     if (members == null || members.isEmpty()) {
                         JLabel emptyLabel = new JLabel("Không có thành viên");
-                        emptyLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+                        emptyLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
                         emptyLabel.setForeground(new Color(150, 150, 150));
                         membersPanel.add(emptyLabel);
                     } else {
@@ -926,10 +926,10 @@ public class GroupChatPanel extends JPanel {
                             
                             JLabel nameLabel = new JLabel((fullName != null ? fullName : username) + 
                                 (memberIsAdmin ? " 👑" : ""));
-                            nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+                            nameLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 14));
                             
                             JLabel usernameLabel = new JLabel("@" + username);
-                            usernameLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                            usernameLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 12));
                             usernameLabel.setForeground(new Color(120, 120, 120));
                             
                             infoPanel.add(nameLabel);
@@ -942,7 +942,7 @@ public class GroupChatPanel extends JPanel {
                             if (isAdmin && !username.equals(mainFrame.getUsername())) {
                                 // d. Gán/Bỏ quyền admin
                                 JButton adminButton = new JButton(memberIsAdmin ? "Bỏ Admin" : "Gán Admin");
-                                adminButton.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                                adminButton.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 12));
                                 adminButton.setBackground(memberIsAdmin ? new Color(255, 152, 0) : PRIMARY_COLOR);
                                 adminButton.setForeground(Color.WHITE);
                                 adminButton.setFocusPainted(false);
@@ -967,7 +967,7 @@ public class GroupChatPanel extends JPanel {
                                 
                                 // e. Xóa thành viên
                                 JButton removeButton = new JButton("Xóa");
-                                removeButton.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                                removeButton.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 12));
                                 removeButton.setBackground(new Color(255, 59, 48));
                                 removeButton.setForeground(Color.WHITE);
                                 removeButton.setFocusPainted(false);
@@ -1060,7 +1060,7 @@ public class GroupChatPanel extends JPanel {
         headerPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
         
         JLabel titleLabel = new JLabel("🔒 Tạo nhóm mã hóa đầu cuối");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        titleLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 16));
         titleLabel.setForeground(Color.WHITE);
         headerPanel.add(titleLabel, BorderLayout.WEST);
         
@@ -1081,7 +1081,7 @@ public class GroupChatPanel extends JPanel {
             "• Chỉ có thể <b>XÓA</b> nhóm mã hóa nếu không cần<br>" +
             "• Tin nhắn cũ không được chuyển sang nhóm mới" +
             "</div></html>");
-        descLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        descLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 13));
         descLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         
         contentPanel.add(descLabel);
@@ -1211,11 +1211,11 @@ public class GroupChatPanel extends JPanel {
         headerPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         
         JLabel iconLabel = new JLabel("!");
-        iconLabel.setFont(new Font("Segoe UI", Font.BOLD, 40));
+        iconLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 40));
         iconLabel.setForeground(Color.WHITE);
         
         JLabel titleLabel = new JLabel("Xóa nhóm \"" + groupName + "\"?");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        titleLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 16));
         titleLabel.setForeground(Color.WHITE);
         
         headerPanel.add(iconLabel, BorderLayout.WEST);
@@ -1228,7 +1228,7 @@ public class GroupChatPanel extends JPanel {
         contentPanel.setBorder(BorderFactory.createEmptyBorder(20, 25, 20, 25));
         
         JLabel warningLabel1 = new JLabel("Hành động này không thể hoàn tác!");
-        warningLabel1.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        warningLabel1.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 14));
         warningLabel1.setForeground(new Color(220, 53, 69));
         warningLabel1.setAlignmentX(Component.LEFT_ALIGNMENT);
         
@@ -1236,7 +1236,7 @@ public class GroupChatPanel extends JPanel {
             "• Tất cả tin nhắn trong nhóm sẽ bị xóa vĩnh viễn<br>" +
             "• Tất cả thành viên sẽ bị xóa khỏi nhóm<br>" +
             "• Nhóm sẽ không thể khôi phục</div></html>");
-        warningLabel2.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        warningLabel2.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 13));
         warningLabel2.setForeground(new Color(80, 80, 80));
         warningLabel2.setAlignmentX(Component.LEFT_ALIGNMENT);
         
@@ -1250,12 +1250,12 @@ public class GroupChatPanel extends JPanel {
         buttonPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(220, 220, 220)));
         
         JButton cancelButton = new JButton("Hủy");
-        cancelButton.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        cancelButton.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 13));
         cancelButton.setPreferredSize(new Dimension(100, 35));
         cancelButton.addActionListener(e -> dialog.dispose());
         
         JButton deleteButton = new JButton("Xóa nhóm");
-        deleteButton.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        deleteButton.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 13));
         deleteButton.setBackground(new Color(220, 53, 69));
         deleteButton.setForeground(Color.WHITE);
         deleteButton.setPreferredSize(new Dimension(120, 35));
@@ -1346,7 +1346,7 @@ public class GroupChatPanel extends JPanel {
         headerPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
         
         JLabel titleLabel = new JLabel("Tìm kiếm trong " + groupName);
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        titleLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 16));
         titleLabel.setForeground(Color.WHITE);
         headerPanel.add(titleLabel, BorderLayout.WEST);
         
@@ -1356,14 +1356,14 @@ public class GroupChatPanel extends JPanel {
         searchPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 10, 20));
         
         JTextField searchField = new JTextField();
-        searchField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        searchField.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         searchField.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(new Color(200, 200, 200)),
             BorderFactory.createEmptyBorder(8, 10, 8, 10)
         ));
         
         JButton searchButton = new JButton("Tìm kiếm");
-        searchButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        searchButton.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 14));
         searchButton.setBackground(PRIMARY_COLOR);
         searchButton.setForeground(Color.WHITE);
         searchButton.setFocusPainted(false);
@@ -1415,7 +1415,7 @@ public class GroupChatPanel extends JPanel {
                         
                         if (results == null || results.isEmpty()) {
                             JLabel label = new JLabel("Không tìm thấy kết quả");
-                            label.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+                            label.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
                             label.setForeground(new Color(150, 150, 150));
                             resultsPanel.add(label);
                         } else {
@@ -1440,14 +1440,14 @@ public class GroupChatPanel extends JPanel {
                                 String timeStr = sentAt.format(DateTimeFormatter.ofPattern("dd/MM HH:mm"));
                                 
                                 JLabel nameLabel = new JLabel((isSent ? "Bạn" : displayName) + " - " + timeStr);
-                                nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+                                nameLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 12));
                                 nameLabel.setForeground(isSent ? PRIMARY_COLOR : new Color(100, 100, 100));
                                 
                                 JLabel contentLabel = new JLabel("<html>" + highlightKeyword(content, keyword) + "</html>");
-                                contentLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+                                contentLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 13));
                                 
                                 JLabel arrowLabel = new JLabel("→");
-                                arrowLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+                                arrowLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 16));
                                 arrowLabel.setForeground(PRIMARY_COLOR);
                                 
                                 JPanel textPanel = new JPanel();
@@ -1561,11 +1561,11 @@ public class GroupChatPanel extends JPanel {
         headerPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
         
         JLabel titleLabel = new JLabel("Trợ lý AI - Gợi ý tin nhắn");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        titleLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 16));
         titleLabel.setForeground(Color.WHITE);
         
         JLabel statusLabel = new JLabel(aiService.isAPIConfigured() ? "Online" : "Offline Mode");
-        statusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        statusLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 12));
         statusLabel.setForeground(new Color(200, 200, 255));
         
         headerPanel.add(titleLabel, BorderLayout.WEST);
@@ -1586,7 +1586,7 @@ public class GroupChatPanel extends JPanel {
         
         for (String suggestion : quickSuggestions) {
             JButton btn = new JButton(suggestion);
-            btn.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+            btn.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 11));
             btn.setFocusPainted(false);
             btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
             btn.addActionListener(e -> inputArea.setText(suggestion));
@@ -1595,9 +1595,9 @@ public class GroupChatPanel extends JPanel {
         
         JLabel instructionLabel = new JLabel(
             "<html>Mô tả tình huống, AI sẽ gợi ý tin nhắn phù hợp cho nhóm:</html>");
-        instructionLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        instructionLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 13));
         
-        inputArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        inputArea.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         inputArea.setLineWrap(true);
         inputArea.setWrapStyleWord(true);
         inputArea.setBorder(BorderFactory.createCompoundBorder(
@@ -1608,7 +1608,7 @@ public class GroupChatPanel extends JPanel {
         JScrollPane inputScroll = new JScrollPane(inputArea);
         
         JButton generateButton = new JButton("Tạo gợi ý");
-        generateButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        generateButton.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 14));
         generateButton.setBackground(new Color(138, 43, 226));
         generateButton.setForeground(Color.WHITE);
         generateButton.setFocusPainted(false);
@@ -1617,7 +1617,7 @@ public class GroupChatPanel extends JPanel {
         generateButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
         JTextArea resultArea = new JTextArea(8, 40);
-        resultArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        resultArea.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         resultArea.setLineWrap(true);
         resultArea.setWrapStyleWord(true);
         resultArea.setEditable(false);
@@ -1636,12 +1636,12 @@ public class GroupChatPanel extends JPanel {
         buttonPanel.setOpaque(false);
         
         JButton regenerateButton = new JButton("Tạo lại");
-        regenerateButton.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        regenerateButton.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 13));
         regenerateButton.setEnabled(false);
         regenerateButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
         JButton copyButton = new JButton("Sao chép");
-        copyButton.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        copyButton.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 13));
         copyButton.setEnabled(false);
         copyButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         copyButton.addActionListener(e -> {
@@ -1655,7 +1655,7 @@ public class GroupChatPanel extends JPanel {
         });
         
         JButton useButton = new JButton("Sử dụng");
-        useButton.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        useButton.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 13));
         useButton.setBackground(PRIMARY_COLOR);
         useButton.setForeground(Color.WHITE);
         useButton.setFocusPainted(false);

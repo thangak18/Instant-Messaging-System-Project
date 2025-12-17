@@ -55,11 +55,11 @@ public class CreateGroupDialog extends JDialog {
         headerPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
         
         JLabel titleLabel = new JLabel("Tạo nhóm chat mới");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        titleLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 20));
         titleLabel.setForeground(PRIMARY_COLOR);
         
         JLabel subtitleLabel = new JLabel("Chọn tối thiểu 1 bạn bè để tạo nhóm");
-        subtitleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        subtitleLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 13));
         subtitleLabel.setForeground(new Color(120, 120, 120));
         
         JPanel titlePanel = new JPanel();
@@ -80,7 +80,7 @@ public class CreateGroupDialog extends JDialog {
         // Group name
         JPanel namePanel = createFieldPanel("Tên nhóm:");
         groupNameField = new JTextField();
-        groupNameField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        groupNameField.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         groupNameField.setPreferredSize(new Dimension(440, 40));
         groupNameField.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(new Color(220, 220, 220), 1),
@@ -91,7 +91,7 @@ public class CreateGroupDialog extends JDialog {
         // Description
         JPanel descPanel = createFieldPanel("Mô tả (tùy chọn):");
         descriptionArea = new JTextArea(3, 20);
-        descriptionArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        descriptionArea.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         descriptionArea.setLineWrap(true);
         descriptionArea.setWrapStyleWord(true);
         descriptionArea.setBorder(new EmptyBorder(8, 12, 8, 12));
@@ -180,12 +180,12 @@ public class CreateGroupDialog extends JDialog {
             lockIcon.setIcon(new ImageIcon(scaled));
         } catch (Exception e) {
             lockIcon.setText("🔒");
-            lockIcon.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 18));
+            lockIcon.setFont(new Font(UIHelper.getEmojiFontName(), Font.PLAIN, 18));
         }
         
         // Checkbox
         encryptedCheckbox = new JCheckBox("Mã hóa đầu cuối (E2E)");
-        encryptedCheckbox.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        encryptedCheckbox.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 14));
         encryptedCheckbox.setForeground(ENCRYPTED_COLOR);
         encryptedCheckbox.setBackground(new Color(240, 255, 240));
         encryptedCheckbox.setCursor(new Cursor(Cursor.HAND_CURSOR));
@@ -197,7 +197,7 @@ public class CreateGroupDialog extends JDialog {
         // Mô tả
         JLabel descLabel = new JLabel("<html><small>• Tin nhắn được mã hóa AES-256, server không thể đọc<br>" +
                                       "• Nhóm mã hóa sẽ hiển thị với biểu tượng ổ khóa 🔒</small></html>");
-        descLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        descLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 11));
         descLabel.setForeground(new Color(100, 100, 100));
         descLabel.setBorder(new EmptyBorder(8, 0, 0, 0));
         
@@ -214,7 +214,7 @@ public class CreateGroupDialog extends JDialog {
         panel.setAlignmentX(Component.LEFT_ALIGNMENT);
         
         JLabel fieldLabel = new JLabel(label);
-        fieldLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        fieldLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 13));
         fieldLabel.setForeground(new Color(50, 50, 50));
         fieldLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         
@@ -226,7 +226,7 @@ public class CreateGroupDialog extends JDialog {
     
     private JButton createButton(String text, Color bg, Color fg) {
         JButton button = new JButton(text);
-        button.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        button.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 13));
         button.setForeground(fg);
         button.setBackground(bg);
         button.setPreferredSize(new Dimension(120, 38));
@@ -442,7 +442,7 @@ public class CreateGroupDialog extends JDialog {
                                                      int index, boolean isSelected, boolean cellHasFocus) {
             setSelected(value.isSelected());
             setText(value.getDisplayName());
-            setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
             
             if (isSelected) {
                 setBackground(new Color(230, 240, 255));

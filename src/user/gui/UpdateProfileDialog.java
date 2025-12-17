@@ -43,7 +43,7 @@ public class UpdateProfileDialog extends JDialog {
         headerPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
         
         JLabel titleLabel = new JLabel("Cập nhật thông tin tài khoản");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        titleLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 18));
         titleLabel.setForeground(Color.WHITE);
         headerPanel.add(titleLabel, BorderLayout.WEST);
         
@@ -56,7 +56,7 @@ public class UpdateProfileDialog extends JDialog {
         // Username (read-only)
         addLabel(formPanel, "Tên đăng nhập:");
         JLabel usernameValue = new JLabel(mainFrame.getUsername());
-        usernameValue.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        usernameValue.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         usernameValue.setForeground(new Color(100, 100, 100));
         formPanel.add(usernameValue);
         formPanel.add(Box.createVerticalStrut(15));
@@ -79,7 +79,7 @@ public class UpdateProfileDialog extends JDialog {
         birthDateSpinner = new JSpinner(dateModel);
         JSpinner.DateEditor dateEditor = new JSpinner.DateEditor(birthDateSpinner, "dd/MM/yyyy");
         birthDateSpinner.setEditor(dateEditor);
-        birthDateSpinner.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        birthDateSpinner.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         birthDateSpinner.setPreferredSize(new Dimension(200, 35));
         birthDateSpinner.setMaximumSize(new Dimension(200, 35));
         birthDateSpinner.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -89,7 +89,7 @@ public class UpdateProfileDialog extends JDialog {
         // Gender
         addLabel(formPanel, "Giới tính:");
         genderComboBox = new JComboBox<>(new String[]{"Nam", "Nữ", "Khác"});
-        genderComboBox.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        genderComboBox.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         genderComboBox.setPreferredSize(new Dimension(150, 35));
         genderComboBox.setMaximumSize(new Dimension(150, 35));
         genderComboBox.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -111,12 +111,12 @@ public class UpdateProfileDialog extends JDialog {
         buttonPanel.setBackground(Color.WHITE);
         
         JButton cancelButton = new JButton("Hủy");
-        cancelButton.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        cancelButton.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         cancelButton.setPreferredSize(new Dimension(100, 35));
         cancelButton.addActionListener(e -> dispose());
         
         saveButton = new JButton("Lưu");
-        saveButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        saveButton.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 14));
         saveButton.setBackground(PRIMARY_COLOR);
         saveButton.setForeground(Color.WHITE);
         saveButton.setPreferredSize(new Dimension(100, 35));
@@ -134,7 +134,7 @@ public class UpdateProfileDialog extends JDialog {
     
     private void addLabel(JPanel panel, String text) {
         JLabel label = new JLabel(text);
-        label.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        label.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 13));
         label.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(label);
         panel.add(Box.createVerticalStrut(5));
@@ -142,7 +142,7 @@ public class UpdateProfileDialog extends JDialog {
     
     private JTextField createTextField() {
         JTextField field = new JTextField();
-        field.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        field.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         field.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(new Color(200, 200, 200)),
             BorderFactory.createEmptyBorder(8, 10, 8, 10)

@@ -41,7 +41,7 @@ public class ContactPanel extends JPanel {
         panel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
         
         JLabel titleLabel = new JLabel("Danh bạ");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        titleLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 20));
         
         // Right panel with create group button
         JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
@@ -49,7 +49,7 @@ public class ContactPanel extends JPanel {
         
         // Create Group button
         JButton createGroupButton = new JButton("Tạo Nhóm");
-        createGroupButton.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        createGroupButton.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 13));
         createGroupButton.setForeground(Color.WHITE);
         createGroupButton.setBackground(PRIMARY_COLOR);
         createGroupButton.setBorderPainted(false);
@@ -96,10 +96,10 @@ public class ContactPanel extends JPanel {
         leftPanel.setOpaque(false);
         
         JLabel iconLabel = new JLabel(icon);
-        iconLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 24));
+        iconLabel.setFont(new Font(UIHelper.getEmojiFontName(), Font.PLAIN, 24));
         
         JLabel textLabel = new JLabel(label);
-        textLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        textLabel.setFont(new Font(UIHelper.getDefaultFontName(), Font.PLAIN, 14));
         
         leftPanel.add(iconLabel);
         leftPanel.add(textLabel);
@@ -110,7 +110,7 @@ public class ContactPanel extends JPanel {
         
         if (badgeCount > 0) {
             JLabel badge = new JLabel(String.valueOf(badgeCount));
-            badge.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            badge.setFont(new Font(UIHelper.getDefaultFontName(), Font.BOLD, 11));
             badge.setForeground(Color.WHITE);
             badge.setBackground(new Color(255, 59, 48));
             badge.setOpaque(true);
