@@ -901,6 +901,9 @@ public class ChatContentPanel extends JPanel {
                             showWelcomeMessage();
                             messageListPanel.revalidate();
                             messageListPanel.repaint();
+                            
+                            // Cập nhật ChatListPanel - xóa preview tin nhắn cuối
+                            mainFrame.updateChatListAfterDelete(currentChatUser);
                         } else {
                             JOptionPane.showMessageDialog(ChatContentPanel.this,
                                     "Không thể xóa lịch sử!",
