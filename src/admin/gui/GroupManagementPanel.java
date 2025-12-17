@@ -50,7 +50,7 @@ public class GroupManagementPanel extends JPanel {
 
     private void initComponents() {
         // Bảng nhóm với cột đầy đủ thông tin
-        String[] columns = { "ID", "Tên nhóm", "Admin chính", "Số thành viên", "Ngày tạo" };
+        String[] columns = { "ID", "Tên nhóm", "Admin (Số lượng)", "Số thành viên", "Ngày tạo" };
         tableModel = new DefaultTableModel(columns, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -68,8 +68,8 @@ public class GroupManagementPanel extends JPanel {
         // Điều chỉnh độ rộng cột
         TableColumnModel columnModel = groupTable.getColumnModel();
         columnModel.getColumn(0).setPreferredWidth(50); // ID
-        columnModel.getColumn(1).setPreferredWidth(250); // Tên nhóm
-        columnModel.getColumn(2).setPreferredWidth(150); // Admin chính
+        columnModel.getColumn(1).setPreferredWidth(200); // Tên nhóm
+        columnModel.getColumn(2).setPreferredWidth(200); // Admin (Số lượng)
         columnModel.getColumn(3).setPreferredWidth(100); // Số thành viên
         columnModel.getColumn(4).setPreferredWidth(120); // Ngày tạo
 
@@ -125,10 +125,24 @@ public class GroupManagementPanel extends JPanel {
         tableModel.setRowCount(0); // Clear table
 
         for (ChatGroup group : groups) {
+            // Đếm số admin của nhóm
+            int adminCount = 1;
+            try {
+                adminCount = groupDAO.countGroupAdmins(group.getId());
+            } catch (SQLException e) {
+                System.err.println("Lỗi đếm admin: " + e.getMessage());
+            }
+            
+            String adminDisplay = (group.getCreatorName() != null ? group.getCreatorName() : "N/A") 
+                    + " (+" + (adminCount - 1) + " admin khác)";
+            if (adminCount == 1) {
+                adminDisplay = group.getCreatorName() != null ? group.getCreatorName() : "N/A";
+            }
+            
             Object[] row = {
                     group.getId(),
                     group.getGroupName() != null ? group.getGroupName() : "",
-                    group.getCreatorName() != null ? group.getCreatorName() : "N/A",
+                    adminDisplay,
                     group.getMemberCount(),
                     group.getCreatedAt() != null ? group.getCreatedAt().format(dateFormatter) : ""
             };
