@@ -72,7 +72,7 @@ public class ActiveUserReportPanel extends JPanel {
     private void initializeComponents() {
         // Bảng hiển thị báo cáo
         String[] columns = { "ID", "Tên đăng nhập", "Họ tên", "Mở ứng dụng",
-                "Chat với người", "Chat nhóm", "Ngày tạo" };
+                "Số lượng người chat", "Số lượng nhóm chat", "Ngày tạo" };
         tableModel = new DefaultTableModel(columns, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -95,8 +95,8 @@ public class ActiveUserReportPanel extends JPanel {
         columnModel.getColumn(1).setPreferredWidth(120); // Tên đăng nhập
         columnModel.getColumn(2).setPreferredWidth(150); // Họ tên
         columnModel.getColumn(3).setPreferredWidth(130); // Mở ứng dụng
-        columnModel.getColumn(4).setPreferredWidth(130); // Chat với người
-        columnModel.getColumn(5).setPreferredWidth(130); // Chat nhóm
+        columnModel.getColumn(4).setPreferredWidth(150); // Số lượng người chat
+        columnModel.getColumn(5).setPreferredWidth(170); // Số lượng nhóm chat
         columnModel.getColumn(6).setPreferredWidth(120); // Ngày tạo
 
         // Chọn khoảng thời gian
@@ -312,7 +312,7 @@ public class ActiveUserReportPanel extends JPanel {
 
         // Nếu cả 2 date fields đều trống, load tất cả users
         boolean loadAll = fromDate.isEmpty() && toDate.isEmpty();
-        
+
         if (!loadAll) {
             // Kiểm tra đầu vào - nếu có 1 trong 2 thì phải có cả 2
             if (fromDate.isEmpty() || toDate.isEmpty()) {
@@ -368,12 +368,12 @@ public class ActiveUserReportPanel extends JPanel {
         try {
             LocalDate startDate = null;
             LocalDate endDate = null;
-            
+
             if (!loadAll) {
                 startDate = LocalDate.parse(fromDate, inputFormatter);
                 endDate = LocalDate.parse(toDate, inputFormatter);
             }
-            
+
             String nameFilter = searchNameField.getText().trim();
             String sortOption = (String) sortCombo.getSelectedItem();
 
@@ -401,16 +401,16 @@ public class ActiveUserReportPanel extends JPanel {
         } catch (SQLException e) {
             String errorMsg = e.getMessage();
             String detailedMsg = "Lỗi load dữ liệu người dùng hoạt động: " + errorMsg;
-            
-            if (errorMsg != null && (errorMsg.contains("connection") || 
-                                     errorMsg.contains("Connection"))) {
+
+            if (errorMsg != null && (errorMsg.contains("connection") ||
+                    errorMsg.contains("Connection"))) {
                 detailedMsg += "\n\nVui lòng kiểm tra:\n" +
-                              "- Kết nối database\n" +
-                              "- Khoảng thời gian đã chọn\n" +
-                              "- File config.properties\n" +
-                              "Hoặc liên hệ admin để được hỗ trợ.";
+                        "- Kết nối database\n" +
+                        "- Khoảng thời gian đã chọn\n" +
+                        "- File config.properties\n" +
+                        "Hoặc liên hệ admin để được hỗ trợ.";
             }
-            
+
             showError(detailedMsg);
             e.printStackTrace();
         }
@@ -547,7 +547,7 @@ public class ActiveUserReportPanel extends JPanel {
                 writer.write('\ufeff');
 
                 // Ghi header
-                writer.println("ID,Tên đăng nhập,Họ tên,Mở ứng dụng,Chat với người,Chat nhóm,Ngày tạo");
+                writer.println("ID,Tên đăng nhập,Họ tên,Mở ứng dụng,Số lượng người chat,Số lượng nhóm chat,Ngày tạo");
 
                 // Ghi dữ liệu từ table
                 for (int i = 0; i < reportTable.getRowCount(); i++) {

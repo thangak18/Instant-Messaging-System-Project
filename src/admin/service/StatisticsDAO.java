@@ -304,10 +304,10 @@ public class StatisticsDAO {
     public List<User> getNewUsers(LocalDate startDate, LocalDate endDate,
             String nameFilter, String emailFilter, String sortOption) throws SQLException {
         List<User> users = new ArrayList<>();
-        
+
         // Nếu cả startDate và endDate đều null, load tất cả users
         boolean loadAll = (startDate == null && endDate == null);
-        
+
         if (!loadAll && (startDate == null || endDate == null)) {
             return users;
         }
@@ -320,7 +320,7 @@ public class StatisticsDAO {
 
         StringBuilder sql = new StringBuilder("SELECT user_id, username, full_name, email, status, created_at " +
                 "FROM users");
-        
+
         // Chỉ thêm WHERE nếu có date filter
         if (!loadAll) {
             sql.append(" WHERE DATE(created_at) BETWEEN ? AND ?");
@@ -331,7 +331,7 @@ public class StatisticsDAO {
         if (nameFilter != null && !nameFilter.isEmpty()) {
             sql.append(" AND (username LIKE ? OR full_name LIKE ?)");
         }
-        
+
         if (emailFilter != null && !emailFilter.isEmpty()) {
             sql.append(" AND email LIKE ?");
         }
@@ -353,7 +353,7 @@ public class StatisticsDAO {
                 pstmt.setString(paramIndex++, pattern);
                 pstmt.setString(paramIndex++, pattern);
             }
-            
+
             if (emailFilter != null && !emailFilter.isEmpty()) {
                 String pattern = "%" + emailFilter + "%";
                 pstmt.setString(paramIndex++, pattern);
@@ -644,16 +644,15 @@ public class StatisticsDAO {
     }
 
     /**
-     * Số người dùng hoạt động theo tháng TẠO TÀI KHOẢN (và có login) trong một năm
-     * Đếm user theo tháng created_at, nhưng chỉ user có ít nhất 1 lần login
+     * Tổng số lần mở ứng dụng (login events) theo tháng trong một năm
+     * Đếm tất cả login events theo tháng login_time
      */
     public int[] getMonthlyActiveUsers(int year) throws SQLException {
         int[] data = new int[12];
-        String sql = "SELECT EXTRACT(MONTH FROM u.created_at) as month, COUNT(DISTINCT u.user_id) as cnt " +
-                "FROM users u " +
-                "INNER JOIN login_history lh ON u.user_id = lh.user_id " +
-                "WHERE EXTRACT(YEAR FROM u.created_at) = ? " +
-                "GROUP BY EXTRACT(MONTH FROM u.created_at) " +
+        String sql = "SELECT EXTRACT(MONTH FROM lh.login_time) as month, COUNT(*) as cnt " +
+                "FROM login_history lh " +
+                "WHERE EXTRACT(YEAR FROM lh.login_time) = ? " +
+                "GROUP BY EXTRACT(MONTH FROM lh.login_time) " +
                 "ORDER BY month";
 
         try (Connection conn = dbConnection.getConnection();
@@ -675,13 +674,12 @@ public class StatisticsDAO {
     }
 
     /**
-     * Tổng số người dùng tạo tài khoản trong năm VÀ có hoạt động login
+     * Tổng số lần mở ứng dụng trong năm
      */
     public int getTotalActiveUsersInYear(int year) throws SQLException {
-        String sql = "SELECT COUNT(DISTINCT u.user_id) as total " +
-                "FROM users u " +
-                "INNER JOIN login_history lh ON u.user_id = lh.user_id " +
-                "WHERE EXTRACT(YEAR FROM u.created_at) = ?";
+        String sql = "SELECT COUNT(*) as total " +
+                "FROM login_history " +
+                "WHERE EXTRACT(YEAR FROM login_time) = ?";
 
         try (Connection conn = dbConnection.getConnection();
                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -771,10 +769,10 @@ public class StatisticsDAO {
             String nameFilter, String comparison,
             Integer totalActivityCount, String sortOption) throws SQLException {
         List<UserActivity> activities = new ArrayList<>();
-        
+
         // Nếu cả startDate và endDate đều null, load tất cả users
         boolean loadAll = (startDate == null && endDate == null);
-        
+
         if (!loadAll && (startDate == null || endDate == null)) {
             return activities;
         }
@@ -794,12 +792,12 @@ public class StatisticsDAO {
                         "  GROUP BY user_id" +
                         "), " +
                         "user_private_chats AS (" +
-                        "  SELECT sender_id as user_id, COUNT(*) as chat_count " +
+                        "  SELECT sender_id as user_id, COUNT(DISTINCT receiver_id) as chat_count " +
                         "  FROM messages " +
                         "  GROUP BY sender_id" +
                         "), " +
                         "user_group_chats AS (" +
-                        "  SELECT sender_id as user_id, COUNT(*) as group_count " +
+                        "  SELECT sender_id as user_id, COUNT(DISTINCT group_id) as group_count " +
                         "  FROM group_messages " +
                         "  GROUP BY sender_id" +
                         ") " +
@@ -815,16 +813,17 @@ public class StatisticsDAO {
                         "LEFT JOIN user_private_chats upc ON u.user_id = upc.user_id " +
                         "LEFT JOIN user_group_chats ugc ON u.user_id = ugc.user_id " +
                         "WHERE 1=1");
-        
+
         // Chỉ thêm date filter nếu không phải load all
         if (!loadAll) {
             sql.append(" AND u.created_at >= ? AND u.created_at < ?");
         }
-        
+
         sql.append(" AND (ul.login_count IS NOT NULL OR upc.chat_count IS NOT NULL OR ugc.group_count IS NOT NULL)");
 
         List<Object> params = new ArrayList<>();
-        // Parameters for date filtering on user creation - chỉ thêm nếu không phải load all
+        // Parameters for date filtering on user creation - chỉ thêm nếu không phải load
+        // all
         if (!loadAll) {
             Timestamp startTs = Timestamp.valueOf(startDate.atStartOfDay());
             Timestamp endTs = Timestamp.valueOf(endDate.plusDays(1).atStartOfDay());

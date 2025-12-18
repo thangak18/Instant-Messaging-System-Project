@@ -58,7 +58,7 @@ public class ActiveUserChartPanel extends JPanel {
         currentYearLabel.setFont(new Font("Arial", Font.BOLD, 14));
         currentYearLabel.setForeground(ZALO_BLUE);
 
-        totalActiveLabel = new JLabel("Tổng số người dùng hoạt động: 0");
+        totalActiveLabel = new JLabel("Tổng số lần mở ứng dụng: 0");
         totalActiveLabel.setFont(new Font("Arial", Font.BOLD, 13));
     }
 
@@ -183,28 +183,28 @@ public class ActiveUserChartPanel extends JPanel {
 
             // Cập nhật labels
             currentYearLabel.setText("Năm: " + year);
-            totalActiveLabel.setText("Tổng số người dùng hoạt động: " + totalActive);
+            totalActiveLabel.setText("Tổng số lần mở ứng dụng: " + totalActive);
 
         } catch (SQLException e) {
             String errorMsg = e.getMessage();
             String detailedMsg = "Lỗi load dữ liệu người dùng hoạt động: " + errorMsg;
-            
-            if (errorMsg != null && (errorMsg.contains("connection") || 
-                                     errorMsg.contains("Connection"))) {
+
+            if (errorMsg != null && (errorMsg.contains("connection") ||
+                    errorMsg.contains("Connection"))) {
                 detailedMsg += "\n\nVui lòng kiểm tra:\n" +
-                              "- Kết nối database\n" +
-                              "- Năm đã chọn\n" +
-                              "- File config.properties\n" +
-                              "Hoặc liên hệ admin để được hỗ trợ.";
+                        "- Kết nối database\n" +
+                        "- Năm đã chọn\n" +
+                        "- File config.properties\n" +
+                        "Hoặc liên hệ admin để được hỗ trợ.";
             }
-            
+
             showError(detailedMsg);
             e.printStackTrace();
 
             // Fallback: hiển thị dữ liệu rỗng
             chartPanel.updateData(new int[12]);
             currentYearLabel.setText("Năm: " + year);
-            totalActiveLabel.setText("Tổng số người dùng hoạt động: 0");
+            totalActiveLabel.setText("Tổng số lần mở ứng dụng: 0");
         }
     }
 
@@ -267,7 +267,7 @@ public class ActiveUserChartPanel extends JPanel {
 
             // Vẽ nhãn trục
             g2.setFont(new Font("Arial", Font.BOLD, 12));
-            g2.drawString("Số người dùng", 5, padding - 5); // Nhãn trục Y
+            g2.drawString("Số lần mở", 5, padding - 5); // Nhãn trục Y
             g2.drawString("Tháng", chartOriginX + chartWidth + 10, chartOriginY + 5); // Nhãn trục X
 
             // Tìm giá trị max để chia tỉ lệ
