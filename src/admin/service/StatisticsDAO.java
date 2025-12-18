@@ -986,4 +986,21 @@ public class StatisticsDAO {
         }
         return 0;
     }
+
+    /**
+     * Tổng số báo cáo spam
+     */
+    public int getTotalSpamReports() throws SQLException {
+        String sql = "SELECT COUNT(*) FROM spam_reports";
+
+        try (Connection conn = dbConnection.getConnection();
+                Statement stmt = conn.createStatement();
+                ResultSet rs = stmt.executeQuery(sql)) {
+
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        }
+        return 0;
+    }
 }

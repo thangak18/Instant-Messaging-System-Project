@@ -120,12 +120,12 @@ public class AdminMainFrame extends JFrame {
 
         // Create cards with loading state
         JPanel userCard = createStatCard("Người dùng", "...", ZALO_BLUE, "user");
-        JPanel onlineCard = createStatCard("Đang online", "...", ZALO_BLUE, "dashboard");
+        JPanel spamCard = createStatCard("Báo cáo spam", "...", ZALO_BLUE, "notification");
         JPanel groupCard = createStatCard("Nhóm chat", "...", ZALO_BLUE, "chat");
         JPanel messageCard = createStatCard("Tin nhắn", "...", ZALO_BLUE, "message");
 
         panel.add(userCard);
-        panel.add(onlineCard);
+        panel.add(spamCard);
         panel.add(groupCard);
         panel.add(messageCard);
 
@@ -135,10 +135,10 @@ public class AdminMainFrame extends JFrame {
             protected int[] doInBackground() throws Exception {
                 // Load all stats in one background thread
                 int users = getDashboardStat(() -> statisticsDAO.getTotalUsers());
-                int online = getDashboardStat(() -> statisticsDAO.getOnlineUsers());
+                int spamReports = getDashboardStat(() -> statisticsDAO.getTotalSpamReports());
                 int groups = getDashboardStat(() -> statisticsDAO.getTotalGroups());
                 int messages = getDashboardStat(() -> statisticsDAO.getTotalMessages());
-                return new int[] { users, online, groups, messages };
+                return new int[] { users, spamReports, groups, messages };
             }
 
             @Override
@@ -146,13 +146,13 @@ public class AdminMainFrame extends JFrame {
                 try {
                     int[] stats = get();
                     updateStatCard(userCard, formatNumber(stats[0]));
-                    updateStatCard(onlineCard, formatNumber(stats[1]));
+                    updateStatCard(spamCard, formatNumber(stats[1]));
                     updateStatCard(groupCard, formatNumber(stats[2]));
                     updateStatCard(messageCard, formatNumber(stats[3]));
                 } catch (Exception e) {
                     System.err.println("Error loading dashboard stats: " + e.getMessage());
                     updateStatCard(userCard, "N/A");
-                    updateStatCard(onlineCard, "N/A");
+                    updateStatCard(spamCard, "N/A");
                     updateStatCard(groupCard, "N/A");
                     updateStatCard(messageCard, "N/A");
                 }
@@ -340,7 +340,7 @@ public class AdminMainFrame extends JFrame {
         titleLabel.setHorizontalAlignment(SwingConstants.LEFT);
         titleLabel.setVerticalAlignment(SwingConstants.CENTER);
         headerPanel.add(titleLabel);
-        
+
         // Đảm bảo headerPanel có đủ không gian để hiển thị text và icon đầy đủ
         int headerMinWidth = iconWidth + 8 + totalWidth; // icon + gap + text
         headerPanel.setMinimumSize(new Dimension(headerMinWidth, 30));
@@ -505,14 +505,14 @@ public class AdminMainFrame extends JFrame {
         ImageIcon titleIcon = loadIcon(iconName, 24, 24);
         int iconWidth = (titleIcon != null) ? titleIcon.getIconWidth() : 0;
         int gap = (titleIcon != null) ? 15 : 10;
-        
+
         if (titleIcon != null) {
             JLabel iconLabel = new JLabel(titleIcon);
             titleContainer.add(iconLabel);
             // Tạo khoảng cách giữa Icon và Text
             titleContainer.add(Box.createRigidArea(new Dimension(gap, 0)));
         } else {
-             // Fallback emoji nếu không có icon
+            // Fallback emoji nếu không có icon
             JLabel emojiLabel = new JLabel(getEmojiForTitle(title));
             emojiLabel.setFont(new Font("Arial", Font.BOLD, 24));
             titleContainer.add(emojiLabel);
@@ -536,12 +536,12 @@ public class AdminMainFrame extends JFrame {
         // Đảm bảo text alignment
         textLabel.setHorizontalAlignment(SwingConstants.LEFT);
         textLabel.setVerticalAlignment(SwingConstants.CENTER);
-        
+
         titleContainer.add(textLabel);
-        
+
         // Đẩy toàn bộ nội dung sang trái, phần thừa bên phải lấp đầy bằng Glue
         titleContainer.add(Box.createHorizontalGlue());
-        
+
         // Đảm bảo titleContainer có đủ không gian để hiển thị text đầy đủ
         // Tính toán tổng width cần thiết: icon + gap + text + padding
         int containerMinWidth = iconWidth + gap + totalWidth;
