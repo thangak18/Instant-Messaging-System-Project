@@ -4,6 +4,7 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.Properties;
 
 /**
  * AI Service - Tích hợp Google Gemini API để gợi ý tin nhắn
@@ -11,16 +12,33 @@ import java.nio.charset.StandardCharsets;
  */
 public class AIService {
     
-    // Gemini API Key - Bạn có thể lấy miễn phí tại: https://makersuite.google.com/app/apikey
-    private static final String API_KEY = "AIzaSyAQ9BoCokw99TZiJgMAHk2Fq9VSmagGdbc";
     private static final String API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+    private static final String apiKey = loadApiKeyFromConfig();
+    
+    /**
+     * Đọc Gemini API key từ release/config.properties
+     */
+    private static String loadApiKeyFromConfig() {
+        Properties props = new Properties();
+        try (FileInputStream fis = new FileInputStream("release/config.properties")) {
+            props.load(fis);
+            String key = props.getProperty("gemini.api.key", "").trim();
+            if (!key.isEmpty()) {
+                System.out.println("✅ Gemini API key loaded from config.properties");
+                return key;
+            }
+        } catch (IOException e) {
+            System.err.println("⚠️ Could not load gemini.api.key from config.properties: " + e.getMessage());
+        }
+        return "";
+    }
     
     /**
      * Gợi ý tin nhắn dựa vào prompt của user
      */
     public String generateSuggestion(String userPrompt, String chatContext) {
         // Kiểm tra API key
-        if (API_KEY.equals("YOUR_GEMINI_API_KEY") || API_KEY.isEmpty()) {
+        if (apiKey == null || apiKey.isEmpty()) {
             return generateOfflineSuggestion(userPrompt);
         }
         
@@ -56,7 +74,7 @@ public class AIService {
      * Gọi Gemini API
      */
     private String callGeminiAPI(String systemPrompt, String userPrompt) throws Exception {
-        URL url = new URL(API_URL + "?key=" + API_KEY);
+        URL url = new URL(API_URL + "?key=" + apiKey);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("POST");
         conn.setRequestProperty("Content-Type", "application/json");
@@ -296,6 +314,6 @@ public class AIService {
      * Kiểm tra API key đã được cấu hình chưa
      */
     public boolean isAPIConfigured() {
-        return !API_KEY.equals("YOUR_GEMINI_API_KEY") && !API_KEY.isEmpty();
+        return apiKey != null && !apiKey.isEmpty();
     }
 }
