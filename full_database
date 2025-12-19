@@ -1,0 +1,556 @@
+-- ============================================
+-- INSTANT MESSAGING SYSTEM - COMPLETE DATABASE SETUP
+-- Database: PostgreSQL/Supabase
+-- Version: 1.0 - Final Consolidated Script
+-- ============================================
+-- 
+-- Script này tạo toàn bộ database hoàn chỉnh cho hệ thống chat,
+-- bao gồm tất cả các bảng, quan hệ, indexes, triggers và dữ liệu mẫu.
+--
+-- Hướng dẫn sử dụng:
+-- 1. Mở Supabase SQL Editor
+-- 2. Copy toàn bộ script này
+-- 3. Chạy script
+-- 4. Kiểm tra kết quả ở cuối file
+-- ============================================
+
+-- ============================================
+-- 1. BẢNG USERS (Người dùng)
+-- ============================================
+CREATE TABLE IF NOT EXISTS users (
+    user_id SERIAL PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    full_name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    address TEXT,
+    dob DATE,
+    gender VARCHAR(10) CHECK (gender IN ('Nam', 'Nữ', 'Khác')),
+    status VARCHAR(10) DEFAULT 'active' CHECK (status IN ('active', 'locked', 'banned')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_login TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Index cho users
+CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);
+CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at);
+
+COMMENT ON TABLE users IS 'Bảng lưu thông tin người dùng';
+COMMENT ON COLUMN users.status IS 'active: hoạt động, locked: khóa tạm thời, banned: cấm vĩnh viễn';
+
+-- ============================================
+-- 2. BẢNG LOGIN_HISTORY (Lịch sử đăng nhập)
+-- ============================================
+CREATE TABLE IF NOT EXISTS login_history (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    login_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ip_address VARCHAR(45),
+    device_info TEXT,
+    user_agent TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+-- Index cho login_history
+CREATE INDEX IF NOT EXISTS idx_login_history_user_id ON login_history(user_id);
+CREATE INDEX IF NOT EXISTS idx_login_history_time ON login_history(login_time);
+
+COMMENT ON TABLE login_history IS 'Lịch sử đăng nhập của người dùng';
+
+-- ============================================
+-- 3. BẢNG FRIENDS (Quan hệ bạn bè)
+-- ============================================
+CREATE TABLE IF NOT EXISTS friends (
+    friendship_id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    friend_id INTEGER NOT NULL,
+    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'rejected', 'blocked')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (friend_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    CONSTRAINT check_different_users CHECK (user_id != friend_id),
+    UNIQUE (user_id, friend_id)
+);
+
+-- Index cho friends
+CREATE INDEX IF NOT EXISTS idx_friends_user_id ON friends(user_id);
+CREATE INDEX IF NOT EXISTS idx_friends_friend_id ON friends(friend_id);
+CREATE INDEX IF NOT EXISTS idx_friends_status ON friends(status);
+
+COMMENT ON TABLE friends IS 'Quan hệ bạn bè giữa các người dùng';
+COMMENT ON COLUMN friends.status IS 'pending: chờ chấp nhận, accepted: đã chấp nhận, rejected: từ chối, blocked: chặn';
+
+-- ============================================
+-- 4. BẢNG BLOCKED_USERS (Danh sách chặn)
+-- ============================================
+CREATE TABLE IF NOT EXISTS blocked_users (
+    block_id SERIAL PRIMARY KEY,
+    blocker_id INTEGER NOT NULL,
+    blocked_id INTEGER NOT NULL,
+    blocked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (blocker_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (blocked_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    CONSTRAINT check_different_block_users CHECK (blocker_id != blocked_id),
+    UNIQUE (blocker_id, blocked_id)
+);
+
+-- Index cho blocked_users
+CREATE INDEX IF NOT EXISTS idx_blocked_users_blocker ON blocked_users(blocker_id);
+CREATE INDEX IF NOT EXISTS idx_blocked_users_blocked ON blocked_users(blocked_id);
+
+COMMENT ON TABLE blocked_users IS 'Danh sách người dùng bị chặn';
+
+-- ============================================
+-- 5. BẢNG GROUPS (Nhóm chat)
+-- ============================================
+CREATE TABLE IF NOT EXISTS groups (
+    group_id SERIAL PRIMARY KEY,
+    group_name VARCHAR(100) NOT NULL,
+    description TEXT,
+    admin_id INTEGER NOT NULL,
+    encrypted BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (admin_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+-- Index cho groups
+CREATE INDEX IF NOT EXISTS idx_groups_admin ON groups(admin_id);
+CREATE INDEX IF NOT EXISTS idx_groups_created_at ON groups(created_at);
+
+COMMENT ON TABLE groups IS 'Nhóm chat';
+COMMENT ON COLUMN groups.encrypted IS 'Nhóm có mã hóa end-to-end hay không';
+
+-- ============================================
+-- 6. BẢNG GROUP_MEMBERS (Thành viên nhóm)
+-- ============================================
+CREATE TABLE IF NOT EXISTS group_members (
+    id SERIAL PRIMARY KEY,
+    group_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    is_admin BOOLEAN DEFAULT FALSE,
+    joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (group_id) REFERENCES groups(group_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    UNIQUE (group_id, user_id)
+);
+
+-- Index cho group_members
+CREATE INDEX IF NOT EXISTS idx_group_members_group ON group_members(group_id);
+CREATE INDEX IF NOT EXISTS idx_group_members_user ON group_members(user_id);
+CREATE INDEX IF NOT EXISTS idx_group_members_is_admin ON group_members(group_id, is_admin) WHERE is_admin = TRUE;
+
+COMMENT ON TABLE group_members IS 'Thành viên của các nhóm chat';
+COMMENT ON COLUMN group_members.is_admin IS 'Có phải là admin của nhóm hay không (hỗ trợ nhiều admin)';
+
+-- ============================================
+-- 7. BẢNG MESSAGES (Tin nhắn riêng tư)
+-- ============================================
+CREATE TABLE IF NOT EXISTS messages (
+    message_id SERIAL PRIMARY KEY,
+    sender_id INTEGER NOT NULL,
+    receiver_id INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    message_type VARCHAR(20) DEFAULT 'text' CHECK (message_type IN ('text', 'image', 'file', 'emoji')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_read BOOLEAN DEFAULT FALSE,
+    FOREIGN KEY (sender_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (receiver_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+-- Index cho messages
+CREATE INDEX IF NOT EXISTS idx_messages_sender ON messages(sender_id);
+CREATE INDEX IF NOT EXISTS idx_messages_receiver ON messages(receiver_id);
+CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at);
+CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(sender_id, receiver_id, created_at);
+
+COMMENT ON TABLE messages IS 'Tin nhắn riêng tư giữa hai người dùng';
+
+-- ============================================
+-- 8. BẢNG DELETED_MESSAGES (Tin nhắn đã xóa - soft delete)
+-- ============================================
+CREATE TABLE IF NOT EXISTS deleted_messages (
+    message_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (message_id, user_id),
+    FOREIGN KEY (message_id) REFERENCES messages(message_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+-- Index cho deleted_messages
+CREATE INDEX IF NOT EXISTS idx_deleted_messages_user ON deleted_messages(user_id);
+CREATE INDEX IF NOT EXISTS idx_deleted_messages_message ON deleted_messages(message_id);
+
+COMMENT ON TABLE deleted_messages IS 'Lưu tin nhắn đã xóa cho từng user (soft delete - xóa chỉ mình tôi)';
+COMMENT ON COLUMN deleted_messages.message_id IS 'ID tin nhắn bị xóa';
+COMMENT ON COLUMN deleted_messages.user_id IS 'User xóa tin nhắn này';
+
+-- ============================================
+-- 9. BẢNG GROUP_MESSAGES (Tin nhắn nhóm)
+-- ============================================
+CREATE TABLE IF NOT EXISTS group_messages (
+    message_id SERIAL PRIMARY KEY,
+    group_id INTEGER NOT NULL,
+    sender_id INTEGER NOT NULL,
+    message_text TEXT NOT NULL,
+    message_type VARCHAR(20) DEFAULT 'text' CHECK (message_type IN ('text', 'image', 'file', 'emoji')),
+    sent_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (group_id) REFERENCES groups(group_id) ON DELETE CASCADE,
+    FOREIGN KEY (sender_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+-- Index cho group_messages
+CREATE INDEX IF NOT EXISTS idx_group_messages_group ON group_messages(group_id);
+CREATE INDEX IF NOT EXISTS idx_group_messages_sender ON group_messages(sender_id);
+CREATE INDEX IF NOT EXISTS idx_group_messages_sent_time ON group_messages(sent_time);
+
+COMMENT ON TABLE group_messages IS 'Tin nhắn trong nhóm chat';
+
+-- ============================================
+-- 10. BẢNG SPAM_REPORTS (Báo cáo spam)
+-- ============================================
+CREATE TABLE IF NOT EXISTS spam_reports (
+    report_id SERIAL PRIMARY KEY,
+    reporter_id INTEGER NOT NULL,
+    reported_user_id INTEGER NOT NULL,
+    reason TEXT,
+    report_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'resolved', 'rejected')),
+    FOREIGN KEY (reporter_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (reported_user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+-- Index cho spam_reports
+CREATE INDEX IF NOT EXISTS idx_spam_reports_reporter ON spam_reports(reporter_id);
+CREATE INDEX IF NOT EXISTS idx_spam_reports_reported ON spam_reports(reported_user_id);
+CREATE INDEX IF NOT EXISTS idx_spam_reports_status ON spam_reports(status);
+
+COMMENT ON TABLE spam_reports IS 'Báo cáo spam/lạm dụng từ người dùng';
+
+-- ============================================
+-- 11. BẢNG USER_ACTIVITIES (Hoạt động người dùng)
+-- ============================================
+CREATE TABLE IF NOT EXISTS user_activities (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    activity_type VARCHAR(20) NOT NULL CHECK (activity_type IN ('login', 'chat', 'group_chat', 'friend_request', 'create_group')),
+    activity_data JSONB,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+-- Index cho user_activities
+CREATE INDEX IF NOT EXISTS idx_user_activities_user ON user_activities(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_activities_type ON user_activities(activity_type);
+CREATE INDEX IF NOT EXISTS idx_user_activities_created_at ON user_activities(created_at);
+
+COMMENT ON TABLE user_activities IS 'Lịch sử hoạt động của người dùng';
+
+-- ============================================
+-- 12. TRIGGERS - Tự động cập nhật updated_at
+-- ============================================
+
+-- Tạo function trigger
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- Trigger cho users
+DROP TRIGGER IF EXISTS update_users_updated_at ON users;
+CREATE TRIGGER update_users_updated_at 
+    BEFORE UPDATE ON users
+    FOR EACH ROW 
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Trigger cho friends
+DROP TRIGGER IF EXISTS update_friends_updated_at ON friends;
+CREATE TRIGGER update_friends_updated_at 
+    BEFORE UPDATE ON friends
+    FOR EACH ROW 
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Trigger cho groups
+DROP TRIGGER IF EXISTS update_groups_updated_at ON groups;
+CREATE TRIGGER update_groups_updated_at 
+    BEFORE UPDATE ON groups
+    FOR EACH ROW 
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================
+-- 13. VIEWS - Views tiện ích
+-- ============================================
+
+-- View: Danh sách lời mời kết bạn đang chờ
+CREATE OR REPLACE VIEW friend_requests_view AS
+SELECT 
+    f.friendship_id,
+    f.user_id as sender_id,
+    u1.username as sender_username,
+    u1.full_name as sender_name,
+    f.friend_id as receiver_id,
+    u2.username as receiver_username,
+    u2.full_name as receiver_name,
+    f.status,
+    f.created_at
+FROM friends f
+JOIN users u1 ON f.user_id = u1.user_id
+JOIN users u2 ON f.friend_id = u2.user_id
+WHERE f.status = 'pending';
+
+COMMENT ON VIEW friend_requests_view IS 'Danh sách lời mời kết bạn đang chờ xử lý';
+
+-- View: Thống kê nhóm và thành viên
+CREATE OR REPLACE VIEW group_stats_view AS
+SELECT 
+    g.group_id,
+    g.group_name,
+    u.username as admin_username,
+    u.full_name as admin_name,
+    COUNT(gm.user_id) as member_count,
+    g.encrypted,
+    g.created_at
+FROM groups g
+JOIN users u ON g.admin_id = u.user_id
+LEFT JOIN group_members gm ON g.group_id = gm.group_id
+GROUP BY g.group_id, g.group_name, u.username, u.full_name, g.encrypted, g.created_at;
+
+COMMENT ON VIEW group_stats_view IS 'Thống kê thông tin nhóm và số lượng thành viên';
+
+-- ============================================
+-- 14. DỮ LIỆU MẪU (Sample Data)
+-- ============================================
+
+-- Insert sample users
+INSERT INTO users (username, password, full_name, email, address, dob, gender, status, created_at, last_login)
+VALUES 
+('admin', '$2a$10$XqsQJZ5J5Z5J5Z5J5Z5J5O', 'Quản Trị Viên', 'admin@chatapp.com', 'Hà Nội', '1990-01-01', 'Nam', 'active', '2024-01-01 08:00:00', NOW()),
+('user1', '$2a$10$XqsQJZ5J5Z5J5Z5J5Z5J5O', 'Nguyễn Văn A', 'vana@gmail.com', 'TP.HCM', '1995-03-15', 'Nam', 'active', '2024-11-01 08:00:00', NOW()),
+('user2', '$2a$10$XqsQJZ5J5Z5J5Z5J5Z5J5O', 'Trần Thị B', 'thib@gmail.com', 'Đà Nẵng', '1998-07-22', 'Nữ', 'active', '2024-11-02 09:15:00', NOW()),
+('user3', '$2a$10$XqsQJZ5J5Z5J5Z5J5Z5J5O', 'Lê Văn C', 'vanc@gmail.com', 'Hải Phòng', '1992-11-10', 'Nam', 'active', '2024-11-03 10:30:00', NOW()),
+('user4', '$2a$10$XqsQJZ5J5Z5J5Z5J5Z5J5O', 'Phạm Thị D', 'thid@gmail.com', 'Cần Thơ', '2000-01-05', 'Nữ', 'active', '2024-11-04 11:45:00', NOW()),
+('testuser', '$2a$10$XqsQJZ5J5Z5J5Z5J5Z5J5O', 'Test User', 'test@test.com', 'Hà Nội', '1999-05-20', 'Khác', 'locked', '2024-10-15 14:00:00', '2024-11-20 10:00:00')
+ON CONFLICT (username) DO NOTHING;
+
+-- Insert sample login history
+INSERT INTO login_history (user_id, login_time, ip_address, device_info)
+SELECT 
+    u.user_id,
+    NOW() - (random() * interval '30 days'),
+    '192.168.1.' || floor(random() * 255 + 1)::text,
+    CASE floor(random() * 4)::int
+        WHEN 0 THEN 'Chrome/Windows 10'
+        WHEN 1 THEN 'Safari/macOS'
+        WHEN 2 THEN 'Firefox/Ubuntu'
+        ELSE 'Mobile/Android'
+    END
+FROM users u, generate_series(1, 3)
+WHERE u.status = 'active';
+
+-- Insert sample friendships
+INSERT INTO friends (user_id, friend_id, status, created_at, updated_at)
+VALUES 
+((SELECT user_id FROM users WHERE username='user1'), (SELECT user_id FROM users WHERE username='user2'), 'accepted', NOW() - interval '10 days', NOW()),
+((SELECT user_id FROM users WHERE username='user1'), (SELECT user_id FROM users WHERE username='user3'), 'accepted', NOW() - interval '8 days', NOW()),
+((SELECT user_id FROM users WHERE username='user2'), (SELECT user_id FROM users WHERE username='user3'), 'pending', NOW() - interval '2 days', NOW()),
+((SELECT user_id FROM users WHERE username='user2'), (SELECT user_id FROM users WHERE username='user4'), 'accepted', NOW() - interval '5 days', NOW())
+ON CONFLICT DO NOTHING;
+
+-- Insert sample groups
+INSERT INTO groups (group_name, description, admin_id, encrypted, created_at)
+VALUES 
+('Nhóm Học Tập', 'Nhóm thảo luận về học tập', (SELECT user_id FROM users WHERE username='user1'), FALSE, NOW() - interval '15 days'),
+('Nhóm Công Việc', 'Nhóm thảo luận về công việc', (SELECT user_id FROM users WHERE username='user2'), TRUE, NOW() - interval '10 days'),
+('Bạn Bè Thân Thiết', 'Nhóm của những người bạn thân', (SELECT user_id FROM users WHERE username='user3'), FALSE, NOW() - interval '5 days')
+ON CONFLICT DO NOTHING;
+
+-- Insert sample group members
+INSERT INTO group_members (group_id, user_id, is_admin, joined_at)
+SELECT 
+    g.group_id,
+    g.admin_id,
+    TRUE,
+    g.created_at
+FROM groups g
+ON CONFLICT DO NOTHING;
+
+-- Add more members to groups
+INSERT INTO group_members (group_id, user_id, is_admin, joined_at)
+SELECT 
+    (SELECT group_id FROM groups WHERE group_name='Nhóm Học Tập'),
+    user_id,
+    FALSE,
+    NOW() - interval '10 days'
+FROM users 
+WHERE username IN ('user2', 'user3', 'user4')
+ON CONFLICT DO NOTHING;
+
+-- Insert sample messages
+INSERT INTO messages (sender_id, receiver_id, content, created_at, is_read)
+SELECT 
+    (SELECT user_id FROM users WHERE username='user1'),
+    (SELECT user_id FROM users WHERE username='user2'),
+    'Chào bạn! Bạn khỏe không?',
+    NOW() - interval '1 day',
+    TRUE
+UNION ALL
+SELECT 
+    (SELECT user_id FROM users WHERE username='user2'),
+    (SELECT user_id FROM users WHERE username='user1'),
+    'Mình khỏe, cảm ơn bạn!',
+    NOW() - interval '23 hours',
+    TRUE
+UNION ALL
+SELECT 
+    (SELECT user_id FROM users WHERE username='user1'),
+    (SELECT user_id FROM users WHERE username='user3'),
+    'Hôm nay đi cafe nhé!',
+    NOW() - interval '2 hours',
+    FALSE;
+
+-- Insert sample group messages
+INSERT INTO group_messages (group_id, sender_id, message_text, sent_time)
+SELECT 
+    (SELECT group_id FROM groups WHERE group_name='Nhóm Học Tập'),
+    (SELECT user_id FROM users WHERE username='user1'),
+    'Xin chào mọi người!',
+    NOW() - interval '3 days'
+UNION ALL
+SELECT 
+    (SELECT group_id FROM groups WHERE group_name='Nhóm Học Tập'),
+    (SELECT user_id FROM users WHERE username='user2'),
+    'Chào bạn! Hôm nay học gì?',
+    NOW() - interval '3 days' + interval '5 minutes';
+
+-- Insert sample spam report
+INSERT INTO spam_reports (reporter_id, reported_user_id, reason, report_time, status)
+SELECT 
+    (SELECT user_id FROM users WHERE username='user2'),
+    (SELECT user_id FROM users WHERE username='testuser'),
+    'Gửi tin nhắn spam quảng cáo',
+    NOW() - interval '5 days',
+    'pending';
+
+-- Insert sample user activities
+INSERT INTO user_activities (user_id, activity_type, activity_data, created_at)
+SELECT 
+    user_id,
+    'login',
+    jsonb_build_object('ip', '192.168.1.100', 'device', 'Chrome/Windows'),
+    NOW() - interval '1 day'
+FROM users 
+WHERE status = 'active'
+LIMIT 3;
+
+-- ============================================
+-- 15. KIỂM TRA KẾT QUẢ
+-- ============================================
+
+-- Thống kê số lượng records trong các bảng
+SELECT 
+    'users' as table_name, 
+    COUNT(*) as total_records,
+    COUNT(CASE WHEN status='active' THEN 1 END) as active_count
+FROM users
+UNION ALL
+SELECT 
+    'login_history', 
+    COUNT(*),
+    COUNT(DISTINCT user_id)
+FROM login_history
+UNION ALL
+SELECT 
+    'friends', 
+    COUNT(*),
+    COUNT(CASE WHEN status='accepted' THEN 1 END)
+FROM friends
+UNION ALL
+SELECT 
+    'blocked_users', 
+    COUNT(*),
+    NULL
+FROM blocked_users
+UNION ALL
+SELECT 
+    'groups', 
+    COUNT(*),
+    COUNT(CASE WHEN encrypted=TRUE THEN 1 END)
+FROM groups
+UNION ALL
+SELECT 
+    'group_members', 
+    COUNT(*),
+    COUNT(CASE WHEN is_admin=TRUE THEN 1 END)
+FROM group_members
+UNION ALL
+SELECT 
+    'messages', 
+    COUNT(*),
+    COUNT(CASE WHEN is_read=TRUE THEN 1 END)
+FROM messages
+UNION ALL
+SELECT 
+    'deleted_messages', 
+    COUNT(*),
+    NULL
+FROM deleted_messages
+UNION ALL
+SELECT 
+    'group_messages', 
+    COUNT(*),
+    NULL
+FROM group_messages
+UNION ALL
+SELECT 
+    'spam_reports', 
+    COUNT(*),
+    COUNT(CASE WHEN status='pending' THEN 1 END)
+FROM spam_reports
+UNION ALL
+SELECT 
+    'user_activities', 
+    COUNT(*),
+    NULL
+FROM user_activities
+ORDER BY table_name;
+
+-- ============================================
+-- KẾT THÚC SCRIPT
+-- ============================================
+-- 
+-- ✅ Database đã được tạo hoàn chỉnh!
+-- 
+-- Các bảng chính:
+-- 1. users - Người dùng (với sample data: admin, user1-4, testuser)
+-- 2. login_history - Lịch sử đăng nhập
+-- 3. friends - Quan hệ bạn bè
+-- 4. blocked_users - Danh sách chặn
+-- 5. groups - Nhóm chat (hỗ trợ mã hóa)
+-- 6. group_members - Thành viên nhóm (hỗ trợ nhiều admin)
+-- 7. messages - Tin nhắn riêng tư
+-- 8. deleted_messages - Tin nhắn đã xóa (soft delete)
+-- 9. group_messages - Tin nhắn nhóm
+-- 10. spam_reports - Báo cáo spam
+-- 11. user_activities - Hoạt động người dùng
+--
+-- Tính năng đã tích hợp:
+-- ✓ Multi-admin support (nhiều admin trong 1 nhóm)
+-- ✓ Group encryption (mã hóa nhóm end-to-end)
+-- ✓ Message soft delete (xóa tin nhắn riêng lẻ)
+-- ✓ Blocked users (chặn người dùng)
+-- ✓ Friend requests (lời mời kết bạn)
+-- ✓ Auto-update timestamps (trigger)
+-- ✓ Utility views (friend_requests_view, group_stats_view)
+-- ✓ Sample data (dữ liệu mẫu để test)
+--
+-- Password mặc định cho tất cả users mẫu: (hash của "123456")
+-- 
+-- ============================================
